@@ -75,10 +75,11 @@ jobs:
       run: |
         pip3 install --user west
         export PATH=$HOME/.local/bin:$PATH
-        west init -l app/hello_world
+        west init .
         west update
         west zephyr-export
         pip3 install --user -r zephyr/scripts/requirements.txt
+
 
     # ⚙️ Build firmware
     - name: Build hello_world firmware
