@@ -21,7 +21,7 @@ jobs:
       with:
         submodules: recursive
 
-    # 💾 Cache Zephyr west environment (new)
+    # 💾 Cache Zephyr west environment
     - name: Cache Zephyr west environment
       uses: actions/cache@v3
       with:
@@ -78,16 +78,15 @@ jobs:
         west zephyr-export
         pip3 install --user -r zephyr/scripts/requirements.txt
 
-    # ⚙️ Build firmware
-    - name: Build hello_world
+    # ⚙️ Build firmware (with board)
+    - name: Build hello_world firmware
       run: |
         export PATH=$HOME/.local/bin:$PATH
         west build -b qemu_cortex_m3 app/hello_world
 
-    # 🧪 Simulate & test UART output
-    - name: Build + Simulate + Test UART
+    # 🧪 Simulate & validate UART output
+    - name: Simulate and test UART output
       run: |
-        west build -b qemu_cortex_m3 app/hello_world
         cd app/hello_world
         west build -t run | tee output.log
         chmod +x test/verify_output.sh
@@ -104,13 +103,13 @@ jobs:
         curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
         syft app/hello_world/build/zephyr/zephyr.elf -o spdx-json > sbom.spdx.json
 
-    # ✅ Validate SBOM
+    # ✅ Validate SPDX SBOM
     - name: Validate SPDX SBOM
       run: |
         pip install spdx-tools
         spdx-lint sbom.spdx.json
 
-    # 🔐 Generate SHA256 checksum
+    # 🔐 Generate SHA256 hash
     - name: Generate firmware hash
       run: |
         sha256sum app/hello_world/build/zephyr/zephyr.elf > firmware.sha256
