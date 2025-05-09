@@ -1,4 +1,4 @@
-name: Zephyr CI DevSecOps Pipeline
+name: Minimal Zephyr UART CI
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 jobs:
-  build-and-test:
+  uart-test:
     runs-on: ubuntu-latest
 
     env:
@@ -15,52 +15,17 @@ jobs:
       ZEPHYR_SDK_INSTALL_DIR: /opt/toolchains/zephyr-sdk
 
     steps:
-    # ⬇️ Checkout source
-    - name: Checkout repository
+    - name: Checkout source
       uses: actions/checkout@v3
-      with:
-        submodules: recursive
 
-    # 💾 Cache west environment
-    - name: Cache Zephyr west environment
-      uses: actions/cache@v3
-      with:
-        path: |
-          .west
-          modules
-          zephyr
-        key: ${{ runner.os }}-zephyr-env-${{ hashFiles('west.yml') }}
-        restore-keys: |
-          ${{ runner.os }}-zephyr-env-
-
-    # ⚙️ Install system dependencies
-    - name: Install build tools
+    - name: Install system dependencies
       run: |
         sudo apt update && sudo apt install -y \
           git cmake ninja-build gperf ccache dfu-util device-tree-compiler wget \
           python3-dev python3-pip python3-setuptools python3-wheel file make \
           gcc g++ xz-utils libsdl2-dev xterm curl
 
-    # 💾 Cache Python packages
-    - name: Cache pip packages
-      uses: actions/cache@v3
-      with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-pip-
-
-    # 💾 Cache Zephyr SDK
-    - name: Cache Zephyr SDK
-      id: cache-zephyr-sdk
-      uses: actions/cache@v3
-      with:
-        path: /opt/toolchains/zephyr-sdk
-        key: zephyr-sdk-0.16.3
-
-    # 📦 Install Zephyr SDK (if not cached)
     - name: Install Zephyr SDK
-      if: steps.cache-zephyr-sdk.outputs.cache-hit != 'true'
       run: |
         sudo mkdir -p /opt/toolchains
         wget https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v0.16.3/zephyr-sdk-0.16.3_linux-x86_64.tar.xz
@@ -68,8 +33,7 @@ jobs:
         sudo mv zephyr-sdk-0.16.3 /opt/toolchains/zephyr-sdk
         /opt/toolchains/zephyr-sdk/setup.sh -t all -c
 
-    # 🧠 Setup west + Zephyr modules
-    - name: Setup Zephyr environment
+    - name: Setup Zephyr environment and modules
       run: |
         pip3 install --user west
         export PATH=$HOME/.local/bin:$PATH
@@ -78,53 +42,21 @@ jobs:
         west zephyr-export
         pip3 install --user -r zephyr/scripts/requirements.txt
 
-    # ⚙️ Build firmware (with board)
-    - name: Build hello_world firmware
+    - name: Build hello_world firmware with board
       run: |
         export PATH=$HOME/.local/bin:$PATH
-        west build -b qemu_cortex_m3 app/hello_world
+        west build -b qemu_cortex_m3 app/hello_world -p always
 
-    # 🧪 Simulate and test UART output
     - name: Simulate and verify UART output
       run: |
+        export PATH=$HOME/.local/bin:$PATH
         west build -t run \
           --build-dir app/hello_world/build \
           --source-dir app/hello_world | tee app/hello_world/output.log
 
-        chmod +x app/hello_world/test/verify_output.sh
-        ./app/hello_world/test/verify_output.sh app/hello_world/output.log
-
-    # 🧾 Generate Git metadata
-    - name: Generate Git metadata
-      run: |
-        python3 scripts/generate_metadata.py
-
-    # 📦 Generate SPDX SBOM
-    - name: Install Syft & generate SBOM
-      run: |
-        curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
-        syft app/hello_world/build/zephyr/zephyr.elf -o spdx-json > sbom.spdx.json
-
-    # ✅ Validate SPDX SBOM
-    - name: Validate SPDX SBOM
-      run: |
-        pip install spdx-tools
-        spdx-lint sbom.spdx.json
-
-    # 🔐 Generate firmware SHA256
-    - name: Generate firmware hash
-      run: |
-        sha256sum app/hello_world/build/zephyr/zephyr.elf > firmware.sha256
-
-    # 📤 Upload artifacts
-    - name: Upload firmware artifacts
-      uses: ./.github/actions/upload-artifact
-      with:
-        name: firmware-artifacts
-        path: |
-          app/hello_world/build/zephyr/zephyr.elf
-          app/hello_world/build/zephyr/zephyr.hex
-          firmware_metadata.json
-          sbom.spdx.json
-          firmware.sha256
-          app/hello_world/output.log
+        echo "Checking UART output:"
+        grep "Hello World" app/hello_world/output.log || (
+          echo "[FAIL] UART output not found."
+          cat app/hello_world/output.log
+          exit 1
+        )
