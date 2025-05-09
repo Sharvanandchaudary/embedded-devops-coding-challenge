@@ -1,16 +1,14 @@
+# scripts/generate_metadata.py
+import os
 import json
+import datetime
 import subprocess
-from datetime import datetime
-
-def get(cmd):
-    return subprocess.check_output(cmd).decode().strip()
 
 metadata = {
-    "git_sha": get(["git", "rev-parse", "HEAD"]),
-    "git_version": get(["git", "describe", "--tags", "--always"]),
-    "build_time": datetime.utcnow().isoformat() + "Z",
-    "toolchain": "Zephyr SDK"
+    "git_sha": subprocess.check_output(["git", "rev-parse", "HEAD"]).decode().strip(),
+    "git_description": subprocess.check_output(["git", "describe", "--always"]).decode().strip(),
+    "build_time": datetime.datetime.utcnow().isoformat() + "Z"
 }
 
-with open("firmware_metadata.json", "w") as f:
-    json.dump(metadata, f, indent=2)
+with open("build/firmware_metadata.json", "w") as f:
+    json.dump(metadata, f, indent=2)  # <-- ✅ this adds line-by-line formatting
