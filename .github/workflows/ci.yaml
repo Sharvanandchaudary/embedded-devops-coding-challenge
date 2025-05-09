@@ -15,26 +15,26 @@ jobs:
       ZEPHYR_SDK_INSTALL_DIR: /opt/toolchains/zephyr-sdk
 
     steps:
-    # ⬇️ Checkout Source
+    # ⬇️ Checkout source
     - name: Checkout repository
       uses: actions/checkout@v3
       with:
         submodules: recursive
 
-    # 💾 Cache Zephyr west environment
+    # 💾 Cache west environment
     - name: Cache Zephyr west environment
       uses: actions/cache@v3
       with:
         path: |
           .west
-          zephyr
           modules
+          zephyr
         key: ${{ runner.os }}-zephyr-env-${{ hashFiles('west.yml') }}
         restore-keys: |
           ${{ runner.os }}-zephyr-env-
 
-    # ⚙️ Install system build tools
-    - name: Install system dependencies
+    # ⚙️ Install system dependencies
+    - name: Install build tools
       run: |
         sudo apt update && sudo apt install -y \
           git cmake ninja-build gperf ccache dfu-util device-tree-compiler wget \
@@ -68,8 +68,8 @@ jobs:
         sudo mv zephyr-sdk-0.16.3 /opt/toolchains/zephyr-sdk
         /opt/toolchains/zephyr-sdk/setup.sh -t all -c
 
-    # 🧠 Setup Zephyr environment
-    - name: Setup Zephyr
+    # 🧠 Setup west + Zephyr modules
+    - name: Setup Zephyr environment
       run: |
         pip3 install --user west
         export PATH=$HOME/.local/bin:$PATH
@@ -78,16 +78,19 @@ jobs:
         west zephyr-export
         pip3 install --user -r zephyr/scripts/requirements.txt
 
-    # ⚙️ Build firmware (with board set)
+    # ⚙️ Build firmware (with board)
     - name: Build hello_world firmware
       run: |
         export PATH=$HOME/.local/bin:$PATH
         west build -b qemu_cortex_m3 app/hello_world
 
-    # 🧪 Simulate & validate UART output (no cd, reuse build)
-    - name: Simulate and test UART output
+    # 🧪 Simulate and test UART output
+    - name: Simulate and verify UART output
       run: |
-        west build -t run --build-dir app/hello_world/build | tee app/hello_world/output.log
+        west build -t run \
+          --build-dir app/hello_world/build \
+          --source-dir app/hello_world | tee app/hello_world/output.log
+
         chmod +x app/hello_world/test/verify_output.sh
         ./app/hello_world/test/verify_output.sh app/hello_world/output.log
 
@@ -108,12 +111,12 @@ jobs:
         pip install spdx-tools
         spdx-lint sbom.spdx.json
 
-    # 🔐 Generate SHA256 checksum
+    # 🔐 Generate firmware SHA256
     - name: Generate firmware hash
       run: |
         sha256sum app/hello_world/build/zephyr/zephyr.elf > firmware.sha256
 
-    # 📤 Upload all artifacts
+    # 📤 Upload artifacts
     - name: Upload firmware artifacts
       uses: ./.github/actions/upload-artifact
       with:
