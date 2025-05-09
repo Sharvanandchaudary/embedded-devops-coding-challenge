@@ -27,7 +27,7 @@ jobs:
         sudo apt update && sudo apt install -y \
           git cmake ninja-build gperf ccache dfu-util device-tree-compiler wget \
           python3-dev python3-pip python3-setuptools python3-wheel file make \
-          gcc g++ xz-utils libsdl2-dev xterm curl qemu-system-arm
+          gcc g++ xz-utils libsdl2-dev xterm curl qemu-system-arm jq
 
     # 💾 Cache Python packages
     - name: Cache pip packages
@@ -58,7 +58,7 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-west-
 
-    # 📦 Install Zephyr SDK if not cached
+    # 📆 Install Zephyr SDK if not cached
     - name: Install Zephyr SDK (if not cached)
       if: steps.cache-zephyr-sdk.outputs.cache-hit != 'true'
       run: |
@@ -73,12 +73,11 @@ jobs:
       run: |
         pip3 install --user west
         export PATH=$HOME/.local/bin:$PATH
-        if [ ! -d ".west" ]; then west init; fi
+        west init 
         west update
         west zephyr-export
         pip3 install --user -r zephyr/scripts/requirements.txt
         west config build.board qemu_cortex_m3
-
 
     # ⚙️ Build firmware
     - name: Build hello_world firmware
@@ -90,11 +89,8 @@ jobs:
     - name: Simulate and test UART output
       run: |
         export PATH=$HOME/.local/bin:$PATH
-
-        # Run QEMU and capture output directly (no pipe)
         cd build
         timeout 10s ninja run > output.log || true
-
         echo "Checking UART output:"
         grep "Hello World" output.log || (
           echo "[FAIL] UART output not found."
@@ -102,4 +98,41 @@ jobs:
           exit 1
         )
 
+    # 🧾 Generate build metadata
+    - name: Generate metadata
+      run: |
+        echo "{" > metadata.json
+        echo "  \"git_sha\": \"$(git rev-parse HEAD)\"," >> metadata.json
+        echo "  \"build_time\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"" >> metadata.json
+        echo "}" >> metadata.json
+        cat metadata.json
 
+    # 📜 Generate SPDX SBOM
+    - name: Generate SPDX SBOM
+      run: |
+        pip3 install --user spdx-tools
+        export PATH=$HOME/.local/bin:$PATH
+        python3 scripts/generate_spdx.py metadata.json > spdx-sbom.json
+
+    # 🧪 Validate SPDX SBOM
+    - name: Validate SPDX SBOM
+      run: |
+        pip3 install --user jsonschema
+        export PATH=$HOME/.local/bin:$PATH
+        python3 -c 'import json, jsonschema; jsonschema.validate(json.load(open("spdx-sbom.json")), {"$schema": "https://json-schema.org/draft/2020-12/schema"})'
+
+    # 📎 Upload UART log artifact
+    - name: Upload UART log artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: uart-output-log
+        path: build/output.log
+
+    # 📎 Upload metadata and SPDX SBOM
+    - name: Upload traceability artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: build-traceability
+        path: |
+          metadata.json
+          spdx-sbom.json
