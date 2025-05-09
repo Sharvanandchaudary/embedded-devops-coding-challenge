@@ -17,7 +17,7 @@ jobs:
     steps:
     # ⬇️ Checkout Source
     - name: Checkout repository
-      uses: github.com/actions/upload-artifact@v3
+      uses: actions/upload-artifact@v3
       with:
         submodules: recursive
 
