@@ -73,11 +73,12 @@ jobs:
       run: |
         pip3 install --user west
         export PATH=$HOME/.local/bin:$PATH
-        west init 
+        if [ ! -d ".west" ]; then west init; fi
         west update
         west zephyr-export
         pip3 install --user -r zephyr/scripts/requirements.txt
         west config build.board qemu_cortex_m3
+
 
     # ⚙️ Build firmware
     - name: Build hello_world firmware
