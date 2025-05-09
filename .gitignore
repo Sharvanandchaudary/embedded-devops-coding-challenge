@@ -1,0 +1,10 @@
+# Ignore Zephyr build and metadata folders
+build/
+.west/
+zephyr/
+modules/
+*.hex
+*.elf
+*.log
+__pycache__/
+*.pyc
