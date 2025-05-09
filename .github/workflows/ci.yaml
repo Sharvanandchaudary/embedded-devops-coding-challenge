@@ -15,41 +15,28 @@ jobs:
       ZEPHYR_SDK_INSTALL_DIR: /opt/toolchains/zephyr-sdk
 
     steps:
-
-    # ⬇️ Checkout Repo
-    - name: Checkout source
+    # ⬇️ Checkout Source
+    - name: Checkout repository
       uses: actions/checkout@v3
       with:
         submodules: recursive
 
-    # ⚙️ Install build tools
-    - name: Install dependencies
+    # ⚙️ Install core build tools
+    - name: Install system dependencies
       run: |
         sudo apt update && sudo apt install -y \
           git cmake ninja-build gperf ccache dfu-util device-tree-compiler wget \
           python3-dev python3-pip python3-setuptools python3-wheel file make \
           gcc g++ xz-utils libsdl2-dev xterm curl
 
-    # 💾 Cache Python dependencies
-    - name: Cache Python dependencies
+    # 💾 Cache Python packages
+    - name: Cache pip packages
       uses: actions/cache@v3
       with:
         path: ~/.cache/pip
         key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
         restore-keys: |
           ${{ runner.os }}-pip-
-
-    # 💾 Cache Zephyr modules (.west folder)
-    - name: Cache west modules
-      uses: actions/cache@v3
-      with:
-        path: |
-          ~/.west
-          modules
-          zephyr
-        key: ${{ runner.os }}-west-${{ hashFiles('**/west.yml') }}
-        restore-keys: |
-          ${{ runner.os }}-west-
 
     # 💾 Cache Zephyr SDK
     - name: Cache Zephyr SDK
@@ -59,19 +46,30 @@ jobs:
         path: /opt/toolchains/zephyr-sdk
         key: zephyr-sdk-0.16.3
 
-    # 🧱 Install Zephyr SDK (only if cache miss)
+    # 💾 Cache Zephyr west modules
+    - name: Cache Zephyr west modules
+      uses: actions/cache@v3
+      with:
+        path: |
+          .west
+          modules
+          zephyr
+        key: ${{ runner.os }}-west-${{ hashFiles('**/west.yml') }}
+        restore-keys: |
+          ${{ runner.os }}-west-
+
+    # 📦 Install Zephyr SDK (if not cached)
     - name: Install Zephyr SDK
       if: steps.cache-zephyr-sdk.outputs.cache-hit != 'true'
       run: |
+        sudo mkdir -p /opt/toolchains
         wget https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v0.16.3/zephyr-sdk-0.16.3_linux-x86_64.tar.xz
         tar -xf zephyr-sdk-0.16.3_linux-x86_64.tar.xz
-        sudo mkdir -p /opt/toolchains
         sudo mv zephyr-sdk-0.16.3 /opt/toolchains/zephyr-sdk
         /opt/toolchains/zephyr-sdk/setup.sh -t all -c
 
-
-    # 🧠 Setup Zephyr environment
-    - name: Setup Zephyr (west + pip)
+    # 🧠 Setup Zephyr
+    - name: Setup Zephyr environment
       run: |
         pip3 install --user west
         export PATH=$HOME/.local/bin:$PATH
@@ -80,49 +78,49 @@ jobs:
         west zephyr-export
         pip3 install --user -r zephyr/scripts/requirements.txt
 
-
     # ⚙️ Build firmware
-    - name: Build hello_world firmware
+    - name: Build hello_world
       run: |
         export PATH=$HOME/.local/bin:$PATH
         west build -b qemu_cortex_m3 app/hello_world
 
-    # 🧪 Simulate & test UART output
-    - name: Run QEMU and verify UART output
+    # 🧪 Simulate & test output
+    - name: Simulate and validate UART output
       run: |
         cd app/hello_world
         west build -t run | tee output.log
         ./test/verify_output.sh output.log
 
     # 🧾 Generate metadata
-    - name: Generate build metadata
+    - name: Generate Git metadata
       run: |
         python3 scripts/generate_metadata.py
 
     # 📦 Install Syft & generate SPDX SBOM
-    - name: Install Syft and generate SBOM
+    - name: Install Syft & generate SBOM
       run: |
         curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
         syft app/hello_world/build/zephyr/zephyr.elf -o spdx-json > sbom.spdx.json
 
-    # ✅ Validate SBOM format
-    - name: Validate SBOM
+    # ✅ Validate SBOM
+    - name: Validate SPDX SBOM
       run: |
         pip install spdx-tools
         spdx-lint sbom.spdx.json
 
-    # 🔐 Generate firmware SHA256
-    - name: Generate SHA256 hash
+    # 🔐 Generate SHA256
+    - name: Generate firmware hash
       run: |
         sha256sum app/hello_world/build/zephyr/zephyr.elf > firmware.sha256
 
-    # 📤 Upload Artifacts
-    - name: Upload artifacts
+    # 📤 Upload artifacts using local action
+    - name: Upload firmware artifacts
       uses: ./.github/actions/upload-artifact
       with:
         name: firmware-artifacts
         path: |
           app/hello_world/build/zephyr/zephyr.elf
+          app/hello_world/build/zephyr/zephyr.hex
           firmware_metadata.json
           sbom.spdx.json
           firmware.sha256
