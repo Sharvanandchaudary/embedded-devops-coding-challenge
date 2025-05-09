@@ -21,7 +21,19 @@ jobs:
       with:
         submodules: recursive
 
-    # ⚙️ Install core build tools
+    # 💾 Cache Zephyr west environment (new)
+    - name: Cache Zephyr west environment
+      uses: actions/cache@v3
+      with:
+        path: |
+          .west
+          modules
+          zephyr
+        key: ${{ runner.os }}-zephyr-env-${{ hashFiles('west.yml') }}
+        restore-keys: |
+          ${{ runner.os }}-zephyr-env-
+
+    # ⚙️ Install system build tools
     - name: Install system dependencies
       run: |
         sudo apt update && sudo apt install -y \
@@ -45,18 +57,6 @@ jobs:
       with:
         path: /opt/toolchains/zephyr-sdk
         key: zephyr-sdk-0.16.3
-
-    # 💾 Cache Zephyr west modules
-    - name: Cache Zephyr west modules
-      uses: actions/cache@v3
-      with:
-        path: |
-          .west
-          modules
-          zephyr
-        key: ${{ runner.os }}-west-${{ hashFiles('**/west.yml') }}
-        restore-keys: |
-          ${{ runner.os }}-west-
 
     # 📦 Install Zephyr SDK (if not cached)
     - name: Install Zephyr SDK
@@ -84,8 +84,8 @@ jobs:
         export PATH=$HOME/.local/bin:$PATH
         west build -b qemu_cortex_m3 app/hello_world
 
-    # 🧪 Simulate & test output
-    - name: Simulate and validate UART output
+    # 🧪 Simulate & test UART output
+    - name: Build + Simulate + Test UART
       run: |
         west build -b qemu_cortex_m3 app/hello_world
         cd app/hello_world
@@ -93,13 +93,12 @@ jobs:
         chmod +x test/verify_output.sh
         ./test/verify_output.sh output.log
 
-
-    # 🧾 Generate metadata
+    # 🧾 Generate Git metadata
     - name: Generate Git metadata
       run: |
         python3 scripts/generate_metadata.py
 
-    # 📦 Install Syft & generate SPDX SBOM
+    # 📦 Generate SPDX SBOM
     - name: Install Syft & generate SBOM
       run: |
         curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
@@ -111,12 +110,12 @@ jobs:
         pip install spdx-tools
         spdx-lint sbom.spdx.json
 
-    # 🔐 Generate SHA256
+    # 🔐 Generate SHA256 checksum
     - name: Generate firmware hash
       run: |
         sha256sum app/hello_world/build/zephyr/zephyr.elf > firmware.sha256
 
-    # 📤 Upload artifacts using local action
+    # 📤 Upload artifacts
     - name: Upload firmware artifacts
       uses: ./.github/actions/upload-artifact
       with:
