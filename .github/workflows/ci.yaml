@@ -51,17 +51,20 @@ jobs:
       run: |
         export PATH=$HOME/.local/bin:$PATH
 
-        # 1. Proper full board build
+        # ✅ 1. Clean full build with board
         west build -b qemu_cortex_m3 app/hello_world -p always
 
-        # 2. Move into build dir so west doesn’t re-trigger cmake
+        # ✅ 2. Move into app dir and reuse build
         cd app/hello_world
+
+        # ✅ 3. Simulate via QEMU from configured build
         west build -t run | tee output.log
 
-        # 3. Verify UART output
+        # ✅ 4. Check UART log for success
         echo "Checking UART output:"
         grep "Hello World" output.log || (
-          echo "[FAIL] UART output not found."
+          echo "[FAIL] UART output not found"
           cat output.log
           exit 1
         )
+
