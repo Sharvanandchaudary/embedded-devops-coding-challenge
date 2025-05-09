@@ -87,9 +87,12 @@ jobs:
     # 🧪 Simulate & test output
     - name: Simulate and validate UART output
       run: |
+        west build -b qemu_cortex_m3 app/hello_world
         cd app/hello_world
         west build -t run | tee output.log
+        chmod +x test/verify_output.sh
         ./test/verify_output.sh output.log
+
 
     # 🧾 Generate metadata
     - name: Generate Git metadata
