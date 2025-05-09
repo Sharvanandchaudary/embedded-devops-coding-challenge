@@ -89,10 +89,13 @@ jobs:
     - name: Simulate and test UART output
       run: |
         export PATH=$HOME/.local/bin:$PATH
-        west build -t run --build-dir app/hello_world/build | tee app/hello_world/output.log
+        west build -t run \
+          --build-dir build | tee build/output.log
+
         echo "Checking UART output:"
-        grep "Hello World" app/hello_world/output.log || (
+        grep "Hello World" build/output.log || (
           echo "[FAIL] UART output not found."
-          cat app/hello_world/output.log
+          cat build/output.log
           exit 1
         )
+
