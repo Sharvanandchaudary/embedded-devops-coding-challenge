@@ -115,7 +115,7 @@ jobs:
 
     # 📤 Upload Artifacts
     - name: Upload artifacts
-      uses: actions/upload-artifact@7c86f6d147729b4e8f7536b3e1741e26bdaddf1f
+      uses: ./.github/actions/upload-artifact
       with:
         name: firmware-artifacts
         path: |
