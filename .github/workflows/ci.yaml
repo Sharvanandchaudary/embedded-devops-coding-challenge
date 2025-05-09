@@ -47,13 +47,19 @@ jobs:
         export PATH=$HOME/.local/bin:$PATH
         west build -b qemu_cortex_m3 app/hello_world -p always
 
-    - name: Simulate and verify UART output
+    - name: Build and simulate
       run: |
         export PATH=$HOME/.local/bin:$PATH
+
+        # Clean board-defined build
+        west build -b qemu_cortex_m3 app/hello_world -p always
+
+        # Now simulate (this uses the valid build system just created)
         west build -t run \
           --build-dir app/hello_world/build \
           --source-dir app/hello_world | tee app/hello_world/output.log
 
+        # Check UART output
         echo "Checking UART output:"
         grep "Hello World" app/hello_world/output.log || (
           echo "[FAIL] UART output not found."
