@@ -69,15 +69,22 @@ jobs:
         /opt/toolchains/zephyr-sdk/setup.sh -t all -c
 
     # 🧠 Setup Zephyr workspace & environment
+    
     - name: Setup Zephyr environment
       run: |
         pip3 install --user west
         export PATH=$HOME/.local/bin:$PATH
-        west init 
+
+        # Initialize only if not already a Zephyr workspace
+        if [ ! -f .west/config ]; then
+          west init
+        fi
+
         west update
         west zephyr-export
         pip3 install --user -r zephyr/scripts/requirements.txt
         west config build.board qemu_cortex_m3
+
 
     # ⚙️ Build firmware
     - name: Build hello_world firmware
