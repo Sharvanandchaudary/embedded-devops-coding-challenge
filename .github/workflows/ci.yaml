@@ -1,4 +1,4 @@
-name: Minimal Zephyr UART CI
+name: Zephyr CI DevSecOps Pipeline
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 jobs:
-  uart-test:
+  build-and-test:
     runs-on: ubuntu-latest
 
     env:
@@ -15,8 +15,10 @@ jobs:
       ZEPHYR_SDK_INSTALL_DIR: /opt/toolchains/zephyr-sdk
 
     steps:
-    - name: Checkout source
+    - name: Checkout repository
       uses: actions/checkout@v3
+      with:
+        submodules: recursive
 
     - name: Install system dependencies
       run: |
@@ -25,7 +27,34 @@ jobs:
           python3-dev python3-pip python3-setuptools python3-wheel file make \
           gcc g++ xz-utils libsdl2-dev xterm curl
 
-    - name: Install Zephyr SDK
+    - name: Cache pip packages
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Cache Zephyr SDK
+      id: cache-zephyr-sdk
+      uses: actions/cache@v3
+      with:
+        path: /opt/toolchains/zephyr-sdk
+        key: zephyr-sdk-0.16.3
+
+    - name: Cache Zephyr west modules
+      uses: actions/cache@v3
+      with:
+        path: |
+          .west
+          modules
+          zephyr
+        key: ${{ runner.os }}-west-${{ hashFiles('**/west.yml') }}
+        restore-keys: |
+          ${{ runner.os }}-west-
+
+    - name: Install Zephyr SDK (if not cached)
+      if: steps.cache-zephyr-sdk.outputs.cache-hit != 'true'
       run: |
         sudo mkdir -p /opt/toolchains
         wget https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v0.16.3/zephyr-sdk-0.16.3_linux-x86_64.tar.xz
@@ -33,38 +62,28 @@ jobs:
         sudo mv zephyr-sdk-0.16.3 /opt/toolchains/zephyr-sdk
         /opt/toolchains/zephyr-sdk/setup.sh -t all -c
 
-    - name: Setup Zephyr environment and modules
+    - name: Setup Zephyr environment
       run: |
         pip3 install --user west
         export PATH=$HOME/.local/bin:$PATH
-        west init .
+        west init -l app/hello_world
         west update
         west zephyr-export
         pip3 install --user -r zephyr/scripts/requirements.txt
+        west config build.board qemu_cortex_m3
 
-    - name: Build hello_world firmware with board
+    - name: Build hello_world firmware
       run: |
         export PATH=$HOME/.local/bin:$PATH
         west build -b qemu_cortex_m3 app/hello_world -p always
 
-    - name: Build and simulate
+    - name: Simulate and test UART output
       run: |
         export PATH=$HOME/.local/bin:$PATH
-
-        # ✅ 1. Clean full build with board
-        west build -b qemu_cortex_m3 app/hello_world -p always
-
-        # ✅ 2. Move into app dir and reuse build
-        cd app/hello_world
-
-        # ✅ 3. Simulate via QEMU from configured build
-        west build -t run | tee output.log
-
-        # ✅ 4. Check UART log for success
+        west build -t run --build-dir app/hello_world/build | tee app/hello_world/output.log
         echo "Checking UART output:"
-        grep "Hello World" output.log || (
-          echo "[FAIL] UART output not found"
-          cat output.log
+        grep "Hello World" app/hello_world/output.log || (
+          echo "[FAIL] UART output not found."
+          cat app/hello_world/output.log
           exit 1
         )
-
