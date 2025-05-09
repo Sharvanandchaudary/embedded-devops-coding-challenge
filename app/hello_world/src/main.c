@@ -2,5 +2,5 @@
 
 void main(void)
 {
-    printk("Hello World! %s\n", CONFIG_BOARD);
+    printk("Hello World! qemu_cortex -v2 %s\n", CONFIG_BOARD);
 }
