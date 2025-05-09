@@ -115,7 +115,7 @@ jobs:
 
     # 📤 Upload Artifacts
     - name: Upload artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v2
       with:
         name: firmware-artifacts
         path: |
