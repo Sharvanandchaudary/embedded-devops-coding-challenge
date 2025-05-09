@@ -89,13 +89,16 @@ jobs:
     - name: Simulate and test UART output
       run: |
         export PATH=$HOME/.local/bin:$PATH
-        west build -t run \
-          --build-dir build | tee build/output.log
+
+        # Run QEMU and capture output directly (no pipe)
+        cd build
+        timeout 10s ninja run > output.log || true
 
         echo "Checking UART output:"
-        grep "Hello World" build/output.log || (
+        grep "Hello World" output.log || (
           echo "[FAIL] UART output not found."
-          cat build/output.log
+          cat output.log
           exit 1
         )
+
 
