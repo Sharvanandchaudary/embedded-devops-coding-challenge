@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main]
 
+
+permissions:
+  contents: write
+
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
@@ -129,6 +133,34 @@ jobs:
     - name: Validate SPDX JSON
       run: |
         jq . build/sbom.spdx.json > /dev/null || (echo "Invalid SPDX JSON" && exit 1)
+
+
+
+    - name: Copy files to metadata folder
+      run: |
+        mkdir -p metadata
+        cp build/firmware_metadata.json metadata/metadata.json
+        cp build/sbom.spdx.json metadata/sbom.spdx.json
+        cp build/firmware.sha256 metadata/firmware.sha256
+
+    - name: Upload build metadata and SBOM
+      uses: actions/upload-artifact@v4
+      with:
+        name: traceability-files
+        path: |
+          build/firmware_metadata.json
+          build/sbom.spdx.json
+          build/firmware.sha256
+          build/zephyr/zephyr.elf
+
+    - name: Commit traceability metadata to repo
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git add metadata/*
+        git commit -m "Update traceability metadata files" || echo "No changes to commit"
+        git push origin main
+
 
     - name: Upload build metadata and SBOM
       uses: actions/upload-artifact@v4
