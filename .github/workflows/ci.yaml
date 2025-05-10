@@ -137,6 +137,8 @@ jobs:
         path: |
           build/firmware_metadata.json
           build/sbom.spdx.json
+          build/firmware.sha256         
+          build/zephyr/zephyr.elf
 
     - name: Display Traceability Info in Logs
       run: |
