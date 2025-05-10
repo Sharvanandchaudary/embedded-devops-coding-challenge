@@ -6,7 +6,6 @@ on:
   pull_request:
     branches: [main]
 
-
 permissions:
   contents: write
 
@@ -19,21 +18,18 @@ jobs:
       ZEPHYR_SDK_INSTALL_DIR: /opt/toolchains/zephyr-sdk
 
     steps:
-    # ⬇️ Checkout Source
     - name: Checkout repository
       uses: actions/checkout@v3
       with:
         submodules: recursive
 
-    # ⚙️ Install core dependencies
     - name: Install system dependencies
       run: |
         sudo apt update && sudo apt install -y \
           git cmake ninja-build gperf ccache dfu-util device-tree-compiler wget \
           python3-dev python3-pip python3-setuptools python3-wheel file make \
-          gcc g++ xz-utils libsdl2-dev xterm curl qemu-system-arm
+          gcc g++ xz-utils libsdl2-dev xterm curl qemu-system-arm jq
 
-    # 💾 Cache Python packages
     - name: Cache pip packages
       uses: actions/cache@v3
       with:
@@ -42,7 +38,6 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-pip-
 
-    # 💾 Cache Zephyr SDK
     - name: Cache Zephyr SDK
       id: cache-zephyr-sdk
       uses: actions/cache@v3
@@ -50,7 +45,6 @@ jobs:
         path: /opt/toolchains/zephyr-sdk
         key: zephyr-sdk-0.16.3
 
-    # 💾 Cache west modules
     - name: Cache Zephyr west modules
       uses: actions/cache@v3
       with:
@@ -62,7 +56,6 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-west-
 
-    # 📦 Install Zephyr SDK if not cached
     - name: Install Zephyr SDK (if not cached)
       if: steps.cache-zephyr-sdk.outputs.cache-hit != 'true'
       run: |
@@ -72,39 +65,32 @@ jobs:
         sudo mv zephyr-sdk-0.16.3 /opt/toolchains/zephyr-sdk
         /opt/toolchains/zephyr-sdk/setup.sh -t all -c
 
-    # 🧠 Setup Zephyr workspace & environment
-    
     - name: Setup Zephyr environment
       run: |
         pip3 install --user west
         export PATH=$HOME/.local/bin:$PATH
-
-        # Initialize only if not already a Zephyr workspace
         if [ ! -f .west/config ]; then
           west init
         fi
-
         west update
         west zephyr-export
         pip3 install --user -r zephyr/scripts/requirements.txt
         west config build.board qemu_cortex_m3
 
-
-    # ⚙️ Build firmware
     - name: Build hello_world firmware
       run: |
         export PATH=$HOME/.local/bin:$PATH
         west build -b qemu_cortex_m3 app/hello_world -p always
 
-    # 🧪 Simulate & test UART output
+    - name: Compute SHA256 Checksum
+      run: |
+        sha256sum build/zephyr/zephyr.elf > build/firmware.sha256
+
     - name: Simulate and test UART output
       run: |
         export PATH=$HOME/.local/bin:$PATH
-
-        # Run QEMU and capture output directly (no pipe)
         cd build
         timeout 10s ninja run > output.log || true
-
         echo "Checking UART output:"
         grep "Hello World" output.log || (
           echo "[FAIL] UART output not found."
@@ -134,8 +120,6 @@ jobs:
       run: |
         jq . build/sbom.spdx.json > /dev/null || (echo "Invalid SPDX JSON" && exit 1)
 
-
-
     - name: Copy files to metadata folder
       run: |
         mkdir -p metadata
@@ -161,17 +145,6 @@ jobs:
         git commit -m "Update traceability metadata files" || echo "No changes to commit"
         git push origin main
 
-
-    - name: Upload build metadata and SBOM
-      uses: actions/upload-artifact@v4
-      with:
-        name: traceability-files
-        path: |
-          build/firmware_metadata.json
-          build/sbom.spdx.json
-          build/firmware.sha256         
-          build/zephyr/zephyr.elf
-
     - name: Display Traceability Info in Logs
       run: |
         echo "🔍 Firmware Traceability Information:"
@@ -180,7 +153,3 @@ jobs:
         echo "Build Timestamp: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
         echo "SHA256 Checksum:"
         cat build/firmware.sha256 || echo "Checksum file not found"
-
-  
-
-
