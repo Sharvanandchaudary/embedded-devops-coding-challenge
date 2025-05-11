@@ -1,0 +1,1 @@
+{"uart_output": "[0/1] To exit from QEMU enter: 'CTRL+a, x'[QEMU] CPU: cortex-m3*** Booting Zephyr OS build v4.1.0-3758-g81ee15787672 ***Hello World! qemu_cortex -v2 qemu_cortex_m3ninja: build stopped: interrupted by user."}

@@ -22,6 +22,7 @@ jobs:
 
     - name: Install system dependencies
       run: |
+        echo "[INFO] Installing dependencies..."
         sudo apt update && sudo apt install -y \
           git cmake ninja-build gperf ccache dfu-util device-tree-compiler wget \
           python3-dev python3-pip python3-setuptools python3-wheel file make \
@@ -56,6 +57,7 @@ jobs:
     - name: Install Zephyr SDK (if not cached)
       if: steps.cache-zephyr-sdk.outputs.cache-hit != 'true'
       run: |
+        echo "[INFO] Installing Zephyr SDK..."
         sudo mkdir -p /opt/toolchains
         wget https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v0.16.3/zephyr-sdk-0.16.3_linux-x86_64.tar.xz
         tar -xf zephyr-sdk-0.16.3_linux-x86_64.tar.xz
@@ -64,6 +66,7 @@ jobs:
 
     - name: Setup Zephyr environment
       run: |
+        echo "[INFO] Setting up Zephyr environment..."
         pip3 install --user west
         export PATH=$HOME/.local/bin:$PATH
         if [ ! -f .west/config ]; then
@@ -76,22 +79,28 @@ jobs:
 
     - name: Build hello_world firmware
       run: |
+        echo "[INFO] Starting build process..."
         export PATH=$HOME/.local/bin:$PATH
         west build -b qemu_cortex_m3 project/hello_world -p always
+        echo "[INFO] Build completed successfully."
 
     - name: Compute SHA256 Checksum
       run: |
+        echo "[INFO] Hashing firmware artifact..."
         sha256sum build/zephyr/zephyr.elf > build/firmware.sha256
+        echo "[INFO] SHA-256 hash:"
+        cat build/firmware.sha256
 
     - name: Simulate and test UART output
       run: |
+        echo "[INFO] Running firmware in QEMU..."
         export PATH=$HOME/.local/bin:$PATH
         cd build
         timeout 10s ninja run > output.log || true
-        echo "Checking UART output:"
+        echo "[INFO] UART Output Log:"
+        cat output.log
         grep "Hello World" output.log || (
           echo "[FAIL] UART output not found."
-          cat output.log
           exit 1
         )
 
@@ -103,10 +112,12 @@ jobs:
 
     - name: Convert UART log to JSON
       run: |
+        echo "[INFO] Converting UART log to JSON..."
         echo "{\"uart_output\": \"$(cat build/output.log | tr -d '\n' | sed 's/\"/\\\"/g')\"}" > build/test_log.json
 
     - name: Generate rich firmware metadata
       run: |
+        echo "[INFO] Creating firmware metadata..."
         mkdir -p build
         cat <<EOF > build/firmware_metadata.json
         {
@@ -121,17 +132,22 @@ jobs:
           "firmware_output": "build/zephyr/zephyr.elf"
         }
         EOF
+        echo "[INFO] Metadata generated at build/firmware_metadata.json"
 
     - name: Install Syft
       run: |
+        echo "[INFO] Installing Syft..."
         curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
 
     - name: Generate SPDX SBOM
       run: |
+        echo "[INFO] Exporting Software Bill of Materials (SBOM)..."
         syft dir:build -o spdx-json > build/sbom.spdx.json
+        echo "[INFO] SBOM exported successfully to build/sbom.spdx.json"
 
     - name: Validate SPDX JSON
       run: |
+        echo "[INFO] Validating SBOM JSON..."
         jq . build/sbom.spdx.json > /dev/null || (echo "Invalid SPDX JSON" && exit 1)
 
     - name: Upload build metadata and SBOM
