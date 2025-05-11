@@ -89,10 +89,3 @@ This project is licensed under the MIT License.
 Contributions
 Contributions, issue reports, and feature suggestions are welcome. Please ensure your changes are well-tested and pass the pipeline before submitting a pull request.
 
-yaml
-Copy
-Edit
-
----
-
-Let me know if you'd like me to generate a matching `LICENSE`, `.gitignore`, or contribution guidel
