@@ -1,4 +1,4 @@
-name: Zephyr CI DevSecOps Pipeline
+name: CI DevSecOps Pipeline
 
 on:
   push:
