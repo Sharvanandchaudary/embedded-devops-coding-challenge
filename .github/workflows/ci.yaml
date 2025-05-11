@@ -80,7 +80,7 @@ jobs:
     - name: Build hello_world firmware
       run: |
         export PATH=$HOME/.local/bin:$PATH
-        west build -b qemu_cortex_m3 project -p always
+        west build -b qemu_cortex_m3 project\hello_world -p always
 
     - name: Compute SHA256 Checksum
       run: |
