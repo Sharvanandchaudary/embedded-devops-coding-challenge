@@ -115,7 +115,7 @@ jobs:
         echo "[INFO] Converting UART log to JSON..."
         echo "{\"uart_output\": \"$(cat build/output.log | tr -d '\n' | sed 's/\"/\\\"/g')\"}" > build/test_log.json
 
-    - name: Generate rich firmware metadata
+    - name: Generate firmware metadata
       run: |
         echo "[INFO] Creating firmware metadata..."
         mkdir -p build
@@ -169,7 +169,7 @@ jobs:
 
     - name: Display Traceability Info in Logs
       run: |
-        echo "🔍 Firmware Traceability Information:"
+        echo "Firmware Traceability Information:"
         echo "Git SHA: $(git rev-parse HEAD)"
         echo "Git Description: $(git describe --always --tags --dirty || echo 'N/A')"
         echo "Build Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
