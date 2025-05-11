@@ -80,7 +80,7 @@ jobs:
     - name: Build hello_world firmware
       run: |
         export PATH=$HOME/.local/bin:$PATH
-        west build -b qemu_cortex_m3 app/hello_world -p always
+        west build -b qemu_cortex_m3 project -p always
 
     - name: Compute SHA256 Checksum
       run: |
@@ -148,11 +148,17 @@ jobs:
           build/zephyr/zephyr.elf
           build/test_log.json
 
+    - name: Upload UART log JSON
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-log-json
+        path: build/test_log.json
+
     - name: Display Traceability Info in Logs
       run: |
         echo "🔍 Firmware Traceability Information:"
         echo "Git SHA: $(git rev-parse HEAD)"
         echo "Git Description: $(git describe --always --tags --dirty || echo 'N/A')"
-        echo "Build Timestamp: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+        echo "Build Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
         echo "SHA256 Checksum:"
         cat build/firmware.sha256 || echo "Checksum file not found"
