@@ -52,7 +52,7 @@ ninja: build stopped: interrupted by user.
 Hello World! qemu_cortex -v2 qemu_cortex_m3
 
 
-
+https://github.com/Sharvanandchaudary/CI_CD/blob/main/images/UART-log.png?raw=true
 ---
 
 ### ☁️ Upload Artifacts Log
@@ -76,20 +76,7 @@ The test results are available in the `build/test_log.json` file and contain the
 }
 
 
-📎 Files Generated
-The following key traceability files are produced and uploaded during the CI workflow:
 
-build/firmware_metadata.json
-
-build/firmware.sha256
-
-build/sbom.spdx.json
-
-build/output.log
-
-build/test_log.json
-
-build/zephyr/zephyr.elf
 
 
 
