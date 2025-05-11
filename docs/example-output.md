@@ -52,8 +52,6 @@ ninja: build stopped: interrupted by user.
 Hello World! qemu_cortex -v2 qemu_cortex_m3
 
 
-![UART Log Screenshot](images/UART-log.png)  
-[🔗 View full image](images/UART-log.png)
 
 ---
 
@@ -65,9 +63,7 @@ Artifact uart-output-log.zip successfully finalized. Artifact ID 3100312288
 Artifact uart-output-log has been successfully uploaded! Final size is 310 bytes. Artifact ID is 3100312288
 Artifact download URL: https://github.com/Sharvanandchaudary/CI_CD/actions/runs/14951317567/artifacts/3100312288
 
-![Upload Artifact Screenshot](images/upload-artifact.png)  
-[🔗 View full image](images/upload-artifact.png)
-
+https://github.com/Sharvanandchaudary/CI_CD/blob/main/images/upload-artifact.png?raw=true
 ---
 
 ## 🧪 Test Log Output
