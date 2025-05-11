@@ -104,10 +104,26 @@ jobs:
         name: uart-output-log
         path: build/output.log
 
-    - name: Generate firmware Git metadata
+    - name: Convert UART log to JSON
+      run: |
+        echo "{\"uart_output\": \"$(cat build/output.log | tr -d '\n' | sed 's/\"/\\\"/g')\"}" > build/test_log.json
+
+    - name: Generate rich firmware metadata
       run: |
         mkdir -p build
-        echo "{\n  \"git_sha\": \"$(git rev-parse HEAD)\",\n  \"git_description\": \"$(git describe --always --tags --dirty || echo 'N/A')\",\n  \"build_time\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"\n}" > build/firmware_metadata.json
+        cat <<EOF > build/firmware_metadata.json
+        {
+          "git_sha": "$(git rev-parse HEAD)",
+          "git_description": "$(git describe --always --tags --dirty || echo 'N/A')",
+          "build_time": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+          "toolchain": {
+            "name": "Zephyr SDK",
+            "version": "0.16.3"
+          },
+          "target_board": "qemu_cortex_m3",
+          "firmware_output": "build/zephyr/zephyr.elf"
+        }
+        EOF
 
     - name: Install Syft
       run: |
@@ -121,8 +137,6 @@ jobs:
       run: |
         jq . build/sbom.spdx.json > /dev/null || (echo "Invalid SPDX JSON" && exit 1)
 
-    
-
     - name: Upload build metadata and SBOM
       uses: actions/upload-artifact@v4
       with:
@@ -132,8 +146,7 @@ jobs:
           build/sbom.spdx.json
           build/firmware.sha256
           build/zephyr/zephyr.elf
-
-    
+          build/test_log.json
 
     - name: Display Traceability Info in Logs
       run: |
