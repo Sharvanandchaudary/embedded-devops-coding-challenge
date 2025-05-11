@@ -17,7 +17,7 @@ Memory region         Used Size  Region Size  %age Used
 Generating files from /home/runner/work/CI_CD/CI_CD/build/zephyr/zephyr.elf for board: qemu_cortex_m3
 [INFO] Build completed successfully.
 
-[![Build Log Screenshot](images/build-status.png)](images/build-status.png)
+
 
 https://github.com/Sharvanandchaudary/CI_CD/blob/main/images/build-status.png
 ---
@@ -29,8 +29,7 @@ Run echo "[INFO] Exporting Software Bill of Materials (SBOM)..."
 [INFO] SBOM exported successfully to build/sbom.spdx.json
 
 
-![SBOM Output](images/SBOM.png)  
-[🔗 View full image](images/SBOM.png)
+https://github.com/Sharvanandchaudary/CI_CD/blob/main/images/SBOM.png?raw=true
 
 ---
 
