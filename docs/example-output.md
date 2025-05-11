@@ -19,7 +19,7 @@ Generating files from /home/runner/work/CI_CD/CI_CD/build/zephyr/zephyr.elf for 
 
 [![Build Log Screenshot](images/build-status.png)](images/build-status.png)
 
-
+https://github.com/Sharvanandchaudary/CI_CD/blob/main/images/build-status.png
 ---
 
 ### 🧬 SBOM Export Log
