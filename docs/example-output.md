@@ -39,8 +39,7 @@ https://github.com/Sharvanandchaudary/CI_CD/blob/main/images/SBOM.png?raw=true
 d219f27f2342fa46cced39758eb530ef45c83e7b1692067078015d5ba5096adf  build/zephyr/zephyr.elf
 
 
-![Hashing Artifact](images/hashing-artifact.png)  
-[🔗 View full image](images/hashing-artifact.png)
+https://github.com/Sharvanandchaudary/CI_CD/blob/main/images/hashing-artifact.png?raw=true
 
 ---
 
