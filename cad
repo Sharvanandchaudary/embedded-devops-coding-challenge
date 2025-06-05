@@ -1,0 +1,153 @@
+name: Cadence Cloud Dev Environment Deployment Flow
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'CustomerVPC/terraform/config/envs/non-prod/**'
+ 
+  workflow_dispatch:
+
+jobs:
+ 
+  checks:
+    runs-on: gh-runner-k8-oncloud-iac-test
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.token }}
+   
+    - name: Checkout the files
+      uses: actions/checkout@v3
+      with:
+        repository: IT/OnCloud_IaC_Github_Actions
+        path: ./OnCloud_IaC_Github_Actions
+        token: ${{ secrets.token }}
+  
+    - name: Setup Git Credentials
+      uses: ./OnCloud_IaC_Github_Actions/.github/actions/setup-git-credentials
+      with:
+        credentials: ${{ secrets.GIT_CREDENTIALS }}
+
+    - name: Get changed files
+      id: files
+      uses: ./OnCloud_IaC_Github_Actions/.github/actions/gh-action-get-changed-files-master
+      with:          
+        token: ${{ secrets.token }}
+   
+    - name: dev1-5 files wered added
+      if: ${{ contains(steps.files.outputs.added, 'dev-') }}
+      run: |
+        echo "chdir=$(echo "${{ steps.files.outputs.added }} " | grep -o 'dev-[0-9]**/' | xargs basename )" >> $GITHUB_ENV
+        
+    - name:  dev1-5 files was modified   
+      if: ${{ contains(steps.files.outputs.modified, 'dev-') }} 
+      run: |
+        echo "chdir=$(echo "${{ steps.files.outputs.modified }} " | grep -o 'dev-[0-9]**/' | xargs basename )" >> $GITHUB_ENV
+
+    - name: Configure OpenStack Credentials
+      env:
+        OS_AUTH_URL: ${{ secrets.OpenStack_OS_AUTH_URL }}
+        OS_USERNAME: ${{ secrets.OpenStack_USERNAME_SECRET }} 
+        OS_PASSWORD: ${{ steps.OpenStack_OS_PASSWORD }}
+        OS_USER_DOMAIN_NAME: ${{ steps.OpenStack_OS_USER_DOMAIN_NAME }}
+        OS_PROJECT_NAME: ${{ steps.OpenStack_OS_PROJECT_NAME }}
+
+    - name: Setup Terraform
+      uses: ./OnCloud_IaC_Github_Actions/.github/actions/setup-terraform-main
+      with:
+        terraform_version: 1.5.7
+
+    - name: Terragrunt Plan
+      run: /gh-runner/bin/terragrunt --terragrunt-tfpath ${{ env.TERRAFORM_CLI_PATH }}/terraform-bin plan
+      working-directory: ${{ github.workspace }}/CustomerVPC/terraform/config/envs/non-prod/${{ env.chdir }}
+
+    - name: Terragrunt Apply
+      if: success() # Only run this step if the plan step was successful
+      run: /gh-runner/bin/terragrunt --terragrunt-tfpath ${{ env.TERRAFORM_CLI_PATH }}/terraform-bin apply -auto-approve
+      working-directory: ${{ github.workspace }}/CustomerVPC/terraform/config/envs/non-prod/${{ env.chdir }}
+
+    - name: Terragrunt Destroy
+      if: ${{ failure() || contains(steps.files.outputs.added, 'delete_chamber')  || contains(steps.files.outputs.modified, 'delete_chamber') }} 
+      run: /gh-runner/bin/terragrunt --terragrunt-tfpath ${{ env.TERRAFORM_CLI_PATH }}/terraform-bin destroy -auto-approve
+      working-directory: ${{ github.workspace }}/CustomerVPC/terraform/config/envs/non-prod/${{ env.chdir }}
+-------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+  name: Cadence Cloud Dev Environment Deployment Flow
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'CustomerVPC/terraform/config/envs/non-prod/qa/**'
+ 
+  workflow_dispatch:
+
+jobs:
+ 
+  checks:
+    runs-on: gh-runner-k8-oncloud-iac-test
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.token }}
+   
+    - name: Checkout the files
+      uses: actions/checkout@v3
+      with:
+        repository: IT/OnCloud_IaC_Github_Actions
+        path: ./OnCloud_IaC_Github_Actions
+        token: ${{ secrets.token }}
+  
+    - name: Setup Git Credentials
+      uses: ./OnCloud_IaC_Github_Actions/.github/actions/setup-git-credentials
+      with:
+        credentials: ${{ secrets.GIT_CREDENTIALS }}
+
+    - name: Get changed files
+      id: files
+      uses: ./OnCloud_IaC_Github_Actions/.github/actions/gh-action-get-changed-files-master
+      with:          
+        token: ${{ secrets.token }}
+   
+    - name: test files wered added
+      if: ${{ contains(steps.files.outputs.added, 'test-') }}
+      run: |
+        echo "chdir=$(echo "${{ steps.files.outputs.added }} " | grep -o 'test-[0-9]**/' | xargs basename )" >> $GITHUB_ENV
+        
+    - name:  test files was modified   
+      if: ${{ contains(steps.files.outputs.modified, 'test-) }} 
+      run: |
+        echo "chdir=$(echo "${{ steps.files.outputs.modified }} " | grep -o 'test-[0-9]**/' | xargs basename )" >> $GITHUB_ENV
+
+    - name: Configure OpenStack Credentials
+      env:
+        OS_AUTH_URL: ${{ secrets.OpenStack_OS_AUTH_URL }}
+        OS_USERNAME: ${{ secrets.OpenStack_USERNAME_SECRET }} 
+        OS_PASSWORD: ${{ steps.OpenStack_OS_PASSWORD }}
+        OS_USER_DOMAIN_NAME: ${{ steps.OpenStack_OS_USER_DOMAIN_NAME }}
+        OS_PROJECT_NAME: ${{ steps.OpenStack_OS_PROJECT_NAME }}
+
+    - name: Setup Terraform
+      uses: ./OnCloud_IaC_Github_Actions/.github/actions/setup-terraform-main
+      with:
+        terraform_version: 1.5.7
+
+    - name: Terragrunt Plan
+      run: /gh-runner/bin/terragrunt --terragrunt-tfpath ${{ env.TERRAFORM_CLI_PATH }}/terraform-bin plan
+      working-directory: ${{ github.workspace }}/CustomerVPC/terraform/config/envs/non-prod/qa/${{ env.chdir }}
+
+    - name: Terragrunt Apply
+      if: success() # Only run this step if the plan step was successful
+      run: /gh-runner/bin/terragrunt --terragrunt-tfpath ${{ env.TERRAFORM_CLI_PATH }}/terraform-bin apply -auto-approve
+      working-directory: ${{ github.workspace }}/CustomerVPC/terraform/config/envs/non-prod/qa/${{ env.chdir }}
+
+    - name: Terragrunt Destroy
+      if: ${{ failure() || contains(steps.files.outputs.added, 'delete_chamber')  || contains(steps.files.outputs.modified, 'delete_chamber') }} 
+      run: /gh-runner/bin/terragrunt --terragrunt-tfpath ${{ env.TERRAFORM_CLI_PATH }}/terraform-bin destroy -auto-approve
+      working-directory: ${{ github.workspace }}/CustomerVPC/terraform/config/envs/non-prod/${{ env.chdir }}
