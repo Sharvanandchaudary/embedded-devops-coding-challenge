@@ -1,0 +1,181 @@
+
+variable "openstack_region"{
+  type        = string
+  description = "(Required) Openstack region"
+}
+
+
+variable "openstack_auth_url" {
+  type        = string
+  sensitive   = true
+  description = "(Required) The Auth Url of the Openstack."
+}
+
+variable "swift_credentials" {
+  type        = map
+  sensitive   = true
+  description = "(Required) The swift user credentials."
+}
+
+variable "opendj_credentials" {
+  type        = map
+  sensitive   = true
+  description = "(Required) The OpenDJ credentials."
+}
+
+variable "netapp_credentials" {
+  type        = map
+  sensitive   = true
+  description = "(Required) The NetApp credentials."
+}
+
+variable "sentinel_one_key" {
+  type        = string
+  sensitive   = true
+  description = "(Required) The SentineOne Key"
+}
+
+variable "nessus_key" {
+  type        = string
+  sensitive   = true
+  description = "(Required) The Nessus Key"
+}
+
+variable "chef_symmetric_key" {
+  type        = string
+  sensitive   = true
+  description = "(Required) The Chef symmetric Key"
+}
+
+variable "fsxn_credentials" {
+  type        = map
+  sensitive   = true
+  description = "(Required) The FSXN credentials."
+}
+
+variable "netapp_profile_name" {
+  type        = string
+  description = "(Required) Netapp Connection Profile Name"
+}
+
+variable "fsxn_profile_name" {
+  type        = string
+  description = "(Required) AWS FSxN Connection Profile Name"
+}
+
+variable "openstack_project_id" {
+  type        = string
+  description = "(Required) The project id of the swift user is belonged to."
+}
+
+variable "openstack_project_name" {
+  type        = string
+  description = "(Required) The project name of that swift user is belonged to."
+}
+
+variable "openstack_user_domain_name" {
+  type        = string
+  description = "(Optional) User Domain Name."
+  default     = "Default"
+}
+
+variable "openstack_project_domain_name" {
+  type        = string
+  description = "(Optional) Project Domain Name."
+  default     = "default"
+}
+
+variable "openstack_auth_version" {
+  type        = number
+  description = "(Optional) Openstack Auth Version."
+  default     = 3
+}
+
+variable "region" {
+  type        = string
+  description = "(Required) The name of the AWS Region."
+}
+
+variable "environment" {
+  type        = string
+  description = "(Required) The SandBox/QA/Stage."
+}
+variable "tags_env" {
+  type        = map(any)
+  description = "(Optional) Map of the Tags"
+  default     = {}
+}
+
+variable "tags_common" {
+  type        = map(any)
+  description = "(Optional) Map of the Tags"
+  default     = {}
+}
+
+variable "compute_common" {
+  type        = map(any)
+  description = "(Optional) Map of the values to use Common Compute Block"
+}
+
+variable "compute" {
+  type        = map(any)
+  description = "(Optional) Map of the values to use Env Compute Block"
+}
+
+#variable "s3_upload_details" {
+#  type = any
+#}
+
+variable "storage_common" {
+  type        = any
+  description = "(Optional) Map of the values to use Common Storage Block "
+}
+
+variable "storage" {
+  type        = any
+  description = "(Optional) Map of the values to use Env Storage Block "
+}
+
+
+variable "security_common" {
+  type        = any
+  description = "(Optional) Map of the values to use Common Security Block "
+}
+
+variable "security" {
+  type        = any
+  description = "(Optional) Map of the values to use Env Security Block "
+}
+
+
+variable "networking_common" {
+  type        = any
+  description = "(Optional) Map of the values to use Common Networking Block"
+}
+
+variable "networking" {
+  type        = any
+  description = "(Optional) Map of the values to use Env Networking Block"
+}
+
+variable "settings_common" {
+  type        = any
+  description = "(Optional) Map of the values to use Common Settings Block"
+}
+
+variable "settings" {
+  type        = any
+  description = "(Optional) Map of the values to use Env Settings Block"
+}
+
+variable "name_prefix" { type = string }
+
+variable "env_dir" {
+  type = string
+}
+
+variable "chef_secrets" {
+  type = map(string)
+  sensitive   = true
+  description = "chef secrets"
+}
