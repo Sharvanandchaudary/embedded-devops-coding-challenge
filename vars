@@ -1,0 +1,53 @@
+{
+  "tags": {
+    "hyperscaler": "rhops"
+  },
+  "environment": "dev-1",
+  "name_prefix": "dn01",
+  "openstack_project_id": "dcfb102e7fc940c39c0c21c48d77d3cf",
+  "openstack_project_name": "cc-dev-oa-chm01-prj",
+  "release": "v2.0.5",
+  "netapp_version": "2.0.1",
+  "TF_VERSION": "1.9.7",
+  "settings": {
+    "hybrid_deployment": false,
+    "aws_chamber_tfstate_key": "cloud30-chambers/config/envs/non-prod/dev/dc02/terraform.tfstate",
+    "cc_chamber_json_s3_location": "s3://cadencecloud-mirrors-eu-central-1/projects/orchestrator/c30-cust/to02/awscbtb02slurm01/to02.json",
+    "cc_hub_tfstate_key": "cloud30-openstack-shr/config/envs/non-prod/dev/dev-1/dn00/terraform.tfstate",
+    "drm_cidr": "10.154.86.0/23",
+    "aws_admin_cidr": "10.154.64.0/23",
+    "aws_chamber_cidr": "10.154.66.0/23",
+    "openstack_mgmt_ip": "10.107.178.0/24"
+  },
+  "compute": {
+    "compute_details": {
+      "node_details": {
+        "ls01": {
+          "image": "3417202f-e81f-46a2-aaa5-f6c8fb2d9440",
+          "additional_volumes" : null
+        },
+        "haproxy": {
+          "image": "3417202f-e81f-46a2-aaa5-f6c8fb2d9440",
+          "additional_volumes" : null
+        }
+      }
+    }
+  },
+  "storage": {  "volume_type":""
+  },
+  "networking": {
+    "provider_vlan" : "1132",
+    "provider_cidr" : "10.107.132.0/23",
+    "customer_vpc": {
+      "cidr_block": "10.154.130.0/23"
+    },
+    "customer_eni_mapping": {
+      "haproxy-eni":{
+        "ip" : {
+          "public_ip"  : "10.107.132.52",
+          "hostnum" : 52
+        }
+      }
+    }
+  }
+}
