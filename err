@@ -1,0 +1,35 @@
+8:31.771 STDERR [.] terraform.exe: ╷
+18:28:31.772 STDERR [.] terraform.exe: │ Error: Failed to download module
+18:28:31.772 STDERR [.] terraform.exe: │
+18:28:31.773 STDERR [.] terraform.exe: │   on 10-main.tf line 1:
+18:28:31.773 STDERR [.] terraform.exe: │    1: module "aws_utils" {
+18:28:31.773 STDERR [.] terraform.exe: │
+18:28:31.773 STDERR [.] terraform.exe: │ Could not download module "aws_utils" (10-main.tf:1) source code from
+18:28:31.773 STDERR [.] terraform.exe: │ "git::https://github.cadence.com/IT/terraform-aws-utils.git?ref=1.3.4":        
+18:28:31.773 STDERR [.] terraform.exe: │ error downloading
+18:28:31.773 STDERR [.] terraform.exe: │ 'https://github.cadence.com/IT/terraform-aws-utils.git?ref=1.3.4':
+18:28:31.773 STDERR [.] terraform.exe: │ C:\Users\vsaravan\AppData\Local\Programs\Git\cmd\git.exe exited with 128:      
+18:28:31.773 STDERR [.] terraform.exe: │ Cloning into '.terraform\modules\aws_utils'...
+18:28:31.774 STDERR [.] terraform.exe: │ error: unable to write file
+18:28:31.774 STDERR [.] terraform.exe: │ C:/Users/vsaravan/terraform-cadencecld-openstack/CustomerVPC/terraform/config/envs/non-prod/qa/test-1/tn01/.terragrunt-cache/Iwi8p7MseTTwbzyhyELGXE_AwWs/VA3PJ6_NbE18hkpxgGxMPzEed4E/.terraform/modules/aws_utils/.git/objects/pack/pack-437e42e05bf390bbd86614cf7b72643009b03006.pack:
+18:28:31.774 STDERR [.] terraform.exe: │ No such file or directory
+18:28:31.774 STDERR [.] terraform.exe: │ fatal: unable to rename temporary '*.pack' file to
+18:28:31.774 STDERR [.] terraform.exe: │ 'C:/Users/vsaravan/terraform-cadencecld-openstack/CustomerVPC/terraform/config/envs/non-prod/qa/test-1/tn01/.terragrunt-cache/Iwi8p7MseTTwbzyhyELGXE_AwWs/VA3PJ6_NbE18hkpxgGxMPzEed4E/.terraform/modules/aws_utils/.git/objects/pack/pack-437e42e05bf390bbd86614cf7b72643009b03006.pack'
+18:28:31.775 STDERR [.] terraform.exe: │ fatal: fetch-pack: invalid index-pack output
+18:28:31.775 STDERR [.] terraform.exe: │
+18:28:31.775 STDERR [.] terraform.exe: ╵
+18:28:31.775 STDERR [.] terraform.exe:
+18:28:31.778 STDERR [.] terraform.exe: ╷
+18:28:31.778 STDERR [.] terraform.exe: │ Error: Failed to download module
+18:28:31.779 STDERR [.] terraform.exe: │
+18:28:31.779 STDERR [.] terraform.exe: │   on 10-main.tf line 7:
+18:28:31.779 STDERR [.] terraform.exe: │    7: module "deepmerge_tags" {
+18:28:31.779 STDERR [.] terraform.exe: │
+18:28:31.779 STDERR [.] terraform.exe: │ Could not download module "deepmerge_tags" (10-main.tf:7) source code from     
+18:28:31.779 STDERR [.] terraform.exe: │ "git::https://github.cadence.com/IT/terraform-null-deepmerge.git?ref=v0.1.5":  
+18:28:31.780 STDERR [.] terraform.exe: │ error downloading
+18:28:31.780 STDERR [.] terraform.exe: │ 'https://github.cadence.com/IT/terraform-null-deepmerge.git?ref=v0.1.5':       
+18:28:31.780 STDERR [.] terraform.exe: │ C:\Users\vsaravan\AppData\Local\Programs\Git\cmd\git.exe exited with 128:      
+18:28:31.781 STDERR [.] terraform.exe: │ Cloning into '.terraform\modules\deepmerge_tags'...
+18:28:31.781 STDERR [.] terraform.exe: │ error: unable to write file
+18:28:31.781 STDERR [.] terraform.exe: │ C:/Users/vsaravan/terraform-cadencecld-openstack/CustomerVPC/terraform/config/envs/non-prod/qa/test-1/tn01/.terragrunt-cache/Iwi8p7MseTTwbzyhyELGXE_AwWs/VA3PJ6_NbE18hkpxgGxMPzEed4E/.terraform/
