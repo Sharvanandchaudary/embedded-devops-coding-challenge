@@ -1,0 +1,43 @@
+name: Cloud3 Test Automation Workflow
+
+on:
+  workflow_dispatch:  # allows you to run it manually from GitHub Actions tab
+  workflow_call:      # allows other workflows to call this one
+  push:               # optionally run on push to main branch
+    branches:
+      - main
+      - master
+      - release/*     # adjust as needed
+
+jobs:
+  run_cloud3_tests:
+    name: Run Cloud3 Test Automation
+    runs-on: cloud30-docker-mvp  # same runner you already use
+    
+    steps:
+      # Checkout test automation repo
+      - name: Checkout Test Automation Repo
+        uses: actions/checkout@v3
+        with:
+          repository: IT/cloud3testautomation
+          path: ./cloud3testautomation
+          token: ${{ secrets.REPO_TOKEN }}
+
+      # Setup Python environment
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'  # adjust to match your scripts
+
+      # Install extra tools if needed
+      - name: Install Extra Tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq unzip curl  # add any other tools your tests require
+
+      # Run test automation script
+      - name: Run Cloud3 Test Automation
+        run: |
+          cd cloud3testautomation
+          chmod +x cloud3testautomationlauncher.sh
+          ./cloud3testautomationlauncher.sh
