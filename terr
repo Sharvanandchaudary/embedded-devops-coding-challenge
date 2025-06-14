@@ -33,4 +33,3 @@ Github:
 create a personal access token to configure with github and copy the key and save the key
 
 From your wsl ubuntu you need to go to your project and able to run the terraform commands by going through all the above steps
-
