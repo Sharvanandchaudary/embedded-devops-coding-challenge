@@ -1,35 +1,74 @@
-Preparing the Environment to run terraform locally
-Install terraform 1.9.7
-Install terragrunt
-Wsl version 1 should be configured 
-Install wsl --set-default-version 1
-      wsl --install -d Ubuntu
-Install sops
+Preparing the environment to run Terraform locally involves configuring WSL, installing required tools, and setting up authentication.
 
-Create a file in you wsl home:
+To begin, configure WSL version 1 using the following:
 
-$HOME/.terraformrc
+wsl --set-default-version 1  wsl --install -d Ubuntu
+
+After installation, restart the system if prompted.
+
+Install Terraform version 1.9.7 by downloading and placing it in the system path:
+
+wget https://releases.hashicorp.com/terraform/1.9.7/terraform_1.9.7_linux_amd64.zip  unzip terraform_1.9.7_linux_amd64.zip  sudo mv terraform /usr/local/bin/  terraform -version
+
+Install Terragrunt using the release binary:
+
+wget https://github.com/gruntwork-io/terragrunt/releases/download/v0.56.3/terragrunt_linux_amd64  chmod +x terragrunt_linux_amd64  sudo mv terragrunt_linux_amd64 /usr/local/bin/  terragrunt -version
+
+Install SOPS for secrets management:
+
+sudo apt update  sudo apt install -y gnupg  wget https://github.com/getsops/sops/releases/download/v3.8.1/sops-v3.8.1.linux  chmod +x sops-v3.8.1.linux  sudo mv sops-v3.8.1.linux /usr/local/bin/  sops --version
+
+Create a .terraformrc file in your WSL home directory to configure the provider mirror:
+
+nano ~/.terraformrc
+
+Insert the following content:
+
 provider_installation {
-  network_mirror {
-    url    = "https://prod.openstack.cadence.com:13808/v1/AUTH_b4e7f5d800c84ddbaf457388752738c2/terraform-providers/"
-    include = ["registry.terraform.io/NetApp/*"]
-  }
- 
-  direct {
-    exclude = ["registry.terraform.io/NetApp/*"]
-  }
- 
+network_mirror {
+url = "https://prod.openstack.cadence.com:13808/v1/AUTH_b4e7f5d800c84ddbaf457388752738c2/terraform-providers/"
+include = ["registry.terraform.io/NetApp/"]
+}
+direct {
+exclude = ["registry.terraform.io/NetApp/"]
+}
 }
 
-Authentication Purposes 
-https://statics.teams.cdn.office.net/evergreen-assets/safelinks/1/atp-safelinks.html
-Go through this wiki for setting up cli
-After this configure with your credentials
-you should be able to run openstack commands
+Save and exit the file.
 
-To run Terraform commands:
-Mentioned profile AWS keys are required for exporting 
-Github:
-create a personal access token to configure with github and copy the key and save the key
+Follow the internal wiki for setting up the OpenStack CLI using the safelinks-provided documentation. Authenticate with your credentials. Upon successful configuration, validate access by running:
 
-From your wsl ubuntu you need to go to your project and able to run the terraform commands by going through all the above steps
+openstack server list
+
+Configure AWS CLI with required credentials:
+
+aws configure
+
+To use a named profile, export it using:
+
+export AWS_PROFILE=your_profile_name
+
+Create a GitHub personal access token from your GitHub account. Authenticate GitHub CLI using:
+
+gh auth login
+
+Or set the token directly:
+
+export GH_TOKEN=your_pat_token_here
+
+Navigate to your project directory in WSL and execute the necessary Terraform commands:
+
+cd ~/your-project-path  terraform init  terraform plan  terraform apply
+
+Or for Terragrunt-based projects:
+
+terragrunt init  terragrunt plan  terragrunt apply
+
+After completing all the above steps, the local environment will be ready to securely run Terraform and Terragrunt workflows in WSL Ubuntu.
+
+
+
+
+
+
+
