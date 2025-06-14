@@ -1,0 +1,36 @@
+Preparing the Environment to run terraform locally
+Install terraform 1.9.7
+Install terragrunt
+Wsl version 1 should be configured 
+Install wsl --set-default-version 1
+      wsl --install -d Ubuntu
+Install sops
+
+Create a file in you wsl home:
+
+$HOME/.terraformrc
+provider_installation {
+  network_mirror {
+    url    = "https://prod.openstack.cadence.com:13808/v1/AUTH_b4e7f5d800c84ddbaf457388752738c2/terraform-providers/"
+    include = ["registry.terraform.io/NetApp/*"]
+  }
+ 
+  direct {
+    exclude = ["registry.terraform.io/NetApp/*"]
+  }
+ 
+}
+
+Authentication Purposes 
+https://statics.teams.cdn.office.net/evergreen-assets/safelinks/1/atp-safelinks.html
+Go through this wiki for setting up cli
+After this configure with your credentials
+you should be able to run openstack commands
+
+To run Terraform commands:
+Mentioned profile AWS keys are required for exporting 
+Github:
+create a personal access token to configure with github and copy the key and save the key
+
+From your wsl ubuntu you need to go to your project and able to run the terraform commands by going through all the above steps
+
