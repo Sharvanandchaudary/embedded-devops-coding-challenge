@@ -1,3 +1,7 @@
+
+cp /mnt/c/Users/$(powershell.exe -NoProfile -Command '$Env:USERNAME' | tr -d '\r')/Downloads/project-openrc.sh ~/
+
+
 {
   "tags": {
     "hyperscaler": "rhops"
