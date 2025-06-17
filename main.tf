@@ -86,3 +86,70 @@ inputs = {
   compute_image            = "a3b8b3b7-0fe0-402c-9e35-8999dc07e564"
   volume_size              = 100
 }
+
+
+
+
+=================================================================================================
+variable "worker_count"        { type = number }
+variable "hostnum_start"       { type = number }
+
+variable "environment"         { type = string }
+variable "name_prefix"         { type = string }
+variable "release"             { type = string }
+variable "openstack_project_id"   { type = string }
+variable "openstack_project_name" { type = string }
+
+variable "settings" {
+  type = object({
+    hybrid_deployment           = bool
+    aws_chamber_tfstate_key     = string
+    cc_chamber_json_s3_location = string
+    cc_hub_tfstate_key          = string
+    drm_cidr                    = string
+    aws_admin_cidr              = string
+    aws_chamber_cidr            = string
+    openstack_mgmt_ip           = string
+  })
+}
+
+variable "provider_vlan"        { type = string }
+variable "provider_cidr"        { type = string }
+variable "baremetal_network_id" { type = string }
+variable "baremetal_subnet_id"  { type = string }
+
+variable "compute_image"        { type = string }
+variable "volume_size"          { type = number }
+
+locals {
+  # Generate worker info list based on count
+  workers = [
+    for idx in range(var.worker_count) : {
+      name        = "${var.name_prefix}-worker-${idx + 1}"
+      hostnum     = var.hostnum_start + idx
+      image       = var.compute_image
+      volume_size = var.volume_size
+    }
+  ]
+}
+
+# Example of exporting the parsed worker list
+output "workers" {
+  value = local.workers
+}
+
+# Forward settings as output
+output "settings" {
+  value = var.settings
+}
+
+# Network details
+output "networking" {
+  value = {
+    vlan      = var.provider_vlan
+    cidr      = var.provider_cidr
+    net_id    = var.baremetal_network_id
+    subnet_id = var.baremetal_subnet_id
+  }
+}
+
