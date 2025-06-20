@@ -1,0 +1,77 @@
+0:11:41.056 ERROR  Error: Unsupported attribute
+00:11:41.057 ERROR    on ../../../../../../terragrunt.hcl line 100, in generate "provider":
+00:11:41.058 ERROR   100:       hostname       = "${local.config_map.networking.customer_eni_mapping.haproxy-eni.ip.public_ip}"
+00:11:41.059 ERROR  This object does not have an attribute named "haproxy-eni".
+00:11:41.059 ERROR  Error: Unsupported attribute
+00:11:41.060 ERROR    on ../../../../../../terragrunt.hcl line 101, in generate "provider":
+00:11:41.060 ERROR   101: #      hostname       = "cidrhost(templatestring(${local.config_map.networking.customer_eni_mapping.haproxy-eni.ip.public_ip},local.config_map.networking.provider_cidr), eni_info.ip.hostnum)"
+00:11:41.061 ERROR  This object does not have an attribute named "haproxy-eni".
+00:11:41.061 ERROR  Error: Unsuitable value type
+00:11:41.062 ERROR    on ../../../../../../terragrunt.hcl line 37, in generate "provider":
+00:11:41.062 ERROR    36:   contents  = <<EOF
+00:11:41.063 ERROR    37: terraform {
+00:11:41.063 ERROR    38:   required_version =  "${local.config_map.TF_VERSION}"
+00:11:41.063 ERROR    40:   required_providers {
+00:11:41.063 ERROR    41:     aws = {
+00:11:41.064 ERROR    42:       source  = "hashicorp/aws"
+00:11:41.064 ERROR    43:       version = "5.21.0"
+00:11:41.065 ERROR    44:     }
+00:11:41.065 ERROR    46:     openstack = {
+00:11:41.065 ERROR    47:       source = "terraform-provider-openstack/openstack"
+00:11:41.065 ERROR    48:       version = "2.0.0"
+00:11:41.066 ERROR    49:     }
+00:11:41.066 ERROR    51:     null = {
+00:11:41.066 ERROR    52:       source  = "hashicorp/null"
+00:11:41.066 ERROR    53:       version = "3.2.1"
+00:11:41.067 ERROR    54:     }
+00:11:41.067 ERROR    55:     local = {
+00:11:41.067 ERROR    56:       source  = "hashicorp/local"
+00:11:41.067 ERROR    57:       version = "2.4.0"
+00:11:41.068 ERROR    58:     }
+00:11:41.068 ERROR    60:     netapp-ontap = {
+00:11:41.068 ERROR    61:       source = "NetApp/netapp-ontap"
+00:11:41.069 ERROR    62:       version = "${local.config_map.netapp_version}"
+00:11:41.069 ERROR    63:     }
+00:11:41.069 ERROR    64:   }
+00:11:41.069 ERROR    65: }
+00:11:41.070 ERROR    68: provider "openstack" {
+00:11:41.070 ERROR    69:   user_name   = "${local.config_map.openstack.username}"
+00:11:41.070 ERROR    70:   tenant_id   = "${local.config_map.openstack_project_id}"
+00:11:41.070 ERROR    71:   password    = "${local.config_map.openstack.password}"
+00:11:41.070 ERROR    72:   auth_url    = "${local.config_map.openstack.openstack_auth_url}"
+00:11:41.071 ERROR    73:   region      = "${local.config_map.openstack_region}"
+00:11:41.071 ERROR    74: }
+00:11:41.071 ERROR    76: provider "aws" {
+00:11:41.071 ERROR    77:   region = "${local.config_map.region}"
+00:11:41.072 ERROR    78:   access_key = "${local.config_map.aws_key.access}"
+00:11:41.072 ERROR    79:   secret_key = "${local.config_map.aws_key.secret}"
+00:11:41.072 ERROR    81:   default_tags {
+00:11:41.072 ERROR    82:     tags = {
+00:11:41.073 ERROR    83:        ${local.final_tags}
+00:11:41.073 ERROR    84:     }
+00:11:41.073 ERROR    85:   }
+00:11:41.074 ERROR    87: }
+00:11:41.074 ERROR    89: provider "netapp-ontap" {
+00:11:41.074 ERROR    90:   connection_profiles = [
+00:11:41.075 ERROR    91:     {
+00:11:41.075 ERROR    92:       name           = "${local.config_map.netapp_credentials.profile_name}"
+00:11:41.076 ERROR    93:       hostname       = "${local.config_map.netapp_credentials.hostname}"
+00:11:41.076 ERROR    94:       username       = "${local.config_map.netapp_credentials.username}"
+00:11:41.077 ERROR    95:       password       = "${local.config_map.netapp_credentials.password}"
+00:11:41.077 ERROR    96:       validate_certs = false
+00:11:41.077 ERROR    97:     },
+00:11:41.077 ERROR    98:     {
+00:11:41.077 ERROR    99:       name           = "${local.config_map.fsxn_credentials.profile_name}"
+00:11:41.078 ERROR   100:       hostname       = "${local.config_map.networking.customer_eni_mapping.haproxy-eni.ip.public_ip}"
+00:11:41.078 ERROR   101: #      hostname       = "cidrhost(templatestring(${local.config_map.networking.customer_eni_mapping.haproxy-eni.ip.public_ip},local.config_map.networking.provider_cidr), eni_info.ip.hostnum)"
+00:11:41.078 ERROR   102:       username       = "${local.config_map.fsxn_credentials.username}"
+00:11:41.078 ERROR   103:       password       = "${local.config_map.fsxn_credentials.password}"
+00:11:41.078 ERROR   104:       validate_certs = false
+00:11:41.079 ERROR   105:     }
+00:11:41.079 ERROR   106:   ]
+00:11:41.079 ERROR   107: }
+00:11:41.079 ERROR   109: EOF
+00:11:41.079 ERROR  Unsuitable value: value must be known
+00:11:41.100 ERROR  error occurred:
+
+* ../../../../../../terragrunt.hcl:100,75-87: Unsupported attribute; This object does not have an attribute named "haproxy-eni"., and 2 other diagnostic(s)
