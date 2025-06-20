@@ -1,0 +1,31 @@
+locals {
+  baremetal_nodes = [for node in var.compute.compute_details.node_details : node if node.flavor == "baremetal" && can(regex("^wrk", node.name))]
+}
+
+resource "openstack_compute_instance_v2" "baremetal_nodes" {
+  for_each        = { for node in local.baremetal_nodes : node.name => node }
+  name            = each.value.name
+  image_name      = var.compute.image
+  flavor_name     = each.value.flavor
+  key_pair        = var.compute.key_pair
+  availability_zone = each.value.availability_zone
+  security_groups = var.compute.security_groups
+  user_data       = templatefile("${path.module}/templates/user_data.sh.tpl", { hostname = each.value.name })
+
+  network {
+    port = openstack_networking_port_v2.bm_ports[each.value.name].id
+  }
+
+  depends_on = [openstack_networking_port_v2.bm_ports]
+}
+
+resource "openstack_networking_port_v2" "bm_ports" {
+  for_each       = { for node in local.baremetal_nodes : node.name => node if contains(keys(var.compute.customer_eni_mapping), node.name) }
+  name           = "${each.value.name}-port"
+  network_id     = var.compute.customer_eni_mapping[each.value.name].network_id
+  admin_state_up = true
+  fixed_ip {
+    subnet_id  = var.compute.customer_eni_mapping[each.value.name].subnet_id
+    ip_address = var.compute.customer_eni_mapping[each.value.name].ip
+  }
+}
