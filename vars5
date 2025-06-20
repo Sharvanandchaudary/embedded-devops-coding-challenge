@@ -985,3 +985,134 @@
         }
     }
 }
+
+
+------------------------------------------------------------------------------------------------------------------------
+{
+  "tags": {
+    "hyperscaler": "rhops"
+  },
+  "environment": "test-2",
+  "name_prefix": "to02",
+  "openstack_project_id": "59c2d928ef6046069a0175d74dc3dc23",
+  "openstack_project_name": "cc-test-oa-chm01-prj",
+  "release": "main",
+  "netapp_version": "2.0.1",
+  "TF_VERSION": "1.9.7",
+  "settings": {
+    "hybrid_deployment": false,
+    "aws_chamber_tfstate_key": "cloud30-chambers/config/envs/non-prod/dev/dc02/terraform.tfstate",
+    "cc_chamber_json_s3_location": "s3://cadencecloud-mirrors-eu-central-1/projects/orchestrator/c30-cust/to02/awscbtb02slurm01/to02.json",
+    "cc_hub_tfstate_key": "cloud30-openstack-shr/config/envs/non-prod/qa/test-2/to00/terraform.tfstate",
+    "drm_cidr": "10.3.120.0/23",
+    "aws_admin_cidr": "10.3.64.0/27",
+    "aws_chamber_cidr": "10.3.66.0/23",
+    "openstack_mgmt_ip": "10.107.178.0/24"
+  },
+  "compute": {
+    "compute_details": {
+      "node_details": {
+        "ls01": {
+          "image": "dbe0c761-622b-4bda-bf89-720255e881fa",
+          "additional_volumes" : null
+        },
+        "haproxy": {
+          "image": "dbe0c761-622b-4bda-bf89-720255e881fa",
+          "additional_volumes" : null
+        },
+        "wrk01": {
+          "name": "wrk01",
+          "instance_type": "m1.large",
+          "image": "dbe0c761-622b-4bda-bf89-720255e881fa",
+          "iam_role": "",
+          "volume_size": 70,
+          "additional_volumes": "wrk01_vol",
+          "eni_name": "wrk01-eni"
+        },
+        "wrk02": {
+          "name": "wrk02",
+          "instance_type": "m1.large",
+          "image": "dbe0c761-622b-4bda-bf89-720255e881fa",
+          "iam_role": "",
+          "volume_size": 70,
+          "additional_volumes" : "wrk02_vol",
+          "eni_name": "wrk02-eni"
+        }
+      }
+    }
+  },
+  "storage": {
+    "volume_type":"",
+    "ebs_volume_details": {
+      "wrk01_vol": {
+        "scratch": {
+          "disk": "scratch",
+          "volume_size": 50,
+          "device": "/dev/xvdc"
+        },
+        "tmp": {
+          "disk": "tmp",
+          "volume_size": 50,
+          "device": "/dev/xvdd"
+        }
+      },
+      "wrk02_vol": {
+        "scratch": {
+          "disk": "scratch",
+          "volume_size": 50,
+          "device": "/dev/xvdc"
+        },
+        "tmp": {
+          "disk": "tmp",
+          "volume_size": 50,
+          "device": "/dev/xvdd"
+        }
+      }
+    }
+  },
+  "networking": {
+    "provider_vlan" : "1170",
+    "provider_cidr" : "10.107.170.0/23",
+    "customer_vpc": {
+      "cidr_block": "10.154.182.0/23"
+    },
+    "customer_eni_mapping": {
+      "haproxy-eni":{
+        "ip" : {
+          "public_ip"  : "10.107.170.52",
+          "hostnum" : 52
+        }
+      },
+      "wrk01-eni": {
+        "name": "wrk01-eni",
+        "subnet": "ComputeSubnet2a",
+        "security_groups": [
+          "Chm-AccessFromUtlSvr",
+          "PrivateSG",
+          "CLA-SG",
+          "Platform-SG"
+        ],
+        "ip": {
+          "private_ip" : "$${cc_chamber_internal_cidr}",
+          "public_ip"  : "$${cc_chamber_cidr}",
+          "hostnum" : 101
+        }
+      },
+      "wrk02-eni": {
+        "name": "wrk02-eni",
+        "subnet": "ComputeSubnet2a",
+        "security_groups": [
+          "Chm-AccessFromUtlSvr",
+          "PrivateSG",
+          "CLA-SG",
+          "Platform-SG"
+        ],
+        "ip": {
+          "private_ip" : "$${cc_chamber_internal_cidr}",
+          "public_ip"  : "$${cc_chamber_cidr}",
+          "hostnum" : 102
+        }
+      }
+    }
+  }
+}
