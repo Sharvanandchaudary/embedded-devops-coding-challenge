@@ -29,3 +29,12 @@ resource "openstack_networking_port_v2" "bm_ports" {
     ip_address = var.compute.customer_eni_mapping[each.value.name].ip
   }
 }
+
+
+
+mkdir modules/baremetal_only/templates
+
+cat <<EOF > modules/baremetal_only/templates/user_data.sh.tpl
+#!/bin/bash
+hostnamectl set-hostname ${hostname}
+EOF
