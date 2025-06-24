@@ -1,0 +1,59 @@
+terraform {
+  required_providers {
+    openstack = {
+      source  = "terraform-provider-openstack/openstack"
+      version = "~> 1.52.1"
+    }
+  }
+}
+
+provider "openstack" {
+  # These variables should be set via environment or tfvars
+  auth_url    = var.os_auth_url
+  tenant_name = var.os_project_name
+  user_name   = var.os_username
+  password    = var.os_password
+  region      = var.os_region
+  domain_name = var.os_user_domain_name
+}
+
+variable "node_details" {
+  type = map(object({
+    name            = string
+    instance_type   = string
+    image           = string
+    volume_size     = number
+    eni_name        = string
+    additional_volumes = any
+  }))
+}
+
+# Example: Provision all nodes from node_details
+resource "openstack_compute_instance_v2" "baremetal_nodes" {
+  for_each      = var.node_details
+
+  name          = each.value.name
+  flavor_name   = each.value.instance_type
+  image_id      = each.value.image
+
+  # Add networking, key_pair, and other required attributes as needed
+  # Example:
+  # key_pair      = var.key_pair
+  # network {
+  #   uuid = var.network_id
+  # }
+  # block_device {
+  #   uuid                  = each.value.image
+  #   source_type           = "image"
+  #   destination_type      = "volume"
+  #   volume_size           = each.value.volume_size
+  #   boot_index            = 0
+  #   delete_on_termination = true
+  # }
+}
+
+# Optionally, output the instance names and IPs
+output "baremetal_instance_names" {
+  value = [for node in openstack_compute_instance_v2.baremetal_nodes : node.name]
+}
+ 
