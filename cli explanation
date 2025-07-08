@@ -1,0 +1,164 @@
+ere is a clear and structured breakdown of your GitHub Actions workflow Terragrunt CLI flow, which automates chamber deployment using Terragrunt across AWS and OpenStack:
+
+🧭 Workflow Overview
+Trigger:
+The workflow runs on:
+
+Push to the Release_dev branch with changes in paths like CustomerVPC/terraform/config/envs/*prod/*/**
+
+Manual trigger via workflow_dispatch
+
+Main Purpose:
+Automate multi-cloud (AWS + OpenStack) chamber deployment using Terragrunt, including plan/apply/destroy logic and conditional reboots of OpenStack VMs.
+
+🧱 Workflow Structure
+👣 1. Job: pre_chamber_deployment
+Runner: cloud30-docker-mvp
+
+Outputs:
+
+rname → Deployment type (e.g. mvp, mvp-cc)
+
+cc_chamber_chdir → Relative path of chamber for OpenStack
+
+cc_changed_files → Changed files in CC chamber repo
+
+env_name → Translated environment (dev, test, prod)
+
+cc_id → Chamber ID
+
+📌 Key Steps:
+Checkout 3 repositories:
+
+Current repo (customer repo)
+
+IT/OnCloud_IaC_Github_Actions (common workflows)
+
+IT/terraform-cadencecld-openstack (OpenStack Infra code)
+
+Get changed files (CC chamber-specific):
+
+Extract file list using git diff (between last and current commit).
+
+Store in added env variable.
+
+Get changed files (AWS):
+
+Uses custom action gh-action-get-changed-files-master to extract added/modified file paths.
+
+Set directory path (for AWS & CC chambers):
+
+If add_chamber or delete_chamber found in path, extract chamber directory and set chdir or cc_chdir.
+
+Parse .tfvars.json file in chdir:
+
+Extract:
+
+Deployment type (e.g., mvp, mvp-cc)
+
+Chamber ID
+
+Environment: prod, non-prod
+
+Sets ccid and cc_chamber_id as outputs
+
+Set final environment name:
+
+Maps paths like prod/prod-1 → prod, qa → test, etc.
+
+🧊 2. Job: aws_chamber_deployment
+Runs only if: pre_chamber_deployment.outputs.rname is mvp or mvp-cc
+
+Outputs: del_chamber_path for AWS destroy
+
+📌 Key Steps:
+Checkout same 2 repos again (Customer + IaC repo).
+
+Get changed files using same method as above.
+
+Set AWS chamber directory chdir from add_chamber or delete_chamber.
+
+Configure AWS credentials.
+
+Setup Terraform.
+
+🧪 Terragrunt Operations:
+Plan: If add_chamber found.
+
+Apply: If plan successful and not a delete.
+
+Destroy: If delete_chamber is found and deployment type is mvp.
+
+💾 Output:
+If destroy was triggered, sets aws_del_chamber path.
+
+🧯 3. Job: openstack_chamber_deployment
+Runs only if: pre_chamber_deployment.outputs.rname == 'mvp-cc'
+
+Environment: Dynamically chosen (e.g., dev, prod) from env_name
+
+Env variables: Includes OS_* OpenStack credentials, cc_id, and TF CLI config file.
+
+📌 Key Steps:
+Checkout code (Customer + IaC + OpenStack).
+
+Setup Git, AWS creds, and Terraform.
+
+🧪 Terragrunt Operations:
+Plan: Only if add_chamber was detected in CC files.
+
+Apply (1st time): Conditional on success and if not a delete.
+
+⚠️ Reboot Logic:
+If first terragrunt apply fails:
+
+Gets OpenStack token from Keystone
+
+Retrieves VMs by name matching cc_id
+
+Sends HARD reboot to each VM
+
+Waits for all to reach ACTIVE state again
+
+Then retries terragrunt apply again
+
+🧨 Destroys:
+If delete_chamber found:
+
+Destroy OpenStack chamber
+
+Then destroy AWS chamber (only if aws_chamber_deployment had a path)
+
+📦 (Commented-out logic):
+Optionally deletes:
+
+S3 chamber config JSON files
+
+CloudWatch log group associated with the chamber
+
+✅ Summary Table
+Job	Role
+pre_chamber_deployment	Determines changes, extracts metadata, sets up outputs
+aws_chamber_deployment	Provisions or destroys AWS chamber (Terragrunt + Terraform)
+openstack_chamber_deployment	Provisions or destroys OpenStack chamber + handles reboots if apply fails
+
+📌 Noteworthy Features
+Multi-repo checkout & modular structure
+
+Dynamic secret injection via environment-specific OS_ keys
+
+Auto-recovery logic with VM reboot for OpenStack
+
+Smart directory inference from file changes (add_chamber, delete_chamber)
+
+Reusable shared GitHub Actions via OnCloud_IaC_Github_Actions
+
+Let me know if you'd like a visual workflow diagram or want this split into re-usable composite actions for simplicity.
+
+
+
+
+
+
+
+
