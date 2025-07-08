@@ -1,0 +1,541 @@
+# Best of Both: Terragrunt CLI Workflow (Optimized)
+# This workflow combines the sophisticated logic from terragrunt_cli_improved.yml 
+
+name: Terragrunt CLI Workflow (Optimized)
+
+on:
+  push:
+    branches:
+      - dev_cicd
+    paths:
+      - 'CustomerVPC/terraform/config/envs/non-prod/da/**'
+  workflow_dispatch:
+
+# Centralized configuration
+env:
+  TERRAFORM_VERSION: "1.9.7"
+  TERRAGRUNT_BINARY: "/gh-runner/bin/terragrunt"
+  AWS_DEFAULT_REGION: "us-west-2"
+  IaC_ACTIONS_PATH: "./OnCloud_IaC_Github_Actions"
+  OPENSTACK_REPO_PATH: "./terraform-cadencecld-openstack"
+
+
+
+jobs:
+  # =============================================================================
+  # JOB 1: ANALYZE CHANGES AND EXTRACT CONFIGURATION
+  # =============================================================================
+  analyze_deployment_changes:
+    name: "Analyze Deployment Changes"
+    runs-on: cloud30-docker-mvp
+    outputs:
+      deployment_type: ${{ steps.analyze.outputs.deployment_type }}
+      aws_working_directory: ${{ steps.analyze.outputs.aws_working_directory }}
+      openstack_working_directory: ${{ steps.analyze.outputs.openstack_working_directory }}
+      operation_type: ${{ steps.analyze.outputs.operation_type }}
+      environment_name: ${{ steps.analyze.outputs.environment_name }}
+      chamber_id: ${{ steps.analyze.outputs.chamber_id }}
+      should_deploy_aws: ${{ steps.analyze.outputs.should_deploy_aws }}
+      should_deploy_openstack: ${{ steps.analyze.outputs.should_deploy_openstack }}
+    
+    steps:
+      - name: Checkout main repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.REPO_TOKEN }}
+
+      - name: Analyze Changed Files
+        id: analyze
+        uses: ./.github/workflows/analyze-changed-files
+        with:
+          repo_token: ${{ secrets.REPO_TOKEN }}
+          aws_repo_path: "."
+          openstack_repo_path: ${{ env.OPENSTACK_REPO_PATH }}
+          iac_actions_repo_path: ${{ env.IaC_ACTIONS_PATH }}
+
+  # =============================================================================
+  # JOB 2: AWS INFRASTRUCTURE DEPLOYMENT
+  # =============================================================================
+  deploy_aws_infrastructure:
+    name: "Deploy AWS Infrastructure"
+    runs-on: cloud30-docker-mvp
+    needs: analyze_deployment_changes
+    if: ${{ needs.analyze_deployment_changes.outputs.should_deploy_aws == 'true' }}
+    outputs:
+      aws_deletion_path: ${{ steps.prepare_deletion.outputs.deletion_path }}
+    
+    steps:
+      - name: Setup environment
+        run: |
+          echo "Setting up AWS deployment environment..."
+          echo "Deployment Type: ${{ needs.analyze_deployment_changes.outputs.deployment_type }}"
+          echo "Working Directory: ${{ needs.analyze_deployment_changes.outputs.aws_working_directory }}"
+          echo "Operation: ${{ needs.analyze_deployment_changes.outputs.operation_type }}"
+      
+      - name: Checkout repositories
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.REPO_TOKEN }}
+
+      - name: Extract Terraform version from tfvars
+        id: extract_tf_version
+        run: |
+          # Determine working directory based on analyzed changes
+          working_dir="CustomerVPC/terraform/config/envs/${{ needs.analyze_deployment_changes.outputs.aws_working_directory }}"
+          echo "Looking for tfvars files in $working_dir"
+          # Find the first matching chamber tfvars file
+          tfvars_file=$(ls "$working_dir"/*.tfvars.json 2>/dev/null | grep -E '[a-zA-Z]+[0-9]+\.tfvars\.json$' | head -1)
+          if [ -z "$tfvars_file" ]; then
+            echo "Error: No tfvars.json file found in $working_dir"
+            exit 1
+          fi
+          echo "Using tfvars file: $tfvars_file"
+          # Extract Terraform version
+          tf_version=$(jq -r '.TF_VERSION' "$tfvars_file")
+          if [ -z "$tf_version" ] || [ "$tf_version" = "null" ]; then
+            echo "Error: TERRAFORM_VERSION not found or empty in $tfvars_file"
+            exit 1
+          fi
+          echo "TERRAFORM_VERSION=$tf_version" >> $GITHUB_ENV
+      
+      - name: Checkout IaC actions
+        uses: actions/checkout@v3
+        with:
+          repository: IT/OnCloud_IaC_Github_Actions
+          path: ${{ env.IaC_ACTIONS_PATH }}
+          token: ${{ secrets.REPO_TOKEN }}
+      
+      - name: Setup Git credentials
+        uses: ./OnCloud_IaC_Github_Actions/.github/actions/setup-git-credentials
+        with:
+          credentials: ${{ secrets.GIT_CREDENTIALS }}
+      
+      - name: Configure AWS credentials
+        uses: ./OnCloud_IaC_Github_Actions/.github/actions/configure-aws-credentials-master
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_DEFAULT_REGION }}
+      
+      - name: Setup Terraform
+        uses: ./OnCloud_IaC_Github_Actions/.github/actions/setup-terraform-main
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+      
+      - name: Validate working directory
+        run: |
+          working_dir="${{ github.workspace }}/CustomerVPC/terraform/config/envs/${{ needs.analyze_deployment_changes.outputs.aws_working_directory }}"
+          
+          if [[ ! -d "$working_dir" ]]; then
+            echo "Working directory does not exist: $working_dir"
+            exit 1
+          fi
+          
+          cd "$working_dir"
+          echo "Working in: $PWD"
+          echo "Files in directory:"
+          ls -la
+          
+          # Verify terragrunt configuration exists
+          if [[ ! -f "terragrunt.hcl" ]]; then
+            echo "No terragrunt.hcl found in working directory"
+          fi
+      
+      - name: Terragrunt Plan
+        if: ${{ needs.analyze_deployment_changes.outputs.operation_type != 'delete_chamber' }}
+        run: |
+          echo "Running Terragrunt plan for ${{ needs.analyze_deployment_changes.outputs.operation_type }} operation..."
+          
+          if ! ${{ env.TERRAGRUNT_BINARY }} --terragrunt-tfpath ${{ env.TERRAFORM_CLI_PATH }}/terraform-bin plan; then
+            echo "Terragrunt plan failed"
+            echo "Debugging information:"
+            echo "  Working directory: $PWD"
+            echo "  Terragrunt version:"
+            ${{ env.TERRAGRUNT_BINARY }} --version || echo "  Could not get Terragrunt version"
+            echo "  Terraform version:"
+            ${{ env.TERRAFORM_CLI_PATH }}/terraform-bin --version || echo "  Could not get Terraform version"
+            exit 1
+          fi
+          
+          echo "Terragrunt plan completed successfully"
+        working-directory: ${{ github.workspace }}/CustomerVPC/terraform/config/envs/${{ needs.analyze_deployment_changes.outputs.aws_working_directory }}
+      
+      - name: Terragrunt Apply
+        if: |
+          success() && 
+          needs.analyze_deployment_changes.outputs.operation_type != 'delete_chamber' &&
+          (needs.analyze_deployment_changes.outputs.operation_type == 'add_chamber' || 
+           needs.analyze_deployment_changes.outputs.operation_type == 'modify_config')
+        run: |
+          echo "Applying Terragrunt configuration for ${{ needs.analyze_deployment_changes.outputs.operation_type }} operation..."
+
+          # Ensure tfenv is installed and available
+          if ! command -v tfenv &> /dev/null; then
+            echo "tfenv not found! Please ensure tfenv is installed on the runner."
+            exit 1
+          fi
+
+          echo "Using Terraform version: $TERRAFORM_VERSION"
+          tfenv use $TERRAFORM_VERSION
+
+          if ! ${{ env.TERRAGRUNT_BINARY }} --terragrunt-tfpath $(which terraform) apply -auto-approve; then
+            echo "Terragrunt apply failed"
+            exit 1
+          fi
+
+          echo "Terragrunt apply completed successfully"
+        working-directory: ${{ github.workspace }}/CustomerVPC/terraform/config/envs/${{ needs.analyze_deployment_changes.outputs.aws_working_directory }}
+      
+      - name: Terragrunt Destroy (AWS only)
+        if: |
+          needs.analyze_deployment_changes.outputs.deployment_type == 'mvp' &&
+          needs.analyze_deployment_changes.outputs.operation_type == 'delete_chamber'
+        run: |
+          echo "Destroying AWS chamber infrastructure..."
+          
+          if ! ${{ env.TERRAGRUNT_BINARY }} --terragrunt-tfpath ${{ env.TERRAFORM_CLI_PATH }}/terraform-bin destroy -auto-approve; then
+            echo "Terragrunt destroy failed"
+            exit 1
+          fi
+          
+          echo "Terragrunt destroy completed successfully"
+        working-directory: ${{ github.workspace }}/CustomerVPC/terraform/config/envs/${{ needs.analyze_deployment_changes.outputs.aws_working_directory }}
+      
+      - name: Prepare deletion path for AWS-OpenStack
+        id: prepare_deletion
+        if: |
+          needs.analyze_deployment_changes.outputs.deployment_type == 'mvp-cc' &&
+          needs.analyze_deployment_changes.outputs.operation_type == 'delete_chamber'
+        run: |
+          deletion_path="${{ github.workspace }}/CustomerVPC/terraform/config/envs/${{ needs.analyze_deployment_changes.outputs.aws_working_directory }}"
+          echo "deletion_path=$deletion_path" >> $GITHUB_OUTPUT
+          echo "AWS deletion path prepared: $deletion_path"
+
+  # =============================================================================
+  # JOB 3: OPENSTACK INFRASTRUCTURE DEPLOYMENT
+  # =============================================================================
+  deploy_openstack_infrastructure:
+    name: "Deploy OpenStack Infrastructure"
+    runs-on: cloud30-docker-mvp
+    needs: [analyze_deployment_changes, deploy_aws_infrastructure]
+    if: ${{ needs.analyze_deployment_changes.outputs.should_deploy_openstack == 'true' }}
+    environment: ${{ needs.analyze_deployment_changes.outputs.environment_name }}
+    
+    env:
+      OS_AUTH_URL: ${{ secrets[format('OS_AUTH_URL_{0}', needs.analyze_deployment_changes.outputs.environment_name)] }}
+      OS_USERNAME: ${{ secrets[format('OS_USERNAME_{0}', needs.analyze_deployment_changes.outputs.environment_name)] }}
+      OS_PASSWORD: ${{ secrets[format('OS_PASSWORD_{0}', needs.analyze_deployment_changes.outputs.environment_name)] }}
+      OS_PROJECT_NAME: ${{ secrets[format('OS_PROJECT_NAME_{0}', needs.analyze_deployment_changes.outputs.environment_name)] }}
+      OS_USER_DOMAIN_NAME: ${{ secrets[format('OS_USER_DOMAIN_NAME_{0}', needs.analyze_deployment_changes.outputs.environment_name)] }}
+      OS_COMPUTE_URL: ${{ secrets[format('OS_COMPUTE_URL_{0}', needs.analyze_deployment_changes.outputs.environment_name)] }}
+      
+      TF_CLI_CONFIG_FILE: ${{ secrets.TF_CLI_CONFIG_FILE }}
+    
+    steps:
+      - name: Setup environment
+        run: |
+          echo "Setting up OpenStack deployment environment..."
+          echo "Deployment Type: ${{ needs.analyze_deployment_changes.outputs.deployment_type }}"
+          echo "Working Directory: ${{ needs.analyze_deployment_changes.outputs.openstack_working_directory }}"
+          echo "Operation: ${{ needs.analyze_deployment_changes.outputs.operation_type }}"
+          echo "Environment: ${{ needs.analyze_deployment_changes.outputs.environment_name }}"
+          echo "Chamber ID: ${{ needs.analyze_deployment_changes.outputs.chamber_id }}"
+      
+      - name: Checkout repositories
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.REPO_TOKEN }}
+      
+      - name: Checkout IaC actions
+        uses: actions/checkout@v3
+        with:
+          repository: IT/OnCloud_IaC_Github_Actions
+          path: ${{ env.IaC_ACTIONS_PATH }}
+          token: ${{ secrets.REPO_TOKEN }}
+      
+      - name: Setup Git credentials
+        uses: ./OnCloud_IaC_Github_Actions/.github/actions/setup-git-credentials
+        with:
+          credentials: ${{ secrets.GIT_CREDENTIALS }}
+      
+      - name: Checkout OpenStack repository
+        uses: actions/checkout@v3
+        with:
+          repository: IT/terraform-cadencecld-openstack
+          path: ${{ env.OPENSTACK_REPO_PATH }}
+          token: ${{ secrets.REPO_TOKEN }}
+          fetch-depth: 0
+      
+      - name: Checkout IaC actions
+        uses: actions/checkout@v3
+        with:
+          repository: IT/OnCloud_IaC_Github_Actions
+          path: ${{ env.IaC_ACTIONS_PATH }}
+          token: ${{ secrets.REPO_TOKEN }}
+      
+      - name: Setup Git credentials
+        uses: ./OnCloud_IaC_Github_Actions/.github/actions/setup-git-credentials
+        with:
+          credentials: ${{ secrets.GIT_CREDENTIALS }}
+          
+      - name: Configure AWS credentials
+        uses: ./OnCloud_IaC_Github_Actions/.github/actions/configure-aws-credentials-master
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-west-2
+
+      - name: Extract Terraform version from tfvars
+        id: extract_tf_version
+        run: |
+          # Determine working directory based on analyzed changes
+          working_dir="${{ github.workspace }}/${{ env.OPENSTACK_REPO_PATH }}/CustomerVPC/terraform/config/envs/${{ needs.analyze_deployment_changes.outputs.openstack_working_directory }}"
+          echo "Looking for tfvars files in $working_dir"
+          # Find the first matching chamber tfvars file
+          tfvars_file=$(ls "$working_dir"/*.tfvars.json 2>/dev/null | grep -E '[a-zA-Z]+[0-9]+\.tfvars\.json$' | head -1)
+          if [ -z "$tfvars_file" ]; then
+            echo "Error: No tfvars.json file found in $working_dir"
+            exit 1
+          fi
+          echo "Using tfvars file: $tfvars_file"
+          # Extract Terraform version
+          tf_version=$(jq -r '.TF_VERSION' "$tfvars_file")
+          if [ -z "$tf_version" ] || [ "$tf_version" = "null" ]; then
+            echo "Error: TERRAFORM_VERSION not found or empty in $tfvars_file"
+            exit 1
+          fi
+          echo "TERRAFORM_VERSION=$tf_version" >> $GITHUB_ENV
+      
+      - name: Setup Terraform
+        uses: ./OnCloud_IaC_Github_Actions/.github/actions/setup-terraform-main
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      - name: Setup Terraform
+        uses: ./OnCloud_IaC_Github_Actions/.github/actions/setup-terraform-main
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+      
+      - name: Validate OpenStack working directory
+        if: ${{ needs.analyze_deployment_changes.outputs.openstack_working_directory != '' }}
+        run: |
+          working_dir="${{ github.workspace }}/${{ env.OPENSTACK_REPO_PATH }}/CustomerVPC/terraform/config/envs/${{ needs.analyze_deployment_changes.outputs.openstack_working_directory }}"
+          
+          if [[ ! -d "$working_dir" ]]; then
+            echo "OpenStack working directory does not exist: $working_dir"
+            exit 1
+          fi
+          
+          cd "$working_dir"
+          echo "Working in: $PWD"
+          echo "Files in directory:"
+          ls -la
+          
+          # Verify terragrunt configuration exists
+          if [[ ! -f "terragrunt.hcl" ]]; then
+            echo "No terragrunt.hcl found in OpenStack working directory"
+          fi
+      
+      - name: OpenStack Terragrunt Plan
+        if: ${{ needs.analyze_deployment_changes.outputs.operation_type != 'delete_chamber' }}
+        run: |
+          echo "Running OpenStack Terragrunt plan for ${{ needs.analyze_deployment_changes.outputs.operation_type }} operation..."
+          
+          # Ensure tfenv is installed and available
+          if ! command -v tfenv &> /dev/null; then
+            echo "tfenv not found! Please ensure tfenv is installed on the runner."
+            exit 1
+          fi
+
+          echo "Using Terraform version: $TERRAFORM_VERSION"
+          tfenv use $TERRAFORM_VERSION
+
+          if ! ${{ env.TERRAGRUNT_BINARY }} --terragrunt-tfpath $(which terraform) plan; then
+            echo "OpenStack Terragrunt plan failed"
+            exit 1
+          fi
+          
+          echo "OpenStack Terragrunt plan completed successfully"
+        working-directory: ${{ github.workspace }}/${{ env.OPENSTACK_REPO_PATH }}/CustomerVPC/terraform/config/envs/${{ needs.analyze_deployment_changes.outputs.openstack_working_directory }}
+      
+      - name: OpenStack Terragrunt Apply
+        if: |
+          success() && 
+          needs.analyze_deployment_changes.outputs.operation_type != 'delete_chamber' &&
+          (needs.analyze_deployment_changes.outputs.operation_type == 'add_chamber' || 
+           needs.analyze_deployment_changes.outputs.operation_type == 'modify_config')
+        run: |
+          echo "Applying OpenStack Terragrunt configuration for ${{ needs.analyze_deployment_changes.outputs.operation_type }} operation..."
+
+          # Ensure tfenv is installed and available
+          if ! command -v tfenv &> /dev/null; then
+            echo "tfenv not found! Please ensure tfenv is installed on the runner."
+            exit 1
+          fi
+
+          echo "Using Terraform version: $TERRAFORM_VERSION"
+          tfenv use $TERRAFORM_VERSION
+
+          ${{ env.TERRAGRUNT_BINARY }} --terragrunt-tfpath $(which terraform) apply -auto-approve 2>&1 | tee terragrunt_apply.log
+          exit_code=${PIPESTATUS[0]}
+          if [ $exit_code -ne 0 ]; then
+            echo "OpenStack Terragrunt apply failed"
+            exit $exit_code
+          fi
+
+          echo "OpenStack Terragrunt apply completed successfully"
+        working-directory: ${{ github.workspace }}/${{ env.OPENSTACK_REPO_PATH }}/CustomerVPC/terraform/config/envs/${{ needs.analyze_deployment_changes.outputs.openstack_working_directory }}
+
+      - name: Reboot VMs
+        id: reboot_vm
+        if: failure()
+        run: |
+          rebooted="false"
+          # Look for either haproxy_availability failure message in the log
+          if grep -q "Failed to connect to web server after 50 attempts. Giving up." terragrunt_apply.log || \
+             grep -q "Error running command 'chmod u+x check_haproxy_status.sh" terragrunt_apply.log; then
+            echo "Detected haproxy_availability failure, rebooting static node(s)..."
+            json_auth_data='{
+              "auth":{
+                "identity":{
+                  "methods":["password"],
+                  "password": { 
+                    "user": { 
+                      "name": "${{ env.OS_USERNAME }}", 
+                      "domain": { "id": "default" }, 
+                      "password": "${{ env.OS_PASSWORD }}"
+                    }
+                  }
+                }
+              }
+            }'
+            OS_AUTH_TOKEN=$(curl -is -X POST -H "Content-Type: application/json" ${{ env.OS_AUTH_URL }}/v3/auth/tokens \
+              -d "$json_auth_data" | grep -i '^x-subject-token' | cut -d' ' -f2 | tr -d '\r')
+            vm_list=$(curl -s -X GET -H "X-Auth-Token: $OS_AUTH_TOKEN"  -H "Content-Type: application/json" \
+              "${{ env.OS_COMPUTE_URL }}/servers?all_tenants=True&name=${{ needs.analyze_deployment_changes.outputs.chamber_id }}" | jq -r '.servers[] | .id')
+            echo "vm_list= $vm_list"
+            vm_list_count=$(echo -e "$vm_list" | tr ' ' '\n' | wc -l | xargs)
+            json_data='{
+              "reboot":{
+                "type":"HARD"
+              }
+            }'
+            echo "json_data=$json_data"
+            echo -e "$vm_list" | tr ' ' '\n' | while read i; do \
+              curl -s -X POST -H "X-Auth-Token: $OS_AUTH_TOKEN" \
+                -H "Content-Type: application/json" "${{ env.OS_COMPUTE_URL }}/servers/$i/action" \
+                -d "$json_data"; echo "$i is rebooted"; \
+            done
+            vm_running=0
+            echo "vm_running = $vm_running, vm_list_count=$vm_list_count"
+            while [ "$vm_running" != "$vm_list_count" ]; do
+              echo "wait....60 seconds"
+              sleep 60
+              vm_running=$(curl -s -X GET -H "X-Auth-Token: $OS_AUTH_TOKEN"  -H "Content-Type: application/json" \
+                "${{ env.OS_COMPUTE_URL }}/servers?all_tenants=True&name=${{ needs.analyze_deployment_changes.outputs.chamber_id }}&status=ACTIVE" \
+                | jq '.servers | length')
+              echo "vm_running = $vm_running, vm_list_count=$vm_list_count"
+            done
+            rebooted="true"
+          else
+            echo "No haproxy_availability failure detected, skipping reboot."
+          fi
+          echo "rebooted=$rebooted" >> $GITHUB_OUTPUT
+        working-directory: ${{ github.workspace }}/${{ env.OPENSTACK_REPO_PATH }}/CustomerVPC/terraform/config/envs/${{ needs.analyze_deployment_changes.outputs.openstack_working_directory }}
+
+      - name: OpenStack Terragrunt Apply (after reboot)
+        if: steps.reboot_vm.outputs.rebooted == 'true'
+        run: |
+          echo "Re-running Terragrunt apply after VM reboot..."
+          # Ensure tfenv is installed and available
+          if ! command -v tfenv &> /dev/null; then
+            echo "tfenv not found! Please ensure tfenv is installed on the runner."
+            exit 1
+          fi
+          echo "Using Terraform version: $TERRAFORM_VERSION"
+          tfenv use $TERRAFORM_VERSION
+          if ! ${{ env.TERRAGRUNT_BINARY }} --terragrunt-tfpath $(which terraform) apply -auto-approve; then
+            echo "Terragrunt apply after reboot failed"
+            exit 1
+          fi
+          echo "Terragrunt apply after reboot completed successfully"
+        working-directory: ${{ github.workspace }}/${{ env.OPENSTACK_REPO_PATH }}/CustomerVPC/terraform/config/envs/${{ needs.analyze_deployment_changes.outputs.openstack_working_directory }}
+
+      - name: OpenStack Terragrunt Destroy
+        if: ${{ needs.analyze_deployment_changes.outputs.operation_type == 'delete_chamber' }}
+        run: |
+          echo "Destroying OpenStack chamber infrastructure..."
+          
+          if ! ${{ env.TERRAGRUNT_BINARY }} --terragrunt-tfpath $(which terraform) destroy -auto-approve; then
+            echo "OpenStack Terragrunt destroy failed"
+            exit 1
+          fi
+          
+          echo "OpenStack Terragrunt destroy completed successfully"
+        working-directory: ${{ github.workspace }}/${{ env.OPENSTACK_REPO_PATH }}/CustomerVPC/terraform/config/envs/${{ needs.analyze_deployment_changes.outputs.openstack_working_directory }}
+
+  # =============================================================================
+  # JOB 4: POST-DEPLOYMENT CLEANUP (FOR AWS-OpenStack DELETIONS)
+  # =============================================================================
+  cleanup_aws_deletion:
+    name: "Cleanup AWS Deletion"
+    runs-on: cloud30-docker-mvp
+    needs: [analyze_deployment_changes, deploy_aws_infrastructure, deploy_openstack_infrastructure]
+    if: |
+      always() &&
+      needs.analyze_deployment_changes.outputs.deployment_type == 'mvp-cc' &&
+      needs.analyze_deployment_changes.outputs.operation_type == 'delete_chamber' &&
+      needs.deploy_openstack_infrastructure.result == 'success'
+    
+    steps:
+      - name: Setup environment
+        run: |
+          echo "Setting up cleanup environment..."
+          echo "Deployment Type: ${{ needs.analyze_deployment_changes.outputs.deployment_type }}"
+          echo "AWS Deletion Path: ${{ needs.deploy_aws_infrastructure.outputs.aws_deletion_path }}"
+      
+      - name: Checkout repositories
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.REPO_TOKEN }}
+      
+      - name: Checkout IaC actions
+        uses: actions/checkout@v3
+        with:
+          repository: IT/OnCloud_IaC_Github_Actions
+          path: ${{ env.IaC_ACTIONS_PATH }}
+          token: ${{ secrets.REPO_TOKEN }}
+      
+      - name: Setup Git credentials
+        uses: ./OnCloud_IaC_Github_Actions/.github/actions/setup-git-credentials
+        with:
+          credentials: ${{ secrets.GIT_CREDENTIALS }}
+      
+      - name: Configure AWS credentials
+        uses: ./OnCloud_IaC_Github_Actions/.github/actions/configure-aws-credentials-master
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_DEFAULT_REGION }}
+      
+      - name: Setup Terraform
+        uses: ./OnCloud_IaC_Github_Actions/.github/actions/setup-terraform-main
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+      
+      - name: Final AWS Cleanup
+        run: |
+          echo "Performing final AWS cleanup for AWS-OpenStack deletion..."
+
+          cd "${{ needs.deploy_aws_infrastructure.outputs.aws_deletion_path }}"
+          
+          if ! ${{ env.TERRAGRUNT_BINARY }} --terragrunt-tfpath $(which terraform) destroy -auto-approve; then
+            echo "Final AWS cleanup failed"
+            exit 1
+          fi
+          
+          echo "Final AWS cleanup completed successfully"
