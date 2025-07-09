@@ -1,0 +1,87 @@
+Title: Provisioning Large-Memory VMs on Large-Memory Servers in OpenStack
+
+Objective:
+Ensure that virtual machines requiring large amounts of memory are only scheduled on physical compute hosts that have sufficient memory capacity. This is achieved through host aggregates, flavor metadata, scheduler filters, and optional affinity policies.
+
+⸻
+
+Process Overview:
+	1.	Identify and group large-memory compute nodes.
+	2.	Tag these compute nodes using host aggregates and metadata.
+	3.	Create a VM flavor representing a large-memory workload.
+	4.	Attach metadata to the flavor that matches the host aggregate.
+	5.	Enable and use the appropriate scheduler filters.
+	6.	Launch the VM with the large-memory flavor.
+	7.	Optionally, apply affinity or anti-affinity rules.
+
+⸻
+
+Detailed Steps:
+
+Step 1: Group large-memory compute nodes
+	•	Determine which physical compute nodes in the infrastructure have high memory capacity (e.g., 256 GB or more).
+	•	These nodes are to be logically grouped for scheduling control.
+
+Step 2: Create a host aggregate
+	•	Use OpenStack to define a host aggregate.
+	•	This is a logical grouping that allows you to tag selected hosts with specific metadata (e.g., large_mem=true).
+	•	Add the high-memory compute nodes to this aggregate.
+
+Step 3: Assign metadata to the aggregate
+	•	Attach key-value metadata to the aggregate that identifies it as intended for large-memory workloads.
+	•	Example metadata: large_mem=true
+
+Step 4: Create a flavor for large-memory VMs
+	•	Define a flavor with high RAM, high vCPU, and appropriate disk size for large-memory VM use cases.
+	•	Assign extra_specs to the flavor that match the host aggregate’s metadata.
+	•	This ensures the scheduler only selects hosts within the correct aggregate.
+
+Step 5: Ensure required scheduler filters are enabled
+	•	The filter AggregateInstanceExtraSpecsFilter must be enabled in the Nova scheduler configuration.
+	•	This filter allows the scheduler to match flavor extra_specs with host aggregate metadata.
+	•	If the filter is not active, metadata-based placement will not work.
+
+Step 6: Launch the VM using the custom flavor
+	•	When the user launches a VM using the large-memory flavor, the Nova scheduler filters hosts.
+	•	Only those hosts that match the aggregate metadata and have sufficient free resources (RAM, CPU) are considered.
+	•	The scheduler selects the best-fit host and boots the VM.
+
+Step 7 (Optional): Apply affinity or anti-affinity policies
+	•	Affinity rules ensure that VMs are placed on the same host (useful for low-latency communication between VMs).
+	•	Anti-affinity rules ensure VMs are spread across different hosts (useful for high availability).
+	•	These rules are implemented using server groups and scheduler hints.
+	•	If using anti-affinity for large-memory VMs, ensure multiple large-memory hosts exist, or the scheduler will fail to place the second VM.
+
+⸻
+
+Behavior Scenarios:
+	1.	Matching host available:
+The VM is successfully scheduled to one of the tagged large-memory compute nodes with sufficient available resources.
+	2.	No matching host found:
+The request fails with an error like NoValidHost. Causes may include:
+
+	•	No compute host with large_mem=true has enough resources.
+	•	Flavor metadata does not match any host aggregate.
+	•	Scheduler filter is not enabled.
+
+	3.	Filters not properly configured:
+If the AggregateInstanceExtraSpecsFilter is disabled, the scheduler may ignore the flavor’s extra_specs and place the VM on any available compute node, potentially violating isolation requirements.
+
+⸻
+
+Responsibility Matrix:
+	•	OpenStack Admin: Create aggregates, configure metadata, define flavors, and enable filters.
+	•	Infrastructure Team: Identify and manage large-memory servers.
+	•	Cloud Users: Use the correct flavor when launching high-memory VMs and apply affinity rules as needed.
+
+⸻
+
+Considerations:
+	•	Ensure consistent metadata between flavors and host aggregates.
+	•	Avoid overprovisioning large-memory hosts since their capacity is limited.
+	•	Use anti-affinity if high availability is needed across different hosts.
+	•	Monitor available resources using OpenStack CLI or dashboard to avoid scheduling failures.
+
+⸻
+
+This documentation provides a structured approach to enforcing large-memory workload placement in OpenStack environments, while also supporting placement control through affinity policies.
