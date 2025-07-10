@@ -1,3 +1,72 @@
+
+#!/bin/bash
+
+echo "=== OpenStack Instance Creation Script ==="
+
+# Prompt for instance name
+read -p "Enter instance name: " INSTANCE_NAME
+
+# Prompt for image (OS)
+echo "Available images:"
+openstack image list --column Name --format value
+read -p "Enter image name (OS): " IMAGE_NAME
+
+# Prompt for flavor (T-shirt size)
+echo "Available flavors (T-shirt sizes):"
+openstack flavor list --column Name --format value
+read -p "Enter flavor (e.g., m1.small): " FLAVOR_NAME
+
+# Prompt for network
+echo "Available networks:"
+openstack network list --column Name --format value
+read -p "Enter network name: " NETWORK_NAME
+
+# Prompt for key pair
+echo "Available key pairs:"
+openstack keypair list --column Name --format value
+read -p "Enter key pair name: " KEY_NAME
+
+# Prompt for security group(s)
+echo "Available security groups:"
+openstack security group list --column Name --format value
+read -p "Enter security group(s) (comma-separated if multiple): " SECURITY_GROUPS
+
+# Convert comma-separated SGs to --security-group arguments
+IFS=',' read -ra SG_ARRAY <<< "$SECURITY_GROUPS"
+SG_ARGS=""
+for sg in "${SG_ARRAY[@]}"; do
+    SG_ARGS+="--security-group $sg "
+done
+
+# Confirm before creation
+echo
+echo "About to create instance:"
+echo "Name: $INSTANCE_NAME"
+echo "Image: $IMAGE_NAME"
+echo "Flavor: $FLAVOR_NAME"
+echo "Network: $NETWORK_NAME"
+echo "Key Pair: $KEY_NAME"
+echo "Security Groups: $SECURITY_GROUPS"
+echo
+read -p "Proceed? (y/n): " CONFIRM
+
+if [[ "$CONFIRM" != "y" ]]; then
+    echo "Aborted."
+    exit 1
+fi
+
+# Create the instance
+openstack server create \
+    --image "$IMAGE_NAME" \
+    --flavor "$FLAVOR_NAME" \
+    --network "$NETWORK_NAME" \
+    --key-name "$KEY_NAME" \
+    $SG_ARGS \
+    "$INSTANCE_NAME"
+
+
+
+
 openstack flavor list -f value -c Name | while read flavor; do
   props=$(openstack flavor show "$flavor" -f value -c properties)
   if [[ -z "$props" || "$props" == "{}" ]]; then
