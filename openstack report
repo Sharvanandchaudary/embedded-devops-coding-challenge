@@ -1,3 +1,13 @@
+
+openstack flavor list -f value -c Name | while read flavor; do
+  props=$(openstack flavor show "$flavor" -f value -c properties)
+  if [[ -z "$props" ]]; then
+    echo "$flavor has NO extra specs ❌"
+  fi
+done
+
+
+
 Title: Provisioning Large-Memory VMs on Large-Memory Servers in OpenStack
 
 Objective:
