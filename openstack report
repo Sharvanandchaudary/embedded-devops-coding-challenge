@@ -1,4 +1,12 @@
 
+for subnet in 10.154.86.0/24 10.154.87.0/25 10.154.87.160/27 10.154.87.128/27; do
+  openstack subnet list | grep "$subnet"
+done
+
+
+
+
+
 Network Name and ID:
 - Name: c30-oa-prod-oa-80-network
 - Network ID: ec40bccd-c7d2-4dcb-9cbd-2f0369b7dc8f
