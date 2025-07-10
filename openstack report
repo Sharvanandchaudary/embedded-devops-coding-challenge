@@ -1,3 +1,13 @@
+openstack flavor list -f value -c Name | while read flavor; do
+  props=$(openstack flavor show "$flavor" -f value -c properties)
+  if [[ -z "$props" || "$props" == "{}" ]]; then
+    echo "$flavor ❌ has NO extra_specs"
+  else
+    echo "$flavor ✅ has extra_specs: $props"
+  fi
+done
+
+
 
 openstack flavor list -f value -c Name | while read flavor; do
   props=$(openstack flavor show "$flavor" -f value -c properties)
