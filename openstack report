@@ -1,4 +1,47 @@
 
+Network Name and ID:
+- Name: c30-oa-prod-oa-80-network
+- Network ID: ec40bccd-c7d2-4dcb-9cbd-2f0369b7dc8f
+2. Subnets Attached to OA80:
+- ComputeSubnet2a: dc0bcb6d-c916-4b25-aaec-f5b76a6dd7ab
+- ComputeSubnet2b: [Example ID, not shown]
+- ComputeSubnet2c: [Example ID, not shown]
+- StorageSubnet: [Example ID, not shown]
+3. Router Details:
+- Router Name: c30-oa-prod-oa-80-RtbInternal-rt
+- Router External Gateway Subnet ID: 08912802-1f16-471f-8bd1-385b36d94651
+- Connected to external VLAN: pro-net-vlan3160
+4. Port Creation in Script:
+- Command: openstack port create --network ec40bccd... --fixed-ip subnet=dc0bcb6d... --enable
+oa80_big_mem_test
+- This creates a port in ComputeSubnet2a
+5. Floating IP Creation in Script:
+- Command uses:
+--subnet 08912802... (matches VLAN 3160)
+--port $port_id (created above)
+6. Volume Created:
+- From snapshot ID: 36748f2c-...
+- Volume size: 320 GB, bootable
+7. Server Creation:
+- Flavor: m6.large-mem
+- Uses created volume, port, and security groups
+8. Mappings Recap:
+- Network: ec40bccd...
+- Subnet for Port: dc0bcb6d... (2a)
+- External Subnet for Floating IP: 08912802... --> VLAN 3160
+9. Validation Commands:
+- openstack network list | grep oa-80
+- openstack subnet list --network ec40bccd...
+- openstack router show <router_id> to see external subnet
+- openstack network list --external to get VLAN from subnet
+This report outlines how OA80's internal and external components map to create floating IPs, ports, and VMs
+within a production OpenStack setup
+
+
+
+
+
+
 #!/bin/bash
 
 echo "=== OpenStack Instance Creation Script ==="
