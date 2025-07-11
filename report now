@@ -1,27 +1,28 @@
- Goals for the Day
-1.	Work on the provisioning approach for large-memory VMs in Cadence Cloud (CLOUD3-1375).
-2.	Analyze and begin resolving the hardcoded password issue in awoouto3 script within the usersync module (CLOUD3-533).
-3.	Investigate Noida ODC backup issue and plan a solution walkthrough (CLOUD3-1306).
- Work Done
-1. CLOUD3-1375 – Provisioning Large Memory VMs (Cadence Cloud)
-•	Focused on designing the approach for deploying large-memory virtual machines in Cadence Cloud.
-•	Analyzed existing flavor definitions and server-to-resource mappings required for high-memory workloads.
-•	Explored the use of host aggregates and affinity/anti-affinity policies in OpenStack to ensure correct placement on memory-intensive hosts.
-•	Worked with the infrastructure team to understand availability zones and aggregate metadata configuration.
-•	Investigated how scheduler hints can be leveraged to target specific host groups during deployment.
-•	Documented the provisioning strategy for repeatable use, aligned with Cadence requirements, without initiating the actual deployment.
+name: PR Checklist Validator
 
-2. CLOUD3-533 – Password Hardcoded in awoouto3 (Usersync Script)
-•	Reviewed the usersync script awoouto3 and identified instances of hardcoded passwords.
-•	Analyzed security risks and maintainability issues due to embedded credentials.
-•	Proposed a secure solution involving externalizing passwords using environment variables or a secure secret management approach.
-•	Work is currently blocked pending access to the system where the script is deployed, which is required to test and validate the proposed solution.
-•	Raised a request for necessary access and coordinated with the team to move forward on implementation.
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+    branches:
+      - '**'  # All branches
 
-3. CLOUD3-1306 – Noida ODC Backup Issue
-•	Analyzed the existing backup setup for the Noida ODC environment, including reviewing cron jobs, script execution flow, and backup target paths.
-•	Identified possible causes of failure such as misconfigured job timings, incorrect script references, and inconsistent retention handling.
-•	Documented the findings and prepared a proposed solution to streamline and stabilize the backup process.
-•	Scheduled a call with Sourav for tomorrow to present the analysis and walk through the recommended remediation steps.
-•	Compiling action items and changes into a solution document to align during the discussion.
+jobs:
+  validate-pr:
+    runs-on: ubuntu-latest
 
+    steps:
+    - name: Checkout PR
+      uses: actions/checkout@v3
+
+    - name: Validate Checklist
+      uses: tzkhan/pr-update-checklist@v1.3.0
+      with:
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
+        require-checklist: true
+        checklist-item-pattern: "- \\[ \\] .+" # Enforce unchecked items to be ticked
+
+    - name: Fail if checklist is incomplete
+      if: failure()
+      run: |
+        echo "❌ PR checklist is not completed. Please complete all items."
+        exit 1
