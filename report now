@@ -26,3 +26,9 @@ jobs:
       run: |
         echo "❌ PR checklist is not completed. Please complete all items."
         exit 1
+### Checklist
+
+- [ ] Code compiles and passes lint
+- [ ] Unit tests are written and pass
+- [ ] Documentation is updated if needed
+- [ ] Reviewed by at least one other developer
