@@ -2,17 +2,22 @@ name: PR Checklist Validator
 
 on:
   pull_request:
-    types: [opened, edited, reopened, synchronize]
+    types:
+      - opened
+      - edited
+      - reopened
+      - synchronize
+      - review_requested  # Triggers when a reviewer is added manually
 
 jobs:
   validate-checklist:
-    runs-on: gh-runner-k8-oncloud-iac-test
+    runs-on: [self-hosted, gh-runner-k8-oncloud-iac-test]
 
     steps:
       - name: Checkout PR
         uses: actions/checkout@v3
 
-      - name: Validate Checklist & Reviewers
+      - name: Validate Checklist and Reviewers
         uses: actions/github-script@v6
         with:
           script: |
@@ -24,15 +29,20 @@ jobs:
 
             const body = pr.data.body || "";
             const reviewers = pr.data.requested_reviewers || [];
+            const teamReviewers = pr.data.requested_teams || [];
+
+            let errors = [];
 
             if (!body.includes("- [x]")) {
-              core.setFailed("❌ PR checklist is not completed!");
-            } else {
-              console.log("✅ PR checklist completed.");
+              errors.push("❌ PR checklist is not completed.");
             }
 
-            if (reviewers.length === 0) {
-              core.setFailed("❌ No reviewers assigned to the PR!");
+            if (reviewers.length === 0 && teamReviewers.length === 0) {
+              errors.push("❌ No reviewers assigned to this PR.");
+            }
+
+            if (errors.length > 0) {
+              core.setFailed(errors.join("\n"));
             } else {
-              console.log("✅ At least one reviewer is assigned.");
+              console.log("✅ PR checklist completed and reviewer(s) assigned.");
             }
