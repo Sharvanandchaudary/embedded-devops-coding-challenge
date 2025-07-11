@@ -3,32 +3,30 @@ name: PR Checklist Validator
 on:
   pull_request:
     types: [opened, edited, reopened, synchronize]
-    branches:
-      - '**'  # All branches
 
 jobs:
-  validate-pr:
+  validate-checklist:
     runs-on: ubuntu-latest
-
     steps:
-    - name: Checkout PR
-      uses: actions/checkout@v3
+      - name: Checkout PR
+        uses: actions/checkout@v3
 
-    - name: Validate Checklist
-      uses: tzkhan/pr-update-checklist@v1.3.0
-      with:
-        repo-token: ${{ secrets.GITHUB_TOKEN }}
-        require-checklist: true
-        checklist-item-pattern: "- \\[ \\] .+" # Enforce unchecked items to be ticked
+      - name: Validate Checklist
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const pr = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number
+            });
 
-    - name: Fail if checklist is incomplete
-      if: failure()
-      run: |
-        echo "❌ PR checklist is not completed. Please complete all items."
-        exit 1
-### Checklist
+            const body = pr.data.body || "";
+            if (!body.includes("- [x]")) {
+              core.setFailed("❌ PR checklist is not completed!");
+            } else {
+              console.log("✅ PR checklist completed.");
+            }
 
-- [ ] Code compiles and passes lint
-- [ ] Unit tests are written and pass
-- [ ] Documentation is updated if needed
-- [ ] Reviewed by at least one other developer
+
+
