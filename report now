@@ -6,12 +6,13 @@ on:
 
 jobs:
   validate-checklist:
-    runs-on: ubuntu-latest
+    runs-on: gh-runner-k8-oncloud-iac-test
+
     steps:
       - name: Checkout PR
         uses: actions/checkout@v3
 
-      - name: Validate Checklist
+      - name: Validate Checklist & Reviewers
         uses: actions/github-script@v6
         with:
           script: |
@@ -22,11 +23,16 @@ jobs:
             });
 
             const body = pr.data.body || "";
+            const reviewers = pr.data.requested_reviewers || [];
+
             if (!body.includes("- [x]")) {
               core.setFailed("❌ PR checklist is not completed!");
             } else {
               console.log("✅ PR checklist completed.");
             }
 
-
-
+            if (reviewers.length === 0) {
+              core.setFailed("❌ No reviewers assigned to the PR!");
+            } else {
+              console.log("✅ At least one reviewer is assigned.");
+            }
