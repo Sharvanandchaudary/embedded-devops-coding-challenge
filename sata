@@ -1,0 +1,13 @@
+[orchestrator@to01wrk01 ~]$ lspci -vnn | grep -i "sata\|raid\|ahci"
+00:18.0 SATA controller [0106]: Intel Corporation Sapphire Rapids SATA AHCI Controller [8086:1bf2] (rev 11) (prog-if 01 [AHCI 1.0])
+        Kernel driver in use: ahci
+        Kernel modules: ahci
+00:19.0 SATA controller [0106]: Intel Corporation Sapphire Rapids SATA AHCI Controller [8086:1bd2] (rev 11) (prog-if 01 [AHCI 1.0])
+        Kernel driver in use: ahci
+        Kernel modules: ahci
+3f:00.0 RAID bus controller [0104]: Broadcom / LSI Fusion-MPT 24GSAS/PCIe SAS40xx/41xx [1000:00a5] (rev 01)
+        DeviceName: SL3 RAID
+[orchestrator@to01wrk01 ~]$
+
+
+
