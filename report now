@@ -1,48 +1,23 @@
-name: PR Checklist Validator
+Daily Status Report
 
-on:
-  pull_request:
-    types:
-      - opened
-      - edited
-      - reopened
-      - synchronize
-      - review_requested  # Triggers when a reviewer is added manually
+Work Done Today
 
-jobs:
-  validate-checklist:
-    runs-on: [self-hosted, gh-runner-k8-oncloud-iac-test]
+Gained an overview of the initial setup for CI/CD automation and the configuration required for the CloudEnv portal.
 
-    steps:
-      - name: Checkout PR
-        uses: actions/checkout@v3
+Built the application manually in the local environment to validate the setup.
 
-      - name: Validate Checklist and Reviewers
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const pr = await github.rest.pulls.get({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: context.payload.pull_request.number
-            });
+Identified the need to set up GitHub Actions runners and implement the required workflows.
 
-            const body = pr.data.body || "";
-            const reviewers = pr.data.requested_reviewers || [];
-            const teamReviewers = pr.data.requested_teams || [];
+Worked on utilizing multiple GPUs by creating a flavor with properties pci_passthrough:alias='gpu:2'.
 
-            let errors = [];
+Configured the environment to support GPU usage.
 
-            if (!body.includes("- [x]")) {
-              errors.push("❌ PR checklist is not completed.");
-            }
+Implemented and tested a script on the VM to install GPU drivers and verify that the VM is utilizing the GPU as expected.
 
-            if (reviewers.length === 0 && teamReviewers.length === 0) {
-              errors.push("❌ No reviewers assigned to this PR.");
-            }
+Plan for Tomorrow
 
-            if (errors.length > 0) {
-              core.setFailed(errors.join("\n"));
-            } else {
-              console.log("✅ PR checklist completed and reviewer(s) assigned.");
-            }
+Set up GitHub Actions runners for the repository and start building the workflow.
+
+Finalize whether to use Docker or JFrog for the artifact repository and plan accordingly.
+
+Continue work on the GPU‑enabled VM by running and refining the validation script.
