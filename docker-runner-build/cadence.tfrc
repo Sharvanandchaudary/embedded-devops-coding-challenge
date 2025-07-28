@@ -1,0 +1,9 @@
+// code placeholder
+provider_installation {
+  network_mirror {
+    url    = "https://prod.openstack.cadence.com:13808/v1/AUTH_b4e7f5d800c84ddbaf457388752738c2/terraform-providers/"
+    include = ["registry.terraform.io/NetApp/*"]
+  }  direct {
+    exclude = ["registry.terraform.io/NetApp/*"]
+  }}
+ 
