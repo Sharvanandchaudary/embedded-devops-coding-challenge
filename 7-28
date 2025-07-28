@@ -1,140 +1,56 @@
-VM  created successfully
-vsaravan@sjcvl-ghrunner1:~$ nano create_10_highmem_vms.sh
-vsaravan@sjcvl-ghrunner1:~$ ./create_10_highmem_vms.sh
-===== Creating VM  =====
-usage: openstack port create [-h] [-f {json,shell,table,value,yaml}]
-                             [-c COLUMN] [--noindent] [--prefix PREFIX]
-                             [--max-width <integer>] [--fit-width]
-                             [--print-empty]
-                             [--extra-property type=<property_type>,name=<property_name>,value=<property_value>]
-                             --network <network> [--description <description>]
-                             [--device <device-id>]
-                             [--mac-address <mac-address>]
-                             [--device-owner <device-owner>]
-                             [--vnic-type <vnic-type>] [--host <host-id>]
-                             [--dns-domain dns-domain] [--dns-name <dns-name>]
-                             [--numa-policy-required | --numa-policy-preferred | --numa-policy-legacy]
-                             [--hint <alias=value>]
-                             [--fixed-ip subnet=<subnet>,ip-address=<ip-address> | --no-fixed-ip]
-                             [--binding-profile <binding-profile>]
-                             [--enable | --disable]
-                             [--enable-uplink-status-propagation | --disable-uplink-status-propagation]
-                             [--project <project>]
-                             [--project-domain <project-domain>]
-                             [--extra-dhcp-option name=<name>[,value=<value>,ip-version={4,6}]]
-                             [--security-group <security-group> | --no-security-group]
-                             [--qos-policy <qos-policy>]
-                             [--enable-port-security | --disable-port-security]
-                             [--allowed-address ip-address=<ip-address>[,mac-address=<mac-address>]]
-                             [--device-profile <device-profile>]
-                             [--hardware-offload-type <hardware-offload-type>]
-                             [--tag <tag> | --no-tag]
-                             <name>
-openstack port create: error: argument --network: expected one argument
-Created port:
-usage: openstack port set [-h] [--extra-property type=<property_type>,name=<property_name>,value=<property_value>] [--description <description>] [--device <device-id>]
-                          [--mac-address <mac-address>] [--device-owner <device-owner>] [--vnic-type <vnic-type>] [--host <host-id>] [--dns-domain dns-domain]
-                          [--dns-name <dns-name>] [--numa-policy-required | --numa-policy-preferred | --numa-policy-legacy] [--hint <alias=value>] [--enable | --disable]
-                          [--name <name>] [--fixed-ip subnet=<subnet>,ip-address=<ip-address>] [--no-fixed-ip] [--binding-profile <binding-profile>]
-                          [--no-binding-profile] [--qos-policy <qos-policy>] [--security-group <security-group>] [--no-security-group]
-                          [--enable-port-security | --disable-port-security] [--allowed-address ip-address=<ip-address>[,mac-address=<mac-address>]]
-                          [--no-allowed-address] [--extra-dhcp-option name=<name>[,value=<value>,ip-version={4,6}]] [--data-plane-status <status>] [--tag <tag>]
-                          [--no-tag]
-                          <port>
-openstack port set: error: the following arguments are required: <port>
-usage: openstack floating ip create [-h] [-f {json,shell,table,value,yaml}]
-                                    [-c COLUMN] [--noindent] [--prefix PREFIX]
-                                    [--max-width <integer>] [--fit-width]
-                                    [--print-empty]
-                                    [--extra-property type=<property_type>,name=<property_name>,value=<property_value>]
-                                    [--subnet <subnet>] [--port <port>]
-                                    [--floating-ip-address <ip-address>]
-                                    [--fixed-ip-address <ip-address>]
-                                    [--qos-policy <qos-policy>]
-                                    [--description <description>]
-                                    [--project <project>]
-                                    [--dns-domain <dns-domain>]
-                                    [--dns-name <dns-name>]
-                                    [--project-domain <project-domain>]
-                                    [--tag <tag> | --no-tag]
-                                    <network>
-openstack floating ip create: error: the following arguments are required: <network>
-Floating IP created for VM
-Created volume: fb6cf01f-e083-4875-bedd-538d63231c61
-usage: openstack server create [-h] [-f {json,shell,table,value,yaml}] [-c COLUMN] [--noindent] [--prefix PREFIX] [--max-width <integer>] [--fit-width] [--print-empty]
-                               --flavor <flavor> [--image <image> | --image-property <key=value> | --volume <volume> | --snapshot <snapshot>]
-                               [--boot-from-volume <volume-size>] [--block-device-mapping <dev-name=mapping>] [--block-device] [--swap <swap>]
-                               [--ephemeral <size=size[,format=format]>] [--network <network>] [--port <port>] [--no-network] [--auto-network]
-                               [--nic <net-id=net-uuid,port-id=port-uuid,v4-fixed-ip=ip-addr,v6-fixed-ip=ip-addr,tag=tag,auto,none>] [--password <password>]
-                               [--security-group <security-group>] [--key-name <key-name>] [--property <key=value>] [--file <dest-filename=source-filename>]
-                               [--user-data <user-data>] [--description <description>] [--availability-zone <zone-name>] [--host <host>]
-                               [--hypervisor-hostname <hypervisor-hostname>] [--server-group <server-group>] [--hint <key=value>]
-                               [--use-config-drive | --no-config-drive | --config-drive <config-drive-volume>|True] [--min <count>] [--max <count>] [--tag <tag>]
-                               [--hostname <hostname>] [--wait] [--trusted-image-cert <trusted-cert-id>]
-                               <server-name>
-openstack server create: error: argument --port: expected one argument
+NETWORK_ID="23f15701-a72f-4d9c-8f2f-de8a470e1514"  # Add this at top
 
+echo "===== Creating VM $i ====="
 
+# ✅ Fix: Pass correct network ID
+port_id=$(openstack port create \
+  --network "$NETWORK_ID" \
+  --fixed-ip subnet=e5db0db9-bf93-43f4-928a-e46e099fef9e \
+  --enable test-gpu-port -f json | jq -r '.id')
+echo "Created port: $port_id"
 
+# ✅ Use port_id properly
+openstack port set \
+  --security-group b3455868-8842-4b16-9f35-684e25f25f28 \
+  --security-group 1320ddfd-e090-4300-8d9c-c0d10dfaf84b \
+  --security-group c741134d-43d3-4419-bb55-ba6e60bead75 \
+  --security-group 58269c3b-bd2d-4287-aedc-2e2f2c744c19 \
+  "$port_id"
 
+# ✅ Floating IP attach
+openstack floating ip create -f json \
+  --subnet e33be8b2-02e2-41a5-87b5-830ba5d0db7a \
+  --port "$port_id" pro-net-vlan1162 > /dev/null
+echo "Floating IP created for VM $i"
 
-  echo "===== Creating VM $i ====="
+# ✅ Volume creation
+volume_id=$(openstack volume create -f json \
+  --snapshot e355ab4b-a2f5-4a25-a0c8-2523816c9678 \
+  --size 125 \
+  --bootable test-gpu-vol | jq -r '.id')
+echo "Created volume: $volume_id"
 
-  # Create port
-  port_id=$(openstack port create \
-    --network  \
-    --fixed-ip subnet=e5db0db9-bf93-43f4-928a-e46e099fef9e \
-    --enable test-gpu-port -f json | jq -r '.id')
-  echo "Created port: $port_id"
+# ✅ Wait until available
+while true; do
+  status=$(openstack volume show "$volume_id" -f value -c status)
+  if [ "$status" = "available" ]; then
+    break
+  else
+    echo "Waiting for volume $volume_id to become available..."
+    sleep 5
+  fi
+done
 
-  # Set security groups
-  openstack port set \
-    --security-group b3455868-8842-4b16-9f35-684e25f25f28 \
-    --security-group 1320ddfd-e090-4300-8d9c-c0d10dfaf84b \
-    --security-group c741134d-43d3-4419-bb55-ba6e60bead75 \
-    --security-group 58269c3b-bd2d-4287-aedc-2e2f2c744c19 \
-    $port_id
+# ✅ Server creation
+openstack server create \
+  --flavor m8g.xlarge  \
+  --volume "$volume_id" \
+  --security-group b3455868-8842-4b16-9f35-684e25f25f28 \
+  --security-group 1320ddfd-e090-4300-8d9c-c0d10dfaf84b \
+  --security-group c741134d-43d3-4419-bb55-ba6e60bead75 \
+  --security-group 58269c3b-bd2d-4287-aedc-2e2f2c744c19 \
+  --port "$port_id" \
+  --key-name c30-drm-keypair \
+  --wait test-gpu-vm
 
-  # Create floating IP
-  openstack floating ip create -f json \
-    --subnet e33be8b2-02e2-41a5-87b5-830ba5d0db7a \
-    --port $port_id pro-net-vlan1162 > /dev/null
-  echo "Floating IP created for VM $i"
-
-  # Create bootable volum
-  volume_id=$(openstack volume create -f json \
-    --snapshot e355ab4b-a2f5-4a25-a0c8-2523816c9678 \
-    --size 125 \
-    --bootable test-gpu-vol | jq -r '.id')
-  echo "Created volume: $volume_id"
-
-  # Wait for volume to be available
-  while true; do
-    status=$(openstack volume show $volume_id -f value -c status)
-    if [ "$status" = "available" ]; then
-      break
-    else
-
-
-
-
-      echo "Waiting for volume $volume_id to become available..."
-      sleep 5
-    fi
-  done
-
-  # Create server
-  openstack server create \
-    --flavor m8g.xlarge  \
-    --volume $volume_id \
-    --security-group b3455868-8842-4b16-9f35-684e25f25f28 \
-    --security-group 1320ddfd-e090-4300-8d9c-c0d10dfaf84b \
-    --security-group c741134d-43d3-4419-bb55-ba6e60bead75 \
-    --security-group 58269c3b-bd2d-4287-aedc-2e2f2c744c19 \
-    --port $port_id \
-    --key-name c30-drm-keypair \
-    --wait test-gpu-vm
-
-  echo "VM $i created successfully"
-
-
+echo "✅ VM $i created successfully"
