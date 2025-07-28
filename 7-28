@@ -1,53 +1,79 @@
 #!/bin/bash
 
-# Inputs from Terraform variables or known values
+set -euo pipefail
+
+# === Input Variables ===
 NETWORK_ID="23f15701-a72f-4d9c-8f2f-de8a470e1514"
-FLOATING_IP_ID="77d4ae8b-9792-495c-bb7b-aaa5569da518"
 SECURITY_GROUP_ID="dfcded29-7ee4-4f19-bb35-30773d62a2f4"
 SNAPSHOT_ID="e355ab4b-a2f5-4a25-a0c8-2523816c9678"
 KEY_NAME="c30-drm-keypair"
 
-# Static Config
 FLAVOR_NAME="m8g.xlarge"
 VM_NAME="test-gpu-vm"
 PORT_NAME="test-gpu-port"
 VOLUME_NAME="test-gpu-vol"
 
-echo "===== Creating OpenStack VM: $VM_NAME ====="
+echo "===== 🚀 Creating VM: $VM_NAME ====="
 
-# Step 1: Create Port (no fixed subnet needed if dynamic IP is okay)
+# === Step 1: Dynamically Find Subnet ===
+echo "[*] Looking up subnet in network $NETWORK_ID..."
+SUBNET_ID=$(openstack subnet list --network "$NETWORK_ID" -f json | jq -r '.[0].ID')
+
+if [ -z "$SUBNET_ID" ]; then
+  echo "❌ No subnet found under network $NETWORK_ID. Aborting."
+  exit 1
+fi
+
+echo "[+] Found subnet: $SUBNET_ID"
+
+# === Step 2: Create Port ===
+echo "[*] Creating port..."
 PORT_ID=$(openstack port create \
   --network "$NETWORK_ID" \
+  --fixed-ip subnet="$SUBNET_ID" \
   --security-group "$SECURITY_GROUP_ID" \
-  "$PORT_NAME" -f json | jq -r '.id')
+  --enable "$PORT_NAME" -f json | jq -r '.id')
 
-echo "[+] Created Port: $PORT_ID"
+echo "[+] Created port: $PORT_ID"
 
-# Step 2: Associate existing floating IP to the port
+# === Step 3: Dynamically Find Available Floating IP ===
+echo "[*] Finding unassigned floating IP..."
+FLOATING_IP_ID=$(openstack floating ip list --status DOWN --network "$NETWORK_ID" -f json | jq -r '.[0].ID')
+
+if [ -z "$FLOATING_IP_ID" ] || [ "$FLOATING_IP_ID" == "null" ]; then
+  echo "❌ No available floating IP in network $NETWORK_ID. Aborting."
+  exit 1
+fi
+
+echo "[+] Found unassigned floating IP: $FLOATING_IP_ID"
+
+# === Step 4: Associate Floating IP with Port ===
+echo "[*] Associating floating IP $FLOATING_IP_ID with port $PORT_ID..."
 openstack floating ip set --port "$PORT_ID" "$FLOATING_IP_ID"
-echo "[+] Associated Floating IP $FLOATING_IP_ID with port $PORT_ID"
+echo "[+] Floating IP associated."
 
-# Step 3: Create bootable volume from snapshot
+# === Step 5: Create Bootable Volume ===
+echo "[*] Creating bootable volume..."
 VOLUME_ID=$(openstack volume create -f json \
   --snapshot "$SNAPSHOT_ID" \
   --size 125 \
   --bootable "$VOLUME_NAME" | jq -r '.id')
 
-echo "[+] Created Volume: $VOLUME_ID"
+echo "[+] Created volume: $VOLUME_ID"
 
-# Wait until volume becomes 'available'
+# === Step 6: Wait for Volume to Become Available ===
+echo "[*] Waiting for volume to become available..."
 while true; do
   STATUS=$(openstack volume show "$VOLUME_ID" -f value -c status)
-  if [ "$STATUS" = "available" ]; then
-    echo "[+] Volume is available."
+  if [[ "$STATUS" == "available" ]]; then
     break
-  else
-    echo "[*] Waiting for volume $VOLUME_ID to become available..."
-    sleep 5
   fi
+  echo "[~] Volume status: $STATUS — waiting..."
+  sleep 5
 done
 
-# Step 4: Create the VM
+# === Step 7: Launch the VM ===
+echo "[*] Creating server..."
 openstack server create \
   --flavor "$FLAVOR_NAME" \
   --volume "$VOLUME_ID" \
@@ -55,4 +81,4 @@ openstack server create \
   --key-name "$KEY_NAME" \
   --wait "$VM_NAME"
 
-echo "✅ VM '$VM_NAME' created successfully and attached to Floating IP."
+echo "✅ VM '$VM_NAME' created successfully with floating IP: $FLOATING_IP_ID"
