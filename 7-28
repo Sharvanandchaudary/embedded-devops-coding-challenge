@@ -93,3 +93,70 @@ openstack server create \
 
 echo "✅ VM created from image $IMAGE_ID"
 
+
+
+#!/bin/bash
+set -e
+
+IMAGE_ID="554e21bf-8d0c-4afc-a59a-8763b882efa2"
+VOLUME_SIZE_GB=400  # Adjust if needed
+VM_NAME="test-gpu-vm"
+PORT_NAME="test-gpu-port"
+FLOATING_NET="pro-net-vlan1162"
+
+echo "===== Creating GPU VM ====="
+
+# Step 1: Create port
+port_id=$(openstack port create \
+  --network 3eb39e89-ac62-4b5b-a313-8d52482cc1f2 \
+  --fixed-ip subnet=e5db0db9-bf93-43f4-928a-e46e099fef9e \
+  --enable ${PORT_NAME} -f json | jq -r '.id')
+echo "Created port: $port_id"
+
+# Step 2: Set security groups
+openstack port set \
+  --security-group b3455868-8842-4b16-9f35-684e25f25f28 \
+  --security-group 1320ddfd-e090-4300-8d9c-c0d10dfaf84b \
+  --security-group c741134d-43d3-4419-bb55-ba6e60bead75 \
+  --security-group 58269c3b-bd2d-4287-aedc-2e2f2c744c19 \
+  "$port_id"
+
+# Step 3: Create and assign floating IP
+openstack floating ip create -f json \
+  --subnet e33be8b2-02e2-41a5-87b5-830ba5d0db7a \
+  --port "$port_id" "$FLOATING_NET" > /dev/null
+echo "Floating IP created for GPU VM"
+
+# Step 4: Create bootable volume from image
+volume_id=$(openstack volume create \
+  --image "$IMAGE_ID" \
+  --size "$VOLUME_SIZE_GB" \
+  --bootable "${VM_NAME}-boot-vol" -f json | jq -r '.id')
+echo "Created bootable volume: $volume_id"
+
+# Step 5: Wait for volume to become available
+while true; do
+  status=$(openstack volume show "$volume_id" -f value -c status)
+  if [ "$status" = "available" ]; then
+    break
+  else
+    echo "Waiting for volume $volume_id to become available... status: $status"
+    sleep 5
+  fi
+done
+
+# Step 6: Create the VM from the bootable volume
+openstack server create \
+  --flavor m8g.xlarge \
+  --volume "$volume_id" \
+  --port "$port_id" \
+  --key-name c30-drm-keypair \
+  --wait "$VM_NAME" \
+  --security-group b3455868-8842-4b16-9f35-684e25f25f28 \
+  --security-group 1320ddfd-e090-4300-8d9c-c0d10dfaf84b \
+  --security-group c741134d-43d3-4419-bb55-ba6e60bead75 \
+  --security-group 58269c3b-bd2d-4287-aedc-2e2f2c744c19
+
+echo "✅ VM '$VM_NAME' created successfully from image $IMAGE_ID"
+
+
