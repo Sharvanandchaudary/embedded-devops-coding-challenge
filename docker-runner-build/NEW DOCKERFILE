@@ -1,112 +1,88 @@
 FROM ubuntu:latest
 
-# Install required system packages including Node.js 16+
+# Required environment setup and system tools
 RUN apt-get update && \
-    apt-get install -y curl gnupg ca-certificates sudo && \
-    curl -fsSL https://deb.nodesource.com/setup_16.x | bash - && \
-    apt-get install -y --no-install-recommends \
-    nodejs \
-    libicu-dev \
-    netcat-traditional \
-    netcat-openbsd \
-    jq \
+    apt-get install -y \
+    curl \
+    gnupg \
+    ca-certificates \
+    sudo \
+    git \
     unzip \
-    wget \
+    jq \
     python3 \
     python3-pip \
-    git \
-    openssh-client \
-    gcc \
     python3-dev \
-    gh \
-    pipx && \
+    openssh-client \
+    lsb-release \
+    netcat-traditional \
+    netcat-openbsd \
+    libicu-dev \
+    software-properties-common && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Set up working directory
+# Install Node.js 16+ (for React and Express)
+RUN curl -fsSL https://deb.nodesource.com/setup_16.x | bash - && \
+    apt-get update && \
+    apt-get install -y nodejs
+
+# Set working directory
 WORKDIR /gh-runner
-
-# GitHub runner version and tool versions
-ARG GITHUB_RUNNER_VERSION="2.310.2"
-ARG TG_VERSION="v0.52.3"
-ARG TRIVY_VERSION="0.47.0"
-ARG TF_VERSION="1.5.7"
-ARG TF_PROFILE_VERSION="v0.4.0"
-
-# Create bin path
 RUN mkdir -p bin
 
-# Install GitHub Actions runner
-RUN curl -o actions-runner-linux-x64-${GITHUB_RUNNER_VERSION}.tar.gz -Ls https://github.com/actions/runner/releases/download/v${GITHUB_RUNNER_VERSION}/actions-runner-linux-x64-${GITHUB_RUNNER_VERSION}.tar.gz && \
+# GitHub Runner version
+ARG GITHUB_RUNNER_VERSION="2.310.2"
+
+# Install GitHub Actions self-hosted runner
+RUN curl -o actions-runner-linux-x64-${GITHUB_RUNNER_VERSION}.tar.gz -Ls \
+    https://github.com/actions/runner/releases/download/v${GITHUB_RUNNER_VERSION}/actions-runner-linux-x64-${GITHUB_RUNNER_VERSION}.tar.gz && \
     tar xzf actions-runner-linux-x64-${GITHUB_RUNNER_VERSION}.tar.gz
 
-# Install kubectl
+# Install Docker CLI
+RUN install -m 0755 -d /etc/apt/keyrings && \
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | \
+    gpg --dearmor -o /etc/apt/keyrings/docker.gpg && \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
+    https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | \
+    tee /etc/apt/sources.list.d/docker.list > /dev/null && \
+    apt-get update && apt-get install -y docker-ce-cli
+
+# Install JFrog CLI
+RUN curl -fL https://getcli.jfrog.io | sh && \
+    mv jfrog /usr/local/bin/
+
+# Optional: Install kubectl and helm (for k8s deployment if needed)
 RUN curl -LO "https://dl.k8s.io/release/$(curl -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" && \
-    chmod +x ./kubectl && mv ./kubectl /gh-runner/bin
+    chmod +x kubectl && mv kubectl /gh-runner/bin
 
-# Install helm
-RUN curl -o helm-v3.9.3-linux-amd64.tar.gz https://get.helm.sh/helm-v3.9.3-linux-amd64.tar.gz && \
-    tar xvf helm-v3.9.3-linux-amd64.tar.gz && \
-    mv linux-amd64/helm /gh-runner/bin
+RUN curl -Lo helm.tar.gz https://get.helm.sh/helm-v3.9.3-linux-amd64.tar.gz && \
+    tar -xvf helm.tar.gz && mv linux-amd64/helm /gh-runner/bin && \
+    rm -rf linux-amd64 helm.tar.gz
 
-# Install trufflehog
-RUN mkdir trufflehog && cd trufflehog && \
-    curl -Lo trufflehog.tar.gz https://github.com/trufflesecurity/trufflehog/releases/download/v3.62.1/trufflehog_3.62.1_linux_amd64.tar.gz && \
-    tar xvf ./trufflehog.tar.gz && mv trufflehog /gh-runner/bin
-
-# Install tfsec
-RUN curl -s https://raw.githubusercontent.com/aquasecurity/tfsec/master/scripts/install_linux.sh | bash
-
-# Install trivy
-RUN mkdir trivy && cd trivy && \
-    curl -Lo trivy.tar.gz https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz && \
-    tar xvf ./trivy.tar.gz && mv trivy /gh-runner/bin
-
-# Install Terraform
-RUN curl -Lo terraform.zip https://releases.hashicorp.com/terraform/${TF_VERSION}/terraform_${TF_VERSION}_linux_amd64.zip && \
-    unzip -o terraform.zip && mv terraform /gh-runner/bin
-
-# Install Terragrunt
-RUN curl -Lo terragrunt https://github.com/gruntwork-io/terragrunt/releases/download/${TG_VERSION}/terragrunt_linux_amd64 && \
-    chmod +x terragrunt && mv terragrunt /gh-runner/bin
-
-# Install tf-profile
-RUN curl -Lo tf-profile.zip https://github.com/datarootsio/tf-profile/releases/download/${TF_PROFILE_VERSION}/tf-profile-${TF_PROFILE_VERSION}-linux-amd64.zip && \
-    unzip tf-profile.zip && rm tf-profile.zip && \
-    chmod +x tf-profile* && mv tf-profile* /gh-runner/bin/tf-profile
-
-# Python packages
-RUN pipx install awscliv2 && \
-    pipx install --include-deps requests && pipx ensurepath && \
-    pip3 install --break-system-packages Jinja2 python-swiftclient && \
-    pip install --break-system-packages python-keystoneclient && \
-    cp /root/.local/bin/* /gh-runner/bin
+# Optional: Python-based utils (for future scripting or monitoring)
+RUN pip3 install Jinja2
 
 # Copy runner scripts
 COPY entrypoint.sh .
 COPY exitpoint.sh .
 RUN chmod +x entrypoint.sh exitpoint.sh
 
-# Environment & permissions
+# Set PATH to include custom bin
 ENV PATH="$PATH:/gh-runner/bin"
+
+# Create non-root user for security
 RUN adduser ghrunner -uid 1001 && \
     chown -R ghrunner:ghrunner /gh-runner && \
     chmod 777 /gh-runner /home/ghrunner && \
-    mkdir /ghrunner && chmod 777 /ghrunner
+    mkdir -p /ghrunner && chmod 777 /ghrunner
 
-# Optional: Copy CES project into image
-# COPY ces/ /ces/
-# WORKDIR /ces/chamber-state-app
-
-# Switch to runner user
 USER ghrunner
-RUN pipx install awscli && pipx ensurepath && cp /home/ghrunner/.local/bin/aws* /gh-runner/bin
 
-# Optional: Copy .tfrc or config file
+# Optional: Copy CLI config for terraform, JFrog, etc.
 COPY cadence.tfrc /home/ghrunner/
 
-# Expose frontend and backend ports
+# Expose frontend and backend ports (React + Express)
 EXPOSE 3000
 EXPOSE 3001
 
-# Start the runner
 ENTRYPOINT ["/gh-runner/entrypoint.sh"]
