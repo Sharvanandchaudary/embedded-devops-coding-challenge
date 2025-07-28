@@ -1,0 +1,82 @@
+#!/bin/bash
+
+
+  echo "===== Creating VM $i ====="
+
+  # Create port
+  port_id=$(openstack port create \
+    --network  \
+    --fixed-ip subnet=e5db0db9-bf93-43f4-928a-e46e099fef9e \
+    --enable test-gpu-port -f json | jq -r '.id')
+  echo "Created port: $port_id"
+
+  # Set security groups
+  openstack port set \
+    --security-group b3455868-8842-4b16-9f35-684e25f25f28 \
+    --security-group 1320ddfd-e090-4300-8d9c-c0d10dfaf84b \
+    --security-group c741134d-43d3-4419-bb55-ba6e60bead75 \
+    --security-group 58269c3b-bd2d-4287-aedc-2e2f2c744c19 \
+    $port_id
+ 
+
+
+ # Create floating IP
+  openstack floating ip create -f json \
+    --subnet e33be8b2-02e2-41a5-87b5-830ba5d0db7a \
+    --port $port_id pro-net-vlan1162 > /dev/null
+  echo "Floating IP created for VM $i"
+
+  # Create bootable volum
+  volume_id=$(openstack volume create -f json \
+    --snapshot e355ab4b-a2f5-4a25-a0c8-2523816c9678 \
+    --size 125 \
+    --bootable test-gpu-vol | jq -r '.id')
+  echo "Created volume: $volume_id"
+
+  # Wait for volume to be available
+  while true; do
+    status=$(openstack volume show $volume_id -f value -c status)
+    if [ "$status" = "available" ]; then
+      break
+    else
+      echo "Waiting for volume $volume_id to become available..."
+      sleep 5
+    fi
+  done
+
+  # Create server
+  openstack server create \
+    --flavor m8g.multi  \
+    --volume $volume_id \
+    --security-group b3455868-8842-4b16-9f35-684e25f25f28 \
+    --security-group 1320ddfd-e090-4300-8d9c-c0d10dfaf84b \
+    --security-group c741134d-43d3-4419-bb55-ba6e60bead75 \
+    --security-group 58269c3b-bd2d-4287-aedc-2e2f2c744c19 \
+    --port $port_id \
+    --key-name c30-drm-keypair \
+    --wait test-gpu-vm
+
+  echo "VM $i created successfully"
+
+
+
+variable "os_network_list" {
+  description = "open stack network"
+  type        = list(string)
+  default     = ["23f15701-a72f-4d9c-8f2f-de8a470e1514"]
+}
+
+variable "os_floating_ip" {
+  type = string
+  default = "77d4ae8b-9792-495c-bb7b-aaa5569da518"
+}
+
+variable "os_sg_list" {
+  description = "open stack security group"
+  type        = list(string)
+  default     = ["dfcded29-7ee4-4f19-bb35-30773d62a2f4"]
+}
+
+
+
+i want to use this network and floating ip security group rewrie this script use this and create 
