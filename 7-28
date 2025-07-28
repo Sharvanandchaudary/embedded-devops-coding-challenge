@@ -287,3 +287,146 @@ Check GPU status	nvidia-smi
 Detect hardware	`lspci
 Run CUDA test	./deviceQuery
 Verify with PyTorch	Python torch.cuda.is_available()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+📦 Step 1: Update System and Install Dependencies
+bash
+Copy
+Edit
+dnf update -y
+dnf install -y gcc kernel-devel kernel-headers dkms make elfutils-libelf libglvnd-glx libglvnd-opengl libglvnd-devel libglvnd
+Also install EPEL (if needed):
+
+bash
+Copy
+Edit
+dnf install -y epel-release
+💡 Step 2: Disable Nouveau Driver (Required)
+bash
+Copy
+Edit
+cat <<EOF > /etc/modprobe.d/disable-nouveau.conf
+blacklist nouveau
+options nouveau modeset=0
+EOF
+
+dracut --force
+Then reboot:
+
+bash
+Copy
+Edit
+reboot
+After reboot, confirm nouveau is disabled:
+
+bash
+Copy
+Edit
+lsmod | grep nouveau   # should return nothing
+🚀 Step 3: Download & Install NVIDIA Driver (Official .run method)
+Get the latest .run file from:
+👉 https://www.nvidia.com/Download/index.aspx
+
+Or directly (example for RHEL 8/9-compatible version):
+
+bash
+Copy
+Edit
+wget https://us.download.nvidia.com/XFree86/Linux-x86_64/535.154.05/NVIDIA-Linux-x86_64-535.154.05.run
+chmod +x NVIDIA-Linux-x86_64-535.154.05.run
+Switch to multi-user mode (disable GUI if running):
+
+bash
+Copy
+Edit
+systemctl isolate multi-user.target
+Run the installer:
+
+bash
+Copy
+Edit
+./NVIDIA-Linux-x86_64-535.154.05.run
+Accept the license
+
+Say Yes to DKMS if prompted
+
+Say No to installing 32-bit libs (unless you need them)
+
+✅ Step 4: Verify GPU Installation
+After reboot:
+
+bash
+Copy
+Edit
+nvidia-smi
+Expected output:
+
+diff
+Copy
+Edit
++-----------------------------------------------------------------------------+
+| NVIDIA-SMI 535.154.05   Driver Version: 535.154.05   CUDA Version: 12.2    |
+| GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile ECC |
+|  0  NVIDIA A100-PCIE...        | ...                 |       0      |
++-----------------------------------------------------------------------------+
+🧪 Step 5 (Optional): Run a CUDA Test
+bash
+Copy
+Edit
+dnf install -y git
+git clone https://github.com/NVIDIA/cuda-samples.git
+cd cuda-samples/Samples/1_Utilities/deviceQuery
+make
+./deviceQuery
+It should end with:
+
+ini
+Copy
+Edit
+Result = PASS
+🔍 Final Notes
+Task	Status
+Disable Nouveau driver	✅ Required
+Install kernel headers	✅ Required for DKMS
+Run .run installer	✅ Cleanest on RHEL
+Reboot	✅ Required after driver install
+Test GPU with nvidia-smi	✅ Confirms success
+
+Let me know if you want to:
+
+Install the full CUDA toolkit
+
+Set up GPU support for PyTorch or TensorFlow
+
+Automate this with a script
+
+You're very close — great work!
+
+
+
+
+
+
+
+
+
+Ask ChatGPT
+
