@@ -160,3 +160,130 @@ openstack server create \
 echo "✅ VM '$VM_NAME' created successfully from image $IMAGE_ID"
 
 
+
+
+
+✅ 1. Update the System
+bash
+Copy
+Edit
+sudo apt update && sudo apt upgrade -y
+✅ 2. Add NVIDIA's Package Repositories
+bash
+Copy
+Edit
+sudo apt install -y wget software-properties-common gnupg
+wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-ubuntu2004.pin
+sudo mv cuda-ubuntu2004.pin /etc/apt/preferences.d/cuda-repository-pin-600
+
+# Replace with the latest key if this changes
+sudo apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/3bf863cc.pub
+
+sudo add-apt-repository "deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/ /"
+sudo apt update
+💡 If you're using Ubuntu 22.04, replace ubuntu2004 with ubuntu2204 in the above URLs.
+
+✅ 3. Install NVIDIA Driver + CUDA Toolkit
+bash
+Copy
+Edit
+sudo apt install -y cuda-drivers cuda-toolkit-11-8
+This will install:
+
+nvidia-smi
+
+nvcc (CUDA compiler)
+
+Kernel modules
+
+✅ 4. Reboot the VM
+bash
+Copy
+Edit
+sudo reboot
+Then SSH back in:
+
+bash
+Copy
+Edit
+ssh -i your-key.pem ubuntu@<floating-ip>
+✅ 5. Check That GPU is Detected
+🔹 Is the GPU recognized?
+bash
+Copy
+Edit
+nvidia-smi
+Expected output: something like this 👇
+
+lua
+Copy
+Edit
++-----------------------------------------------------------------------------+
+| NVIDIA-SMI 535.54.03    Driver Version: 535.54.03    CUDA Version: 12.2     |
+|-------------------------------+----------------------+----------------------+
+| GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |
+|  0  NVIDIA A100-PCIE...  Off  | 00000000:00:1E.0 Off |                    0 |
++-------------------------------+----------------------+----------------------+
+🔹 If nvidia-smi not found:
+bash
+Copy
+Edit
+which nvidia-smi
+dpkg -l | grep nvidia
+✅ 6. Confirm GPU is Attached
+bash
+Copy
+Edit
+lspci | grep -i nvidia
+Expected output:
+
+makefile
+Copy
+Edit
+00:1e.0 VGA compatible controller: NVIDIA Corporation GPU Model...
+✅ 7. Test GPU with CUDA Sample
+bash
+Copy
+Edit
+# Install build tools
+sudo apt install -y build-essential
+
+# Download CUDA samples
+cuda-install-samples-11.8.sh ~
+cd ~/NVIDIA_CUDA-11.8_Samples/1_Utilities/deviceQuery
+
+# Compile and run
+make
+./deviceQuery
+Expected output should end with:
+
+ini
+Copy
+Edit
+Result = PASS
+✅ Optional: Run TensorFlow or PyTorch GPU Test
+🔹 Install Python environment
+bash
+Copy
+Edit
+sudo apt install -y python3-pip
+pip3 install torch torchvision --index-url https://download.pytorch.org/whl/cu118
+🔹 Python GPU test
+python
+Copy
+Edit
+python3 -c "import torch; print(torch.cuda.is_available()); print(torch.cuda.get_device_name(0))"
+Expected:
+
+graphql
+Copy
+Edit
+True
+NVIDIA A100-PCIE-40GB
+✅ Summary of Key Commands
+Purpose	Command
+Install drivers	sudo apt install cuda-drivers
+Check GPU status	nvidia-smi
+Detect hardware	`lspci
+Run CUDA test	./deviceQuery
+Verify with PyTorch	Python torch.cuda.is_available()
