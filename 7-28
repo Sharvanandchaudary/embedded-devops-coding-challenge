@@ -82,3 +82,17 @@ openstack server create \
   --wait "$VM_NAME"
 
 echo "✅ VM '$VM_NAME' created successfully with floating IP: $FLOATING_IP_ID"
+
+
+
+
+echo "[DEBUG] Port ID: $PORT_ID"
+echo "[DEBUG] Volume ID: $VOLUME_ID"
+echo "[DEBUG] Running command:"
+echo openstack server create \
+  --flavor "$FLAVOR_NAME" \
+  --volume "$VOLUME_ID" \
+  --port "$PORT_ID" \
+  --key-name "$KEY_NAME" \
+  --wait "$VM_NAME"
+
