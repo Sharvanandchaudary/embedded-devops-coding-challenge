@@ -424,9 +424,41 @@ You're very close — great work!
 
 
 
+#!/bin/bash
+set -e
+
+# Bootable volume ID you provided
+VOLUME_ID="554e21bf-8d0c-4afc-a59a-8763b882efa2"
+
+# Variables from Terraform
+NETWORK_ID="23f15701-a72f-4d9c-8f2f-de8a470e1514"
+FLOATING_IP_ID="77d4ae8b-9792-495c-bb7b-aaa5569da518"
+SEC_GROUP="dfcded29-7ee4-4f19-bb35-30773d62a2f4"
+VM_NAME="auto-vm-01"
+FLAVOR="m8g.xlarge"
+
+echo "Creating port..."
+PORT_ID=$(openstack port create \
+  --network "$NETWORK_ID" \
+  --enable "${VM_NAME}-port" \
+  --security-group "$SEC_GROUP" \
+  -f json | jq -r '.id')
+
+echo "Assigning floating IP to port..."
+openstack floating ip set --port "$PORT_ID" "$FLOATING_IP_ID"
+
+echo "Creating instance..."
+openstack server create \
+  --flavor "$FLAVOR" \
+  --volume "$VOLUME_ID" \
+  --port "$PORT_ID" \
+  --wait \
+  "$VM_NAME"
+
+echo "✅ Instance $VM_NAME created and floating IP is bound."
 
 
 
 
-Ask ChatGPT
+
 
