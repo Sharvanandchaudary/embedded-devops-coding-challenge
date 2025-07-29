@@ -457,8 +457,28 @@ openstack server create \
 
 echo "✅ Instance $VM_NAME created and floating IP is bound."
 
+network : 23f15701-a72f-4d9c-8f2f-de8a470e1514
+flaoting ip 77d4ae8b-9792-495c-bb7b-aaa5569da518
+Image id: 705495d2-f0c6-44fa-aabd-90577d989fcc
+sg list "dfcded29-7ee4-4f19-bb35-30773d62a2f4
+m1.large
 
 
 
 
+image 705495d2-f0c6-44fa-aabd-90577d989fcc
+Dn01 packer
+Network  23f15701-a72f-4d9c-8f2f-de8a470e1514
+subnet 81952139-370a-464f-8940-62d6ef967
+pro-subnet-1132 
+
+security groups
+
+80a223b3-273f-44c3-b22c-7c90e9259b3b
+
+866eaf2b-fc80-496a-a440-f0e6cfc310f0
+
+1db5e212-a003-4557-9898-d649b475269a
+
+32d5b9f5-a613-4853-b326-588b47c37fe2
 
