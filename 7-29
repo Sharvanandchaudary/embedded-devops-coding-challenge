@@ -1,0 +1,6 @@
+openstack flavor create g2-h100x2-32xlarge \
+  --ram 262144 --disk 200 --vcpus 32
+
+openstack flavor set g2-h100x2-32xlarge \
+  --property "pci_passthrough:alias=h100-sxm:2" \
+  --property "aggregate_instance_extra_specs:host_type=gpu_h100"
