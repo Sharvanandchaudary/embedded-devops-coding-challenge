@@ -561,6 +561,54 @@ SEC_GROUPS=(
   32d5b9f5-a613-4853-b326-588b47c37fe2
 )
 
+
+
+
+
+
+
+
+
+
+
+Daily Status Report
+Date: [Insert Date]
+Engineer: [Your Name]
+
+Today's Work:
+
+Investigated GPU passthrough requirements and found it needs to be enabled by the Cloud IaaS team.
+
+Raised a ticket to the Cloud IaaS team with explanation of PCI passthrough requirements.
+
+Accessed the instance after some delay to begin GPU validation.
+
+Observed that the instance has no internet access, blocking NVIDIA driver verification using nvidia-smi.
+
+Filed a request with the Infosec team to whitelist the NVIDIA driver repository URL.
+
+Confirmed that the expected image and GPU testing were not done by Brian.
+
+Restarted setup from scratch using the RHEL 8.6 image from the development environment.
+
+Conducted initial setup and testing on instance with multiple GPUs.
+
+Raised a pull request for GitHub runner integration in the cloudenvstatus CI/CD repository.
+
+Worked on updating the Dockerfile to build the runner container with all required tools and configurations.
+
+Plan for Tomorrow:
+
+Ensure PCI passthrough is enabled and test using a proper GPU flavor.
+
+Provision a GPU instance and verify GPU attachment and driver functionality using nvidia-smi.
+
+Create and validate a reusable image from the tested setup.
+
+Finalize and configure GitHub Actions runner access from the VM.
+
+Start development of the CI/CD workflow for automated GPU validation.
+
 # Create a port with fixed IP on the specified subnet
 echo "Creating port for $VM_NAME..."
 PORT_ID=$(openstack port create \
