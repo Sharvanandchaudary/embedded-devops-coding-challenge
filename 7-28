@@ -634,3 +634,60 @@ openstack server create \
 
 echo "✅ VM '$VM_NAME' created and attached to subnet $SUBNET_ID"
 
+
+
+
+
+
+
+#!/bin/bash
+set -e
+
+# === Parameters ===
+IMAGE_ID="705495d2-f0c6-44fa-aabd-90577d989fcc"
+VM_NAME="dn01-packer"
+FLAVOR="r6i.8xlarge"
+KEY_NAME="veera-dev"
+
+# Network and Subnet
+NETWORK_ID="23f15701-a72f-4d9c-8f2f-de8a470e1514"
+SUBNET_ID="81952139-370a-464f-8940-62d6ef967"
+
+# Security Groups
+SEC_GROUPS=(
+  80a223b3-273f-44c3-b22c-7c90e9259b3b
+  866eaf2b-fc80-496a-a440-f0e6cfc310f0
+  1db5e212-a003-4557-9898-d649b475269a
+  32d5b9f5-a613-4853-b326-588b47c37fe2
+)
+
+# Optional: Floating IP creation (commented out)
+# FLOATING_NET="pro-net-vlan1162"
+# FLOATING_IP=$(openstack floating ip create --subnet $SUBNET_ID $FLOATING_NET -f json | jq -r '.floating_ip_address')
+
+# Create a port with fixed IP on the specified subnet
+echo "Creating port for $VM_NAME..."
+PORT_ID=$(openstack port create \
+  --network "$NETWORK_ID" \
+  --fixed-ip subnet="$SUBNET_ID" \
+  --enable "${VM_NAME}-port" \
+  -f json | jq -r '.id')
+
+# Attach security groups to the port
+echo "Attaching security groups..."
+for sg in "${SEC_GROUPS[@]}"; do
+  openstack port set --security-group "$sg" "$PORT_ID"
+done
+
+# Create instance using image and key pair
+echo "Creating server $VM_NAME with key pair $KEY_NAME..."
+openstack server create \
+  --flavor "$FLAVOR" \
+  --image "$IMAGE_ID" \
+  --port "$PORT_ID" \
+  --key-name "$KEY_NAME" \
+  --wait \
+  "$VM_NAME"
+
+echo "✅ VM '$VM_NAME' created successfully and connected to subnet $SUBNET_ID with key pair $KEY_NAME"
+
