@@ -537,4 +537,7 @@ openstack server create \
 
 echo "✅ VM '$VM_NAME' created successfully and connected to subnet $SUBNET_ID"
 
+ openstack subnet list | grep 8195
+| 81952139-370a-464f-8940-62d6ef9671f1 | c30-dn-dev-dn-01-ComputeSubnet2a   | 23f15701-a72f-4d9c-8f2f-de8a470e1514 | 10.154.130.0/24   |
+vsaravan@sjcvl-ghrunner1:~$
 
