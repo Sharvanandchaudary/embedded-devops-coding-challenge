@@ -1,0 +1,23 @@
+[root@rhel86-barem ~]# nvidia-smi
+NVIDIA-SMI has failed because it couldn't communicate with the NVIDIA driver. Make sure that the latest NVIDIA driver is installed and running.
+
+[root@rhel86-barem ~]# lsmod | grep nvidia
+[root@rhel86-barem ~]# modprobe nvidia
+modprobe: FATAL: Module nvidia not found in directory /lib/modules/4.18.0-372.26.1.el8_6.x86_64
+[root@rhel86-barem ~]# uname -r
+4.18.0-372.26.1.el8_6.x86_64
+[root@rhel86-barem ~]# ls -l /lib/modules/$(uname -r)/kernel/drivers/video/nvidia*
+ls: cannot access '/lib/modules/4.18.0-372.26.1.el8_6.x86_64/kernel/drivers/video/nvidia*': No such file or directory
+[root@rhel86-barem ~]# dnf install kernel-devel kernel-headers dcc make -y
+Updating Subscription Management repositories.
+Unable to read consumer identity
+
+This system is not registered with an entitlement server. You can use subscription-manager to register.
+
+^CRed Hat Enterprise Linux 8 Workstation - x86_64 - Base                                    [                                                                     ===            ] ---  B/s |   0  B     --:-- ETRed Hat Enterprise Linux 8 Workstation - x86_64 - Base                                                                                                                           0.0  B/s |   0  B     00:52
+Errors during downloading metadata for repository 'Base':
+  - Curl error (28): Timeout was reached for http://10.207.8.38/images/rhel-8-x86_64/8.6/os/BaseOS/repodata/repomd.xml [Connection timed out after 30000 milliseconds]
+Error: Failed to download metadata for repo 'Base': Librepo was interrupted by a signal
+[root@rhel86-barem ~]# dnf download kernel-devel-$(uname -r)
+Updating Subscription Management repositories.
+Unable to read consumer identity
