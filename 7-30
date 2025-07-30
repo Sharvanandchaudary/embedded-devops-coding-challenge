@@ -1,3 +1,92 @@
+
+rm -rf /root/nvidia/python39-offline
+rm -f /root/nvidia/python39-offline.tar.gz
+💻 1. On Your Ubuntu/Linux Machine (with internet)
+Build Python 3.9
+bash
+Copy
+Edit
+cd /tmp
+wget https://www.python.org/ftp/python/3.9.18/Python-3.9.18.tgz
+tar -xzf Python-3.9.18.tgz
+cd Python-3.9.18
+./configure --enable-optimizations
+make -j$(nproc)
+make install DESTDIR=$HOME/python39-offline
+📦 2. Package Python
+bash
+Copy
+Edit
+cd ~
+tar -czvf python39-offline.tar.gz python39-offline/
+✅ File size should be ~120 MB.
+
+📤 3. Copy Python to RHEL VM
+bash
+Copy
+Edit
+scp -i veera-dev2.pem ~/python39-offline.tar.gz root@<VM-IP>:/root/nvidia/
+📂 4. On VM: Extract and test
+bash
+Copy
+Edit
+cd /root/nvidia
+tar -xzvf python39-offline.tar.gz
+/root/nvidia/python39-offline/usr/local/bin/python3.9 --version
+✅ Expected:
+
+nginx
+Copy
+Edit
+Python 3.9.18
+🧪 5. Create & activate virtual environment
+bash
+Copy
+Edit
+/root/nvidia/python39-offline/usr/local/bin/python3.9 -m venv /root/torch-env
+source /root/torch-env/bin/activate
+📦 6. Install PyTorch from offline .whl
+Assuming your PyTorch wheels are already in:
+
+swift
+Copy
+Edit
+/root/nvidia/pytorch-cu121-offline/
+Run:
+
+bash
+Copy
+Edit
+pip install --no-index --find-links=/root/nvidia/pytorch-cu121-offline torch torchvision torchaudio
+🚀 7. Test GPU access with PyTorch
+bash
+Copy
+Edit
+python -c "import torch; print(torch.__version__); print(torch.cuda.is_available()); print(torch.cuda.get_device_name(0))"
+✅ Expected Output:
+
+graphql
+Copy
+Edit
+2.x.x
+True
+NVIDIA H100 SXM
+Let me know if you want a PyTorch test script for GPU benchmarking or TensorFlow added ne
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ✅ STEP-BY-STEP (on your VM)
 1. Go to the working folder:
 bash
