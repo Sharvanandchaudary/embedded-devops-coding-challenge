@@ -1,56 +1,99 @@
-✅ Fix: Re-download PyTorch + CUDA wheels for Python 3.6 (offline)
-On your internet-connected machine:
-
-🔁 Step-by-step:
+✅ PART 1: Install Python 3.9 Locally and Package for Transfer
+1. On Local Ubuntu (with internet)
 bash
 Copy
 Edit
-mkdir pytorch-cu121-py36
-cd pytorch-cu121-py36
-Then run:
+sudo apt update
+sudo apt install -y build-essential libssl-dev zlib1g-dev \
+  libbz2-dev libreadline-dev libsqlite3-dev wget curl llvm \
+  libncursesw5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev
+2. Download and build Python 3.9
+bash
+Copy
+Edit
+cd /tmp
+wget https://www.python.org/ftp/python/3.9.18/Python-3.9.18.tgz
+tar -xf Python-3.9.18.tgz
+cd Python-3.9.18
+./configure --enable-optimizations
+make -j$(nproc)
+make install DESTDIR=$HOME/python39-offline
+This installs Python into $HOME/python39-offline/usr/local/bin/python3.9
+
+3. Compress the folder
+bash
+Copy
+Edit
+cd ~
+tar -czvf python39-offline.tar.gz python39-offline
+✅ PART 2: Copy Python 3.9 + PyTorch Offline to VM
+bash
+Copy
+Edit
+scp -i veera-dev2.pem ~/python39-offline.tar.gz ec2-user@<VM-IP>:/home/ec2-user/
+scp -i veera-dev2.pem pytorch-cu121-offline.tar.gz ec2-user@<VM-IP>:/home/ec2-user/
+✅ PART 3: On VM – Extract Python and Use It
+1. SSH into the VM
+bash
+Copy
+Edit
+ssh -i veera-dev2.pem ec2-user@<VM-IP>
+2. Extract Python
+bash
+Copy
+Edit
+tar -xzvf python39-offline.tar.gz
+cd python39-offline
+3. Add Python 3.9 to PATH (temporary)
+bash
+Copy
+Edit
+export PATH=$PWD/usr/local/bin:$PATH
+4. Check Python version
+bash
+Copy
+Edit
+python3.9 --version
+✅ PART 4: Install PyTorch Offline with Python 3.9
+1. Extract your PyTorch package
+bash
+Copy
+Edit
+tar -xzvf pytorch-cu121-offline.tar.gz
+This should create a folder like pytorch-cu121-offline/ containing .whl and .tar.gz files.
+
+2. Create and activate virtualenv
+bash
+Copy
+Edit
+python3.9 -m venv torch-env
+source torch-env/bin/activate
+3. Install from local folder
+bash
+Copy
+Edit
+pip install --no-index --find-links=./pytorch-cu121-offline torch torchvision torchaudio
+✅ PART 5: Verify GPU Support
+bash
+Copy
+Edit
+python -c "import torch; print(torch.cuda.is_available()); print(torch.cuda.get_device_name(0))"
+🧼 Optional (Make Python 3.9 Permanent)
+If you want Python 3.9 globally:
 
 bash
 Copy
 Edit
-pip download torch torchvision torchaudio \
---index-url https://download.pytorch.org/whl/cu121 \
---python-version 3.6 \
---platform manylinux2014_x86_64 \
---only-binary=:all: \
---dest .
-This will download .whl files that work for:
+sudo cp -r python39-offline/usr/local/* /usr/local/
+sudo ln -sf /usr/local/bin/python3.9 /usr/bin/python3.9
+Let me know if you also want a TensorFlow offline zip to be used with this Python 3.9, or if you want .whl structure for PyTorch.
 
-Python 3.6
 
-RHEL 8.6 (manylinux2014_x86_64)
 
-CUDA 12.1 runtime
 
-🗜️ Zip and copy to VM:
-bash
-Copy
-Edit
-zip -r pytorch-cu121-py36.zip pytorch-cu121-py36/
-scp pytorch-cu121-py36.zip root@10.107.163.176:/root/
-🖥️ On the VM:
-bash
-Copy
-Edit
-cd /root
-unzip pytorch-cu121-py36.zip
-cd pytorch-cu121-py36
-pip3 install *.whl
-✅ Verify after install:
-bash
-Copy
-Edit
-python3
-Then run:
 
-python
-Copy
-Edit
-import torch
-print(torch.cuda.is_available())          # True
-print(torch.cuda.get_device_name(0))      # NVIDIA H100
-print(torch.__version__)                  # Should show 2.x
+
+
+
+
+Ask ChatGPT
