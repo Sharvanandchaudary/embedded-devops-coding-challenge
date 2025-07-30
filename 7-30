@@ -1,66 +1,81 @@
-On your Ubuntu machine:
-https://github.com/anilkumarsripadam/nvidia-install/blob/main/README.md?plain=1
+✅ Step-by-Step Commands (Run on Ubuntu with internet)
+1. Create folders
 bash
 Copy
 Edit
-sudo apt update
-sudo apt install podman -y  # or docker if preferred
-Then run a RHEL-compatible container:
+mkdir -p ~/offline_pkgs/pytorch
+mkdir -p ~/offline_pkgs/tensorflow
+2. Create Python virtual environment (optional for clean dependency tracking)
+bash
+Copy
+Edit
+python3 -m venv ~/torch-env
+source ~/torch-env/bin/activate
+3. Download PyTorch (with CUDA 12.1, which supports H100)
+bash
+Copy
+Edit
+pip download torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu121 -d ~/offline_pkgs/pytorch
+Then deactivate the venv:
 
 bash
 Copy
 Edit
-podman run -it --name rhel8-download --volume $HOME/rhel8_rpms:/rpms centos:8 bash
-Inside the container:
+deactivate
+4. Download TensorFlow (latest version with GPU support)
+bash
+Copy
+Edit
+python3 -m venv ~/tf-env
+source ~/tf-env/bin/activate
+pip download tensorflow -d ~/offline_pkgs/tensorflow
+deactivate
+5. Verify the folder sizes
+bash
+Copy
+Edit
+du -sh ~/offline_pkgs/*
+6. Copy both folders to VM (no internet)
+bash
+Copy
+Edit
+scp -i veera-dev2.pem -r ~/offline_pkgs ec2-user@<VM-IP>:/home/ec2-user/
+Replace <VM-IP> with your actual VM IP (e.g., 10.0.2.15 or external IP if floating IP is attached).
 
+✅ On VM (RHEL 8.6) – Install from Copied Folder
 bash
 Copy
 Edit
-dnf install -y dnf-utils
-dnf install --downloadonly --downloaddir=/rpms \
-  kernel-devel-4.18.0-372.26.1.el8_6 \
-  kernel-headers-4.18.0-372.26.1.el8_6 \
-  gcc make binutils elfutils-libelf-devel
-This downloads all required .rpm files into ~/rhel8_rpms on your Ubuntu system.
+cd ~/offline_pkgs/pytorch
+python3 -m venv torch-env
+source torch-env/bin/activate
+pip install --no-index --find-links=. torch torchvision torchaudio
+bash
+Copy
+Edit
+cd ~/offline_pkgs/tensorflow
+python3 -m venv tf-env
+source tf-env/bin/activate
+pip install --no-index --find-links=. tensorflow
+✅ Final GPU Tests
+PyTorch:
+bash
+Copy
+Edit
+python -c "import torch; print(torch.cuda.is_available()); print(torch.cuda.get_device_name(0))"
+TensorFlow:
+bash
+Copy
+Edit
+python -c "import tensorflow as tf; print(tf.config.list_physical_devices('GPU'))"
+Let me know if you want to tar.gz the folders instead before transferring. I can give you exact compression + transfer + extraction steps too.
 
-📁 Folder Structure on Host After Exit:
-bash
-Copy
-Edit
-~/rhel8_rpms/
-├── kernel-devel-4.18.0-372.26.1.el8_6.x86_64.rpm
-├── kernel-headers-4.18.0-372.26.1.el8_6.x86_64.rpm
-├── gcc-...
-├── make-...
-└── dependencies...
-🔁 Transfer to RHEL VM:
-bash
-Copy
-Edit
-scp -r ~/rhel8_rpms root@<vm_ip>:/root/
-🖥️ On the Offline RHEL 8.6 VM:
-✅ 1. Go to the folder
-bash
-Copy
-Edit
-cd /root/rhel8_rpms
-✅ 2. Install all RPMs locally
-bash
-Copy
-Edit
-sudo yum localinstall -y *.rpm
-Or fallback:
 
-bash
-Copy
-Edit
-sudo rpm -Uvh *.rpm --nodeps
-✅ Finally: Install the NVIDIA Driver
-bash
-Copy
-Edit
-chmod +x NVIDIA-Linux-x86_64-535.261.03.run
-./NVIDIA-Linux-x86_64-535.261.03.run
-reboot
-nvidia-smi
-Would you like a script that auto-runs all the above in Ubu
+
+
+
+
+
+
+
+Ask ChatGPT
