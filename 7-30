@@ -1,81 +1,92 @@
-✅ Step-by-Step Commands (Run on Ubuntu with internet)
-1. Create folders
+✅ 1. On an internet-connected machine
+Step 1: Create a folder
 bash
 Copy
 Edit
-mkdir -p ~/offline_pkgs/pytorch
-mkdir -p ~/offline_pkgs/tensorflow
-2. Create Python virtual environment (optional for clean dependency tracking)
-bash
-Copy
-Edit
-python3 -m venv ~/torch-env
-source ~/torch-env/bin/activate
-3. Download PyTorch (with CUDA 12.1, which supports H100)
-bash
-Copy
-Edit
-pip download torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu121 -d ~/offline_pkgs/pytorch
-Then deactivate the venv:
+mkdir pytorch-cu121-offline
+cd pytorch-cu121-offline
+Step 2: Download .whl files
+Use pip download to fetch all necessary packages:
 
 bash
 Copy
 Edit
-deactivate
-4. Download TensorFlow (latest version with GPU support)
+pip download torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+This will download files like:
+
+torch-2.x.x+cu121-cp38-cp38-linux_x86_64.whl
+
+torchvision-0.x.x+cu121-cp38-cp38-linux_x86_64.whl
+
+torchaudio-0.x.x+cu121-cp38-cp38-linux_x86_64.whl
+
+Plus any dependencies (e.g., typing_extensions, numpy, etc.)
+
+✅ 2. Copy files to your VM
+From your local machine:
+
 bash
 Copy
 Edit
-python3 -m venv ~/tf-env
-source ~/tf-env/bin/activate
-pip download tensorflow -d ~/offline_pkgs/tensorflow
-deactivate
-5. Verify the folder sizes
+scp *.whl root@10.107.163.176:/root/pytorch-cu121/
+Or zip them first:
+
 bash
 Copy
 Edit
-du -sh ~/offline_pkgs/*
-6. Copy both folders to VM (no internet)
+zip -r pytorch-cu121.zip pytorch-cu121-offline/
+scp pytorch-cu121.zip root@10.107.163.176:/root/
+Then on the VM:
+
 bash
 Copy
 Edit
-scp -i veera-dev2.pem -r ~/offline_pkgs ec2-user@<VM-IP>:/home/ec2-user/
-Replace <VM-IP> with your actual VM IP (e.g., 10.0.2.15 or external IP if floating IP is attached).
-
-✅ On VM (RHEL 8.6) – Install from Copied Folder
+unzip pytorch-cu121.zip
+cd pytorch-cu121-offline
+✅ 3. On the RHEL VM: Install Offline
+Install with pip (no internet needed)
 bash
 Copy
 Edit
-cd ~/offline_pkgs/pytorch
-python3 -m venv torch-env
-source torch-env/bin/activate
-pip install --no-index --find-links=. torch torchvision torchaudio
+cd /root/pytorch-cu121-offline
+pip install *.whl
+⚠️ Make sure you use pip3 if your default pip is Python 2.x:
+
 bash
 Copy
 Edit
-cd ~/offline_pkgs/tensorflow
-python3 -m venv tf-env
-source tf-env/bin/activate
-pip install --no-index --find-links=. tensorflow
-✅ Final GPU Tests
-PyTorch:
+pip3 install *.whl
+✅ 4. Test PyTorch with CUDA on the VM
 bash
 Copy
 Edit
-python -c "import torch; print(torch.cuda.is_available()); print(torch.cuda.get_device_name(0))"
-TensorFlow:
+python3
+Run this:
+
+python
+Copy
+Edit
+import torch
+print(torch.cuda.is_available())
+print(torch.cuda.get_device_name(0))
+print(torch.__version__)
+Expected output:
+
+graphql
+Copy
+Edit
+True
+NVIDIA H100 80GB HBM3
+2.x.x
+Let me know if you want me to:
+
+Send you the direct .whl file URLs
+
+Or script this into a zip bundle for your environment (Python 3.6/3.8/3.9, etc.)
+
+Also confirm your Python version on the VM:
+
 bash
 Copy
 Edit
-python -c "import tensorflow as tf; print(tf.config.list_physical_devices('GPU'))"
-Let me know if you want to tar.gz the folders instead before transferring. I can give you exact compression + transfer + extraction steps too.
-
-
-
-
-
-
-
-
-
-Ask ChatGPT
+python3 --version
