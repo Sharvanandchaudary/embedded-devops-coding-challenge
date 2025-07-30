@@ -1,0 +1,66 @@
+On your Ubuntu machine:
+
+bash
+Copy
+Edit
+sudo apt update
+sudo apt install podman -y  # or docker if preferred
+Then run a RHEL-compatible container:
+
+bash
+Copy
+Edit
+podman run -it --name rhel8-download --volume $HOME/rhel8_rpms:/rpms centos:8 bash
+Inside the container:
+
+bash
+Copy
+Edit
+dnf install -y dnf-utils
+dnf install --downloadonly --downloaddir=/rpms \
+  kernel-devel-4.18.0-372.26.1.el8_6 \
+  kernel-headers-4.18.0-372.26.1.el8_6 \
+  gcc make binutils elfutils-libelf-devel
+This downloads all required .rpm files into ~/rhel8_rpms on your Ubuntu system.
+
+📁 Folder Structure on Host After Exit:
+bash
+Copy
+Edit
+~/rhel8_rpms/
+├── kernel-devel-4.18.0-372.26.1.el8_6.x86_64.rpm
+├── kernel-headers-4.18.0-372.26.1.el8_6.x86_64.rpm
+├── gcc-...
+├── make-...
+└── dependencies...
+🔁 Transfer to RHEL VM:
+bash
+Copy
+Edit
+scp -r ~/rhel8_rpms root@<vm_ip>:/root/
+🖥️ On the Offline RHEL 8.6 VM:
+✅ 1. Go to the folder
+bash
+Copy
+Edit
+cd /root/rhel8_rpms
+✅ 2. Install all RPMs locally
+bash
+Copy
+Edit
+sudo yum localinstall -y *.rpm
+Or fallback:
+
+bash
+Copy
+Edit
+sudo rpm -Uvh *.rpm --nodeps
+✅ Finally: Install the NVIDIA Driver
+bash
+Copy
+Edit
+chmod +x NVIDIA-Linux-x86_64-535.261.03.run
+./NVIDIA-Linux-x86_64-535.261.03.run
+reboot
+nvidia-smi
+Would you like a script that auto-runs all the above in Ubu
