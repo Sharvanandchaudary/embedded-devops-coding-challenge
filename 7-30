@@ -1,3 +1,108 @@
+✅ STEP-BY-STEP (on your VM)
+1. Go to the working folder:
+bash
+Copy
+Edit
+cd /root/nvidia
+2. Confirm Python 3.9 is working:
+bash
+Copy
+Edit
+./python39-offline/usr/local/bin/python3.9 --version
+You should see:
+
+nginx
+Copy
+Edit
+Python 3.9.18
+3. Create a virtual environment named torch-env
+bash
+Copy
+Edit
+./python39-offline/usr/local/bin/python3.9 -m venv /root/torch-env
+This creates the venv in /root/torch-env/.
+
+4. Activate the virtual environment:
+bash
+Copy
+Edit
+source /root/torch-env/bin/activate
+Once activated, your prompt should change like:
+
+graphql
+Copy
+Edit
+(torch-env) root@rhel86-barem #
+5. Install PyTorch offline using the .whl files
+bash
+Copy
+Edit
+pip install --no-index --find-links=/root/nvidia/pytorch-cu121-offline torch torchvision torchaudio
+This tells pip to:
+
+Not use the internet (--no-index)
+
+Install from local .whl files
+
+✅ Wait for it to finish (it may take a minute).
+
+6. Test if PyTorch + GPU is working
+bash
+Copy
+Edit
+python -c "import torch; print(torch.__version__); print(torch.cuda.is_available()); print(torch.cuda.get_device_name(0))"
+Expected Output:
+
+graphql
+Copy
+Edit
+2.x.x
+True
+NVIDIA H100 SXM
+✅ Summary of Commands to Copy-Paste:
+bash
+Copy
+Edit
+cd /root/nvidia
+./python39-offline/usr/local/bin/python3.9 -m venv /root/torch-env
+source /root/torch-env/bin/activate
+pip install --no-index --find-links=/root/nvidia/pytorch-cu121-offline torch torchvision torchaudio
+python -c "import torch; print(torch.__version__); print(torch.cuda.is_available()); print(torch.cuda.get_device_name(0))"
+Let me know if you want a GPU test script (like matrix multiplication or speed test).
+
+
+
+
+
+
+
+
+
+Ask ChatGPT
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ✅ PART 1: Install Python 3.9 Locally and Package for Transfer
 1. On Local Ubuntu (with internet)
 bash
