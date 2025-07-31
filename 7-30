@@ -1,4 +1,14 @@
 
+
+qemu-system-x86_64 \
+  -enable-kvm \
+  -m 4096 \
+  -drive format=raw,file=rhel86.img \
+  -bios /usr/share/OVMF/OVMF_CODE.fd
+
+
+
+
 https://dl.rockylinux.org/vault/rocky/8.6/BaseOS/x86_64/os/Packages/k/?utm_source=chatgpt.com
 
 
