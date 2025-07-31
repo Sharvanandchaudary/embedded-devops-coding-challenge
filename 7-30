@@ -1,3 +1,10 @@
+
+https://dl.rockylinux.org/vault/rocky/8.6/BaseOS/x86_64/os/Packages/k/?utm_source=chatgpt.com
+
+
+
+
+
 #include <stdio.h>
 
 __global__ void hello_from_gpu() {
