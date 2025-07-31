@@ -1,91 +1,53 @@
-GPU Passthrough VM Setup & CUDA Validation Workflow
+Day 1 - Goal and Work Done
 
-This document provides a clear step-by-step log of actions performed to provision, configure, and validate GPU passthrough in a VM instance with multiple H100 GPUs.
+Goals:
 
-VM Provisioning
+Provisioned a new OpenStack VM instance with GPU passthrough enabled using two H100 GPUs to support compute-heavy tasks.
 
-Flavor Used: g2-h100x2-32xlarge
+Defined and applied a custom OpenStack flavor with the correct passthrough alias configuration for H100 GPUs.
 
-GPU Alias: pci_passthrough:alias='h100-sxm:2'
+Launched the VM with the expected CPU, memory, and PCI device configurations to match project requirements.
 
-vCPUs & RAM: Provisioned automatically as per flavor spec
+Verified successful GPU passthrough by checking GPU hardware presence using the lspci command.
 
-Floating IP Assigned: Yes
+Ensured remote access capability to the VM by configuring floating IP and testing SSH connection.
 
-Instance Confirmed via: openstack server show, lspci, and SSH access
+Encountered and investigated DNS resolution issues inside the VM which were blocking internet access.
 
-GPU Passthrough Validation
+Checked kernel version compatibility with the targeted NVIDIA driver for H100.
 
-Inside the VM, ran:
-lspci | grep -i nvidia
-→ Confirmed 2 NVIDIA H100 SXM devices attached
+Downloaded the correct NVIDIA .run driver file externally due to internet restrictions in the VM environment.
 
-Created a test directory to download and install the NVIDIA .run driver:
+Used SCP to securely transfer the downloaded .run file to the test VM for offline installation.
 
-Checked current kernel version with:
-uname -r
+Prepared all prerequisites inside the VM for offline NVIDIA driver installation to be completed next day.
 
-Used wget or downloaded .run file externally and scp'd into VM:
-chmod +x NVIDIA-Linux-x86_64-535.XX.run
-./NVIDIA-Linux-x86_64-535.XX.run --silent
+Work Done:
 
-Verified driver installation:
-nvidia-smi
-→ Output confirmed both GPUs active with no ECC or driver issues.
+Created and applied the OpenStack flavor g2-h100x2-32xlarge with passthrough alias h100-sxm:2.
 
-CUDA Samples Method (Option 1 for GPU Process Testing)
+Verified presence of both H100 GPUs in the VM by executing lspci and confirming the PCI device list.
 
-Cloned CUDA Samples:
+Faced initial issues in accessing the VM via SSH due to DNS failure and network restrictions.
 
-git clone https://github.com/NVIDIA/cuda-samples.git
-cd cuda-samples
-make -j$(nproc)
+Diagnosed the cause of DNS issues and confirmed no internet resolution was working from inside the VM.
 
-Ran long-running samples to appear in nvidia-smi:
+Downloaded the required NVIDIA driver .run package on a local development machine.
 
-matrixMul: Too fast; not reliable for process visibility
+Used SCP to upload the .run driver file into the VM over the configured floating IP connection.
 
-nbody: Fails unless Makefile is patched to prevent binary from being moved to bin/x86_64/linux/release/. Can be run manually:
-./nbody -benchmark -numbodies=256000
+Adjusted OpenStack security groups to allow SSH access from trusted sources.
 
-bandwidthTest: Works but completes in <1s — not visible in nvidia-smi
+Successfully established SSH session to the target VM with the uploaded keypair.
 
-simpleMultiGPU: Verified GPU usage on both cards, visible in nvidia-smi
+Checked hardware readiness and kernel prerequisites before driver installation.
 
-simpleDrvRuntime: A CUDA Driver API and Runtime API interop test. Runs long enough to appear in nvidia-smi
-cd cuda-samples/Samples/0_Introduction/simpleDrvRuntime
-make
-./simpleDrvRuntime
+Confirmed all components were ready to proceed with offline NVIDIA driver installation in Day 2.
 
-Issues Faced:
+Day 2 - Goal and Work Done
 
-Some domain-specific CUDA samples like recursiveGaussian, MonteCarloMultiGPU failed due to:
+Goals:
 
-Missing shared libraries (libcurand.so.10, libglut.so)
+Install the NVIDIA driver in a fully offline mode on the RHEL 8.6-based test VM to enable GPU workloads.
 
-Required GUI (OpenGL/GLUT) not supported in headless setup
-
-PyTorch Method (Option 2 for GPU Process Testing)
-
-Problem:
-
-Default system Python was 3.6, not compatible with modern PyTorch wheels
-
-Solution:
-
-Built Python 3.9 locally (on dev system) and uploaded to VM
-
-Created a virtual environment:
-python3.9 -m venv ~/torch-env
-source ~/torch-env/bin/activate
-
-Uploaded offline PyTorch .whl files and installed:
-pip install --no-index --find-links=/path/to/torch-wheels torch torchvision torchaudio
-
-Validation:
-
-Ran a simple test:
-import torch
-a = torch.randn(10000, 10000, device='cuda')
-b = torch.mm(a, a)
-→ GPU load was visible in nvidia-smi
+Validate that both attached H100 GPUs are accessi
