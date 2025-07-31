@@ -1,0 +1,63 @@
+GPU Passthrough VM Setup & CUDA Validation Workflow
+
+This document provides a step-by-step report of actions performed to provision, configure, and validate GPU passthrough in a VM instance with dual NVIDIA H100 GPUs.
+
+VM Provisioning and GPU Configuration
+A new OpenStack flavor was created: g2-h100x2-32xlarge, configured with pci_passthrough:alias='h100-sxm:2' to allocate two H100 SXM GPUs.
+
+A VM instance was provisioned using this flavor.
+
+GPU passthrough was validated using the lspci command inside the VM to confirm visibility of NVIDIA devices.
+
+The instance was assigned a floating IP and security groups were updated to allow SSH access.
+
+Initial DNS and outbound connectivity issues inside the VM were resolved by downloading necessary driver files externally and using scp to copy them to the VM.
+
+NVIDIA Driver Installation
+The .run installer for NVIDIA drivers was downloaded locally with the correct version matching H100 and kernel.
+
+The .run file was transferred into the VM.
+
+Kernel headers were validated, and dependencies were checked.
+
+The .run installer was executed with --silent mode for offline installation.
+
+The installation completed successfully, and nvidia-smi confirmed both GPUs were functional and recognized.
+
+Python & PyTorch Environment
+RHEL 8.6 VM had Python 3.6 preinstalled, which is incompatible with modern PyTorch wheels.
+
+Python 3.9 was compiled locally and transferred to the VM.
+
+A virtual environment was created using Python 3.9.
+
+PyTorch, torchvision, and torchaudio were installed from offline .whl packages.
+
+A test PyTorch script using torch.mm with large CUDA tensors was executed successfully.
+
+GPU activity was confirmed using nvidia-smi during execution.
+
+CUDA Samples Testing
+The official cuda-samples GitHub repository was cloned.
+
+Samples were built using make -j$(nproc).
+
+Short-running samples like matrixMul and bandwidthTest executed successfully but did not show up in nvidia-smi due to rapid execution time.
+
+Long-running samples like nbody, simpleMultiGPU, and simpleDrvRuntime were modified to:
+
+Build in-place (prevent binary relocation to bin/...)
+
+Run with large input sizes (nbody -numbodies=256000)
+
+These tests successfully ran and showed active GPU usage in nvidia-smi.
+
+Noted Issues and Solutions
+DNS failure inside the VM: Worked around by downloading drivers locally and using SCP.
+
+Python version mismatch: Resolved by building and pushing Python 3.9 to the VM.
+
+Missing sample dependencies (libcurand, libglut): Skipped affected samples or used only headless-compatible ones.
+
+CUDA samples copying binaries to subfolders: Resolved by modifying Makefile to output locally.
+
