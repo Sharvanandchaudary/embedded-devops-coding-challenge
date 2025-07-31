@@ -3,93 +3,51 @@ Day 1 - Goal and Work Done
 Goals:
 
 Provisioned a new OpenStack VM instance with GPU passthrough enabled using two H100 GPUs to support compute-heavy tasks.
-
 Defined and applied a custom OpenStack flavor with the correct passthrough alias configuration for H100 GPUs.
-
 Launched the VM with the expected CPU, memory, and PCI device configurations to match project requirements.
-
 Verified successful GPU passthrough by checking GPU hardware presence using the lspci command.
-
 Ensured remote access capability to the VM by configuring floating IP and testing SSH connection.
-
 Encountered and investigated DNS resolution issues inside the VM which were blocking internet access.
-
 Checked kernel version compatibility with the targeted NVIDIA driver for H100.
-
 Downloaded the correct NVIDIA .run driver file externally due to internet restrictions in the VM environment.
-
 Used SCP to securely transfer the downloaded .run file to the test VM for offline installation.
-
 Prepared all prerequisites inside the VM for offline NVIDIA driver installation to be completed next day.
 
 Work Done:
-
 Created and applied the OpenStack flavor g2-h100x2-32xlarge with passthrough alias h100-sxm:2.
-
 Verified presence of both H100 GPUs in the VM by executing lspci and confirming the PCI device list.
-
 Faced initial issues in accessing the VM via SSH due to DNS failure and network restrictions.
-
 Diagnosed the cause of DNS issues and confirmed no internet resolution was working from inside the VM.
-
 Downloaded the required NVIDIA driver .run package on a local development machine.
-
 Used SCP to upload the .run driver file into the VM over the configured floating IP connection.
-
 Adjusted OpenStack security groups to allow SSH access from trusted sources.
-
 Successfully established SSH session to the target VM with the uploaded keypair.
-
 Checked hardware readiness and kernel prerequisites before driver installation.
-
 Confirmed all components were ready to proceed with offline NVIDIA driver installation in Day 2.
 
 Day 2 - Goal and Work Done
 
-
-
 Install the NVIDIA driver in a fully offline mode on the RHEL 8.6-based test VM to enable GPU workloads.
-
 Validate that both attached H100 GPUs are accessible and error-free using nvidia-smi.
-
 Build and set up a compatible Python 3.9 runtime since system Python (3.6) does not support recent PyTorch versions.
-
 Install PyTorch in the virtual environment using offline .whl packages prepared externally.
-
 Run a GPU-intensive PyTorch matrix multiplication program to verify GPU functionality.
-
 Clone and build CUDA samples to test runtime GPU engagement with C/C++ applications.
-
 Identify and resolve any sample build errors, especially due to missing libraries like GLUT or curand.
-
 Patch Makefiles in relevant CUDA sample directories to prevent binaries from being moved outside local folders.
-
 Run GPU tests that last long enough to appear in nvidia-smi for visual GPU process verification.
-
 Ensure system is production-ready for GPU workloads using both PyTorch and CUDA validation methods.
 
 Work Done:
-
 Initial attempt at driver installation failed due to missing system dependencies in the default RHEL configuration.
-
 Identified correct .run installer version for H100, and used it to perform a silent offline driver installation.
-
 Verified installation success using nvidia-smi, confirming visibility of both H100 GPUs with no errors.
-
 Built Python 3.9 locally from source and transferred it to the VM to bypass the outdated Python 3.6 environment.
-
 Set up a Python virtual environment using the uploaded 3.9 binaries and verified interpreter integrity.
-
 Installed PyTorch and supporting packages like torchvision and torchaudio using offline .whl files.
-
 Tested GPU utilization with a PyTorch script performing large matrix multiplication on the CUDA device.
-
 Cloned the official CUDA samples repository and initiated compilation of selected test programs.
-
 Modified Makefiles in CUDA samples like nbody, simpleMultiGPU, and simpleDrvRuntime to keep binaries local.
-
 Executed those samples successfully and confirmed their activity using nvidia-smi with observed GPU processes.
-
 Work verified and all GPU functionality validated using both CUDA and PyTorch approaches.
-
 Next: Automate provisioning and setup using Terraform and cloud-init.
