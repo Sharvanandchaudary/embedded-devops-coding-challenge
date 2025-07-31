@@ -1,0 +1,91 @@
+GPU Passthrough VM Setup & CUDA Validation Workflow
+
+This document provides a clear step-by-step log of actions performed to provision, configure, and validate GPU passthrough in a VM instance with multiple H100 GPUs.
+
+VM Provisioning
+
+Flavor Used: g2-h100x2-32xlarge
+
+GPU Alias: pci_passthrough:alias='h100-sxm:2'
+
+vCPUs & RAM: Provisioned automatically as per flavor spec
+
+Floating IP Assigned: Yes
+
+Instance Confirmed via: openstack server show, lspci, and SSH access
+
+GPU Passthrough Validation
+
+Inside the VM, ran:
+lspci | grep -i nvidia
+→ Confirmed 2 NVIDIA H100 SXM devices attached
+
+Created a test directory to download and install the NVIDIA .run driver:
+
+Checked current kernel version with:
+uname -r
+
+Used wget or downloaded .run file externally and scp'd into VM:
+chmod +x NVIDIA-Linux-x86_64-535.XX.run
+./NVIDIA-Linux-x86_64-535.XX.run --silent
+
+Verified driver installation:
+nvidia-smi
+→ Output confirmed both GPUs active with no ECC or driver issues.
+
+CUDA Samples Method (Option 1 for GPU Process Testing)
+
+Cloned CUDA Samples:
+
+git clone https://github.com/NVIDIA/cuda-samples.git
+cd cuda-samples
+make -j$(nproc)
+
+Ran long-running samples to appear in nvidia-smi:
+
+matrixMul: Too fast; not reliable for process visibility
+
+nbody: Fails unless Makefile is patched to prevent binary from being moved to bin/x86_64/linux/release/. Can be run manually:
+./nbody -benchmark -numbodies=256000
+
+bandwidthTest: Works but completes in <1s — not visible in nvidia-smi
+
+simpleMultiGPU: Verified GPU usage on both cards, visible in nvidia-smi
+
+simpleDrvRuntime: A CUDA Driver API and Runtime API interop test. Runs long enough to appear in nvidia-smi
+cd cuda-samples/Samples/0_Introduction/simpleDrvRuntime
+make
+./simpleDrvRuntime
+
+Issues Faced:
+
+Some domain-specific CUDA samples like recursiveGaussian, MonteCarloMultiGPU failed due to:
+
+Missing shared libraries (libcurand.so.10, libglut.so)
+
+Required GUI (OpenGL/GLUT) not supported in headless setup
+
+PyTorch Method (Option 2 for GPU Process Testing)
+
+Problem:
+
+Default system Python was 3.6, not compatible with modern PyTorch wheels
+
+Solution:
+
+Built Python 3.9 locally (on dev system) and uploaded to VM
+
+Created a virtual environment:
+python3.9 -m venv ~/torch-env
+source ~/torch-env/bin/activate
+
+Uploaded offline PyTorch .whl files and installed:
+pip install --no-index --find-links=/path/to/torch-wheels torch torchvision torchaudio
+
+Validation:
+
+Ran a simple test:
+import torch
+a = torch.randn(10000, 10000, device='cuda')
+b = torch.mm(a, a)
+→ GPU load was visible in nvidia-smi
