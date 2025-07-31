@@ -3,8 +3,9 @@ https://dl.rockylinux.org/vault/rocky/8.6/BaseOS/x86_64/os/Packages/k/?utm_sourc
 
 
 
-
-
+UUID=3137-AE31  /boot/efi  vfat  umask=0077,shortname=winnt  0  2
+grub2-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=RHEL --recheck
+grub2-mkconfig -o /boot/efi/EFI/RHEL/grub.cfg
 #include <stdio.h>
 
 __global__ void hello_from_gpu() {
