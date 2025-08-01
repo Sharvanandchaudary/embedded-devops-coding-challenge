@@ -1,3 +1,48 @@
+Daily Status Report
+
+Date: August 1, 2025
+
+Goals:
+
+Make the RHEL 8.6 bare-metal image bootable using UEFI by creating EFI and /boot partitions
+
+Evaluate and validate CUDA programs on GPU-enabled VM
+
+Set up GitHub Actions workflow to build the CloudEnvStatus application
+
+Work Done:
+
+Successfully evaluated CUDA sample program and confirmed it runs on the GPU with visible process in nvidia-smi
+
+Created a snapshot of the working image that includes NVIDIA drivers and CUDA samples for reuse in GPU testing
+
+Attempted to create an EFI and /boot partition on top of the current image, but it was BIOS-booted and didn’t support UEFI
+
+Tried an older image that had EFI and /boot partitions, but it lacked the required firmware (EFI files), so UEFI boot failed
+
+Downloaded all kernel modules inside the image and tried to manually set up partitions
+
+Decided to switch to building from a proper UEFI-bootable ISO image
+
+Downloaded the official RHEL 8.6 ISO for creating a fresh UEFI-compatible image with the required partitions
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 Great! Since you're using Ubuntu locally, here's a clear and complete step-by-step guide to:
 
