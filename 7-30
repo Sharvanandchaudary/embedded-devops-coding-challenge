@@ -1,3 +1,146 @@
+🛠️ Step 0: Install Required Tools on Ubuntu
+Open a terminal and run:
+
+bash
+Copy
+Edit
+sudo apt update
+sudo apt install -y qemu-kvm libvirt-daemon-system libvirt-clients virt-manager ovmf qemu-utils
+This installs:
+
+qemu-kvm: virtualization engine
+
+ovmf: UEFI firmware for QEMU
+
+qemu-img: for image conversion
+
+🗃️ Step 1: Prepare the Image
+Copy your .qcow2 file to your Ubuntu system (e.g., rhel86-kvm.qcow2).
+
+Then convert it to raw format:
+
+bash
+Copy
+Edit
+qemu-img convert -O raw rhel86-kvm.qcow2 rhel86-uefi.img
+🧰 Step 2: Boot the Image in QEMU with UEFI
+Run the following (adjust memory or CPUs as needed):
+
+bash
+Copy
+Edit
+qemu-system-x86_64 \
+  -enable-kvm \
+  -m 4096 \
+  -cpu host \
+  -drive file=rhel86-uefi.img,format=raw \
+  -bios /usr/share/OVMF/OVMF_CODE.fd \
+  -nographic
+You'll boot into your RHEL installation, now in UEFI mode.
+
+Check:
+
+bash
+Copy
+Edit
+ls /sys/firmware/efi
+If it exists → ✅ you're booted in UEFI mode.
+
+🏗️ Step 3: Create and Mount EFI Partition (if missing)
+If /boot/efi is missing, do this:
+
+bash
+Copy
+Edit
+fdisk /dev/vda
+# Create a new partition (type EF), write & quit
+mkfs.vfat -F32 /dev/vda2
+mkdir -p /boot/efi
+mount /dev/vda2 /boot/efi
+Then update /etc/fstab:
+
+bash
+Copy
+Edit
+UUID=$(blkid -s UUID -o value /dev/vda2)
+echo "UUID=$UUID /boot/efi vfat umask=0077,shortname=winnt 0 2" >> /etc/fstab
+🧩 Step 4: Add SATA Drivers and Initramfs (if needed)
+bash
+Copy
+Edit
+dracut --force --add-drivers "ahci sd_mod ata_piix"
+🧱 Step 5: Install UEFI GRUB Bootloader
+Now install GRUB to the EFI partition:
+
+bash
+Copy
+Edit
+grub2-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=RHEL
+grub2-mkconfig -o /boot/efi/EFI/RHEL/grub.cfg
+You now have a fully UEFI-bootable image.
+
+🧼 Step 6: Power Off & Convert Back to QCOW2
+Shut down the QEMU VM, then:
+
+bash
+Copy
+Edit
+qemu-img convert -O qcow2 rhel86-uefi.img rhel86-baremetal-uefi.qcow2
+☁️ Step 7: Upload to OpenStack
+bash
+Copy
+Edit
+openstack image create \
+  --disk-format qcow2 \
+  --container-format bare \
+  --file rhel86-baremetal-uefi.qcow2 \
+  --property hw_firmware_type=uefi \
+  rhel86-uefi-ready
+✅ Done! You Can Now Boot This Image on Bare Metal via OpenStack
+Let me know if you'd like:
+
+A script to automate all of this
+
+Help troubleshooting QEMU or UEFI boot issues
+
+You're on the right track!
+
+
+
+
+
+
+
+
+
+Ask ChatGPT
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 Daily Status Report
 
 Date: August 1, 2025
