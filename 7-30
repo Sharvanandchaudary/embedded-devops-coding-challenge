@@ -22,7 +22,7 @@ Then convert it to raw format:
 bash
 Copy
 Edit
-qemu-img convert -O raw rhel86-kvm.qcow2 rhel86-uefi.img
+qemu-img convert -O rhel86-b.qcow2 rhel86-uefi.img
 🧰 Step 2: Boot the Image in QEMU with UEFI
 Run the following (adjust memory or CPUs as needed):
 
