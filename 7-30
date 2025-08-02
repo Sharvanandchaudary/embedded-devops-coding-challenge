@@ -1,3 +1,45 @@
+ Daily Status Report
+Goal:
+Debug bare metal image compatibility issues.
+Copy RHEL ISO image directly from Red Hat and create a custom partition layout.
+Investigate GUI freeze issue with Stratus tool in the aw99 chamber.
+ Work Done:
+Downloaded and copied the RHEL ISO image to the dev environment.
+Launched and tested a VM instance thoroughly to analyze partition structure.
+Ideniified that the image operates in BIOS mode but also contains UEFI support, which is incompatible with bare metal requirements.
+Concluded that a custom EFI boot partition needs to be created and the image must be rebuilt for proper UEFI-based booting on bare metal.
+Synced with Michael and discussed the findings and current blockers.
+Conducted deep testing of all Stratus modules and found some module versions lack the IDE launcher due to old specifications.
+Isolated the issue to a GUI hang/freeze and traced it back to possible DISPLAY or version-related conflicts.
+Worked on identifying the root cause behind the Stratus GUI not responding in the aw99 chamber.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ince you have:
 
 🖼️ rhel8.6-x86_64-kvm.qcow2 image
