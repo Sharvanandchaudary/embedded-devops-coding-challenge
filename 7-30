@@ -1,3 +1,146 @@
+🧰 Step-by-Step Guide
+🔧 Step 1: Boot the Image in QEMU (UEFI Mode)
+bash
+Copy
+Edit
+qemu-system-x86_64 \
+  -m 4096 \
+  -cpu host \
+  -machine q35 \
+  -drive if=pflash,format=raw,readonly,file=/usr/share/OVMF/OVMF_CODE.fd \
+  -drive if=pflash,format=raw,file=/usr/share/OVMF/OVMF_VARS.fd \
+  -drive file=rhel8.6-x86_64-kvm.qcow2,format=qcow2 \
+  -boot c
+This will boot the image in UEFI mode — GRUB might fail to boot, that’s okay.
+
+Press e to drop into GRUB, or use recovery shell.
+
+🔧 Step 2: Enter Rescue Mode (if system fails to boot)
+You can:
+
+Boot from a RHEL 8.6 ISO in UEFI mode
+
+Mount your qcow2 disk as secondary
+
+chroot into the installed OS to fix boot
+
+🔧 Step 3: Mount the EFI Partition & Root
+Assuming:
+
+/dev/vda2 is EFI (100 MB)
+
+/dev/vda3 is / (root)
+
+Then:
+
+bash
+Copy
+Edit
+mkdir -p /mnt/sysimage
+mount /dev/vda3 /mnt/sysimage
+mount /dev/vda2 /mnt/sysimage/boot/efi
+mount --bind /dev /mnt/sysimage/dev
+mount --bind /proc /mnt/sysimage/proc
+mount --bind /sys /mnt/sysimage/sys
+chroot /mnt/sysimage
+🔧 Step 4: Install GRUB for UEFI
+bash
+Copy
+Edit
+dnf install grub2-efi grub2-efi-modules shim efibootmgr -y
+
+grub2-install \
+  --target=x86_64-efi \
+  --efi-directory=/boot/efi \
+  --bootloader-id=RHEL
+
+grub2-mkconfig -o /boot/grub2/grub.cfg
+✅ This writes grubx64.efi to /boot/efi/EFI/RHEL/.
+
+🧽 Optional Cleanup: Remove BIOS Bootloader (Optional)
+bash
+Copy
+Edit
+rm -rf /boot/grub2/i386-pc
+🔧 Step 5: Exit and Shutdown
+bash
+Copy
+Edit
+exit
+umount -R /mnt/sysimage
+🔧 Step 6: Boot to Confirm UEFI Works
+Boot the image again in UEFI mode:
+
+bash
+Copy
+Edit
+qemu-system-x86_64 ... (same as above)
+Run:
+
+bash
+Copy
+Edit
+ls /sys/firmware/efi && echo "✅ UEFI boot" || echo "❌ BIOS boot"
+✅ If UEFI is detected — you're ready.
+
+🔧 Step 7: Upload to OpenStack
+bash
+Copy
+Edit
+openstack image create "rhel86-uefi-clean" \
+  --file rhel8.6-x86_64-kvm.qcow2 \
+  --disk-format qcow2 \
+  --container-format bare \
+  --property hw_firmware_type=uefi \
+  --property hw_machine_type=q35
+Also update baremetal node:
+
+bash
+Copy
+Edit
+openstack baremetal node set <NODE_UUID> \
+  --property capabilities='boot_mode:uefi'
+✅ Summary
+Step	Purpose
+QEMU UEFI boot	Triggers EFI path so we can install GRUB UEFI
+Mount & chroot	Allows GRUB install on existing disk
+grub2-install + grub2-mkconfig	Adds UEFI boot support
+Upload to Glance	Register for UEFI-based provisioning
+Test in QEMU / Baremetal	Ensure successful UEFI boot
+
+Let me know if you want:
+
+A script to automate this
+
+To also upgrade it to RHEL 9.2 after fixing boot
+
+Help converting .qcow2 to .raw if needed for Ironic direct deploy
+
+You're on the right track!
+
+
+
+
+
+
+
+
+
+Ask ChatGPT
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 🧰 Use QEMU to Create UEFI-Compatible RHEL 9.2 Image
 bash
 Copy
