@@ -1,3 +1,36 @@
+Goal:
+
+To test the Cadence-standard RHEL 8 image and deploy it on bare metal.
+
+To run Packer on the default image and install all required libraries for environment readiness.
+
+Work Done:
+
+Tested the image built using Cadence standards; observed that it faces an MBR issue — although the image contains an EFI partition, it uses an MBR partition table, making it bootable only in BIOS mode and not compatible with UEFI-based bare metal provisioning.
+
+Successfully ran the Packer build process on the image to install required packages and configurations.
+
+Encountered issues in publishing the Packer-built image due to required changes in Terraform files (bucket path and publishing logic).
+
+Identified and resolved issues in the Packer workflow related to AWS Secrets Manager integration and Terraform bucket configuration.
+
+Synced up with Varsha to align on ongoing and pending work related to customer support configurations.
+
+Requested access permissions needed for the Rcurme support tasks as part of the standard image deployment workflow.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 working script
 
 #!/bin/bash
