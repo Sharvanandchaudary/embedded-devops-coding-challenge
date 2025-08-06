@@ -1,0 +1,116 @@
+Meeting Minutes
+
+Date: [Insert Date]
+Prepared by: V. Saravan
+Subject: VM Flavor & Node Placement Issues, GPU Node Provisioning, Hydrant Certificate Testing
+
+Discussion Points:
+
+Flavor Landing on Incorrect Node:
+
+It was observed that a flavor configured with both aggregate and PCI passthrough landed on the wrong node.
+
+The team discussed the root cause and it was agreed that the OpenStack scheduler logic will be reviewed and modified to ensure proper node placement moving forward.
+
+Aggregate List Consistency:
+
+Emphasis on ensuring that the aggregate list output is accurate and consistent across environments, especially in the next CR cycle.
+
+Flavor-to-Aggregate Mapping:
+
+A review will be conducted to map each flavor to its corresponding aggregate.
+
+This will help in better debugging and understanding placement logic when provisioning VMs.
+
+Handling Full Nodes:
+
+Concern raised regarding how to proceed if nodes within an aggregate are already full.
+
+Action Item: Investigate with DRM queue mechanisms for how such scenarios are handled when VMs are in queue and require placement.
+
+VM Migration:
+
+Discussion about cases where existing VMs are already provisioned but placed incorrectly.
+
+Plan to migrate these VMs to the appropriate node when identified.
+
+Fallback Flavor Strategy:
+
+Proposed idea to create a fallback flavor with the same aggregate mapping in case nodes are full.
+
+Helps ensure high availability and reliability in provisioning workflows.
+
+GPU Node Provisioning Issue:
+
+Issue with GPU VM provisioning to incorrect nodes was acknowledged.
+
+Resolution planned to ensure GPU-enabled VMs are provisioned strictly on GPU-capable nodes.
+
+Flavor Configuration Standards:
+
+Flavors should include relevant aggregates like default, highmem, etc., to allow correct scheduling to the intended nodes.
+
+Hydrant Certificate Testing:
+
+In DEV: Testing will be performed by Veer to validate hydrant certificate functionality.
+
+In CR/PROD: Hydrant certificate testing will be carried out as part of the production validation plan.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Meeting Minutes
+
+Date: [Insert Date]
+Prepared by: V. Saravan
+Subject: VM Flavor & Node Placement Issues, GPU Node Provisioning, Hydrant Certificate Testing
+
+Discussion Points:
+
+Flavor Landing on Incorrect Node:
+It was observed that a flavor configured with both aggregate and PCI passthrough landed on the wrong node.
+The team discussed the root cause and agreed to update the OpenStack scheduler to ensure proper node placement.
+
+Aggregate List Consistency:
+The aggregate list output must be reviewed and aligned correctly for the next CR.
+
+Flavor-to-Aggregate Mapping:
+A mapping of each flavor to its associated aggregate is to be created to improve visibility and debugging during VM provisioning.
+
+Handling Full Nodes:
+The team discussed scenarios where nodes are full but VMs still need to be provisioned.
+Action: Explore how the DRM queue handles such conditions and potential options to queue or redirect provisioning.
+
+VM Migration:
+Cases where existing VMs are placed incorrectly were discussed.
+Action: Plan and execute migration of such VMs to their appropriate nodes.
+
+Fallback Flavor Strategy:
+Suggested creating fallback flavors under the same aggregate in case primary nodes are full, allowing successful VM provisioning.
+
+GPU Node Provisioning Issue:
+A GPU node placement issue was identified.
+Action: Ensure GPU-enabled VMs are only provisioned on GPU-capable nodes with correct scheduling and flavor configuration.
+
+Flavor Configuration Standards:
+Flavors should be tagged with appropriate aggregates such as default, highmem, etc., to ensure the scheduler places them correctly.
+
+Hydrant Certificate Testing:
+In the DEV environment, testing will be conducted by Veer.
+In CR/PROD, hydrant certificate testing will be part of the production deployment plan.
