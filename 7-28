@@ -1,3 +1,6 @@
+Daily Status Report
+Date: August 5, 2025
+
 Goal:
 
 To test the Cadence-standard RHEL 8 image and deploy it on bare metal.
@@ -14,9 +17,13 @@ Encountered issues in publishing the Packer-built image due to required changes 
 
 Identified and resolved issues in the Packer workflow related to AWS Secrets Manager integration and Terraform bucket configuration.
 
+Disabled the default cloud-init configuration to enable password authentication for login during early-stage image testing and access validation.
+
 Synced up with Varsha to align on ongoing and pending work related to customer support configurations.
 
 Requested access permissions needed for the Rcurme support tasks as part of the standard image deployment workflow.
+
+
 
 
 
