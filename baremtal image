@@ -1,3 +1,18 @@
+# Optional but recommended
+sudo rm -rf /var/lib/cloud/
+sudo truncate -s 0 /etc/machine-id
+sudo cloud-init clean
+
+# Shut down
+sudo poweroff
+
+
+
+
+
+
+
+
 vsaravan@sjcvl-ghrunner1:~$ openstack image show f2758907-89de-4670-bfd1-58e9bd4f61a9
 
  openstack image set --name cc-rhel-baremetal-packer f2758907-89de-4670-bfd1-58e9bd4f61a9
