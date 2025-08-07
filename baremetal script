@@ -1,0 +1,282 @@
+{
+  "tags": {
+    "hyperscaler": "rhops"
+  },
+  "environment": "test-2",
+  "name_prefix": "to01",
+  "openstack_project_id": "59c2d928ef6046069a0175d74dc3dc23",
+  "openstack_project_name": "cc-test-oa-chm01-prj",
+  "release" : "v2.0.10",
+  "netapp_version": "2.0.1",
+  "settings": {
+    "hybrid_deployment": false,
+    "aws_chamber_tfstate_key": "cloud30-chambers/config/envs/non-prod/dev/dc01/terraform.tfstate",
+    "cc_chamber_json_s3_location": "s3://cadencecloud-mirrors-eu-central-1/projects/orchestrator/c30-cust/to01/awscbtb02slurm01/to01.json",
+    "cc_hub_tfstate_key": "cloud30-openstack-shr/config/envs/non-prod/qa/test-2/to00/terraform.tfstate",
+    "drm_cidr": "10.3.120.0/23",
+    "aws_admin_cidr": "10.3.64.0/27",
+    "aws_chamber_cidr": "10.3.66.0/23",
+    "openstack_mgmt_ip": "10.107.178.0/24"
+  },
+  "compute": {
+    "compute_details": {
+      "node_details": {
+        "ls01": {
+          "image": "71e5ed26-05bc-4e6e-b107-d1eb3ab65a7f",
+          "volume_size": 100,
+          "enabled" : false,
+          "additional_volumes" : "ls01_vol"
+          
+        },
+        "haproxy": {
+          "image": "fe8ba8c6-9c98-4f45-ba96-802ef7a37391",
+          "volume_size": 100,
+          "enabled" : false,
+          "additional_volumes" : null
+          
+        },
+        "wrk01": {
+          "name": "wrk01",
+          "instance_type": "baremetal",
+          "image": "ef40de67-b794-4d47-84f4-eb24fd6ca122",
+          "volume_size": 100,
+          "additional_volumes": null,
+          "eni_name": "wrk01-eni"
+        }
+      }
+    }
+  },
+  "storage": {
+    "volume_type": "netapp_iscsi_enc",
+    "ebs_volume_details": {
+      "ls01_vol": {
+        "scratch": {
+          "disk": "tmp",
+          "volume_size": 100,
+          "device": "/dev/vdb"
+        }
+      }
+    }
+  },
+  "networking": {
+    "provider_vlan" : "1168",
+    "provider_cidr" : "10.107.168.0/23",
+    "baremetal" : {
+      "network_id": "5c79a1a8-b294-4435-a2e6-ef1b992735d3",
+      "subnet_id" : "c83e54b1-822e-4931-ac73-b731d1f6c966"
+    },
+    "customer_vpc": {
+      "cidr_block": "10.154.180.0/23"
+    },
+    "customer_eni_mapping": {
+      "haproxy-eni": {
+        "ip": {
+          "public_ip": "10.107.168.52",
+          "hostnum": 52
+        }
+      },
+      "wrk01-eni": {
+        "name": "wrk01-eni",
+        "subnet": "ComputeSubnet2a",
+        "security_groups": [
+          "Chm-AccessFromUtlSvr",
+          "PrivateSG",
+          "CLA-SG",
+          "Platform-SG"
+        ],
+        "ip": {
+          "private_ip" : "$${cc_chamber_internal_cidr}",
+          "public_ip"  : "$${cc_chamber_cidr}",
+          "hostnum" : 101
+        }
+      }
+    }
+  }
+}
+
+
+
+
+
+✅ Final Updated Script (create_rhel86_r6i8xlarge.sh)
+bash
+Copy
+Edit
+#!/bin/bash
+set -e
+
+# ===== CONFIG =====
+SEC_GROUP="testing-rhel-sg"
+KEY_NAME="testingRHELtestvm"          # <-- keypair name registered in OpenStack
+KEY_FILE="testing-rhel-testvm.pem"    # <-- your saved PEM file
+VM_NAME="testvm"
+PORT_NAME="tn02-${VM_NAME}-port"
+NETWORK_ID="3eb39e89-ac62-4b5b-a313-8d52482cc1f2"
+SUBNET_ID="e5db0db9-bf93-43f4-928a-e46e099fef9e"
+FLOATING_SUBNET_ID="e33be8b2-02e2-41a5-87b5-830ba5d0db7a"
+FLAVOR="r6i.8xlarge"
+IMAGE_ID="07ba4847-245e-401c-aff0-65a4124ceef2"   # rhel86-new image ID
+# ===== CONFIG =====
+
+echo "=== Step 1: Create security group allowing SSH (22) ==="
+if ! openstack security group list -f value -c Name | grep -q "^${SEC_GROUP}$"; then
+  openstack security group create $SEC_GROUP --description "Allow SSH"
+  openstack security group rule create --proto tcp --dst-port 22 $SEC_GROUP
+  echo "Security group $SEC_GROUP created with SSH access."
+else
+  echo "Security group $SEC_GROUP already exists."
+fi
+
+echo "=== Step 2: Verify keypair exists ==="
+if ! openstack keypair list -f value -c Name | grep -q "^${KEY_NAME}$"; then
+  echo "Keypair $KEY_NAME does not exist in OpenStack!"
+  echo "Please create it first:"
+  echo "openstack keypair create $KEY_NAME > $KEY_FILE"
+  exit 1
+else
+  echo "Keypair $KEY_NAME found in OpenStack."
+fi
+
+echo "=== Step 3: Create port in TN02 network ==="
+PORT_ID=$(openstack port create \
+  --network $NETWORK_ID \
+  --fixed-ip subnet=$SUBNET_ID \
+  --enable $PORT_NAME -f json | jq -r '.id')
+echo "Created port: $PORT_ID"
+
+echo "=== Step 4: Assign security group to port ==="
+openstack port set \
+  --security-group $SEC_GROUP \
+  $PORT_ID
+echo "Security group $SEC_GROUP applied to port $PORT_ID"
+
+echo "=== Step 5: Create and associate floating IP ==="
+FLOATING_IP_JSON=$(openstack floating ip create -f json --subnet $FLOATING_SUBNET_ID --port $PORT_ID)
+FLOATING_IP=$(echo $FLOATING_IP_JSON | jq -r '.floating_ip_address')
+echo "Floating IP created and associated: $FLOATING_IP"
+
+echo "=== Step 6: Launch server ==="
+openstack server create \
+  --flavor $FLAVOR \
+  --image $IMAGE_ID \
+  --port $PORT_ID \
+  --key-name $KEY_NAME \
+  --security-group $SEC_GROUP \
+  --wait $VM_NAME
+echo "Server $VM_NAME created successfully."
+
+echo "=== Step 7: Verify placement ==="
+HOST=$(openstack server show $VM_NAME -f value -c OS-EXT-SRV-ATTR:host)
+echo "VM $VM_NAME is running on host: $HOST"
+
+
+
+
+./nexus -nexusIP="US-LIT-TR01-CC-1-2-15.cadence.com:443" -username="svc_cloud30_network_" -interfaceName="eth1/42" -enableVlanID="vlan-1168"
+
+./nexus -nexusIP="US-LIT-TR01-CC-1-2-15.cadence.com:443" -username="svc_cloud30_network_" -interfaceName="eth1/42" -disableVlanID="vlan-1"
+
+nxos-rest-client
+This is Rest Library to communicate with Cisco Nexus Switches
+
+It is able to execute the switchport access vlan API. It takes in user credentials, interface, disableVlanID, and enableVlanID.
+
+It also requires the following environment variables to be set: PASSWORD.
+
+Run go build on this repository to build the nexus executable.
+
+If it is on linux, the binary will be nexus; otherwise, on windows it will be nexus.exe.
+
+To execute it, run nexus -nexusIP <nexusIP> -username <username> -interfaceName <interfaceName> -enableVlanID <enableVlanID> -disableVlanID <disableVlanID>. At least one of the enableVlanID or disableVlanID parameters must be entered.
+
+Enable Switchport Example Command: nexus.exe -nexusIP="10.107.128.100:443" -username="ccloud" -interfaceName="eth1/6" -enableVlanID="vlan-3002".
+
+Screenshot 2025-04-17 111942
+
+Screenshot 2025-04-17 112021
+
+Disable Switchport Example Command: nexus.exe -nexusIP="10.107.128.100:443" -username="ccloud" -interfaceName="eth1/6" -disableVlanID="vlan-1".
+
+Screenshot 2025-04-17 112103
+
+Screenshot 2025-04-17 112159
+
+All the parameters and the environment variables must be set to execute the switchport access vlan API.
+
+The logs will be kept in the file nexus_api.log. View that file to check the states of the process.
+
+Verifying the authenticate API call passed: {"level":"debug","time":1744826776,"message":"Authenticate API Call Passed"}.
+
+Verifying the get interface API call passed: {"level":"debug","time":1744826776,"message":"GET Interface API Call Passed"}.
+
+Verifying the post switchport API call passed: {"level":"debug","time":1744826776,"message":"POST Switchport API Call Passed"}.
+
+Verifying the post disable switchport API call passed: {"level":"debug","time":1744829021,"message":"POST Disable Switchport API Call Passed"}.
+
+Authenticate API
+
+   curl 'https://10.107.128.100/api/aaaLogin.json' \
+  -H 'authorization: Basic Y2Nsb3VkOkNsb3VkQDEyMw==' \
+  -H 'content-type: application/x-www-form-urlencoded; charset=UTF-8' \
+  -H 'x-requested-with: XMLHttpRequest' \
+  --data-raw $'{\n"aaaUser": {\n"attributes": {\n"name": "<user>",\n"pwd": "<pwd>"\n}\n}\n}' \
+  --insecure
+GET Interface API
+
+curl -X GET 'https://10.107.128.100/api/mo/sys/intf/phys-[eth1/6]' \   -H 'content-type: application/json-rpc' \   -H 'x-requested-with: XMLHttpRequest' \   -b 'APIC-cookie=KWYUOOmh0JBC/+GHXWrG9b5UkFAp4BYWDqV0ubZJrSFQdeo+bHPyCvk7JCKoTQjvip5CeQOK/En+7DqUFMfH8bi17X8VlCYvUO7awKEVoF1ftHbi2AiXTe6B5g24todT4ZqHNvlAi5MAFRJMo6pcW3x5X/Ytcbr4xg04V9GMorp4x7MBLRn9WnzAG0Y04k4W' \   --insecure
+POST Switchport API
+
+curl --location 'https://10.107.128.100:443/api/mo/sys.json' \
+--header 'x-requested-with: XMLHttpRequest' \
+--header 'APIC-cookie: 7MqiNlOw5/I+5vyXcQ8lqTPxP+k8FZtIJmasdyhy5srMHdR3kJxSwNPVF6rTu7ltUBSFwrHzLZWDK+QnXqFXi6XQPTpU2fL6efK6UKI6A+d6BvlKS45ew9buiFaDVF6YEdChUralw+qnCr32ECJMSvkpv2QSQ4wFQrYrUbgb4JFi+SmPTrEspgHNIs08Dsvh' \
+--header 'content-type: application/json-rpc' \
+--data '{
+    "topSystem": {
+        "children": [
+            {
+                "interfaceEntity": {
+                    "children": [
+                        {
+                            "l1PhysIf": {
+                                "attributes": {
+                                    "accessVlan": "vlan-3002",
+                                    "id": "eth1/6",
+                                    "layer": "Layer2",
+                                    "userCfgdFlags": "admin_layer"
+                                }
+                            }
+                        }
+                    ]
+                }
+            }
+        ]
+    }
+}'
+POST Disable Switchport API
+
+curl --location 'https://10.107.128.100:443/api/mo/sys.json' \
+--header 'x-requested-with: XMLHttpRequest' \
+--header 'APIC-cookie: 7MqiNlOw5/I+5vyXcQ8lqTPxP+k8FZtIJmasdyhy5srMHdR3kJxSwNPVF6rTu7ltUBSFwrHzLZWDK+QnXqFXi6XQPTpU2fL6efK6UKI6A+d6BvlKS45ew9buiFaDVF6YEdChUralw+qnCr32ECJMSvkpv2QSQ4wFQrYrUbgb4JFi+SmPTrEspgHNIs08Dsvh' \
+--header 'content-type: application/json-rpc' \
+--data '{
+    "topSystem": {
+        "children": [
+            {
+                "interfaceEntity": {
+                    "children": [
+                        {
+                            "l1PhysIf": {
+                                "attributes": {
+                                    "accessVlan": "vlan-1",
+                                    "id": "eth1/6",
+                                    "layer": "Layer2",
+                                    "userCfgdFlags": "admin_layer"
+                                }
+                            }
+                        }
+                    ]
+                }
+            }
+        ]
+    }
+}'
