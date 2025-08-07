@@ -11,6 +11,7 @@ openstack image set rhel86-iso-uefi \
   --property hw_disk_bus=virtio \
   --property hw_boot_menu=true
 
+openstack image show rhel86-iso-uefi -f yaml | grep -E 'hw_firmware_type|hw_disk_bus|hw_boot_menu'
 
 +
 vsaravan@sjcvl-ghrunner1:~$ openstack image show rhel86-iso-uefi -f yaml
