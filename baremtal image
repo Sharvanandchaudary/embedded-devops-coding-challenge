@@ -3,6 +3,26 @@ rm -rf /var/lib/cloud/
 truncate -s 0 /etc/machine-id
 cloud-init clean
 
+If OpenStack image creation keeps failing, use this approach:
+
+A. Get instance ID and disk info:
+bash
+Copy
+Edit
+openstack server show <instance-name> -f json | jq '.id'
+B. Create a snapshot from instance root disk manually (using Packer or dd inside the instance), then:
+bash
+Copy
+Edit
+glance image-create \
+  --name rhel86-root-ready \
+  --disk-format qcow2 \
+  --container-format bare \
+  --file rhel86-fixed.qcow2 \
+  --min-disk 40 \
+  --property hw_firmware_type=uefi \
+  --property hw_disk_bus=virtio \
+  --property hw_boot_menu=true
 
 
 ✅ Fix: Correct Way to Create Image from Powered-Off Instance
