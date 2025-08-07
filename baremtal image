@@ -1,7 +1,7 @@
 # Optional but recommended
-sudo rm -rf /var/lib/cloud/
-sudo truncate -s 0 /etc/machine-id
-sudo cloud-init clean
+rm -rf /var/lib/cloud/
+truncate -s 0 /etc/machine-id
+cloud-init clean
 
 # Shut down
 sudo poweroff
@@ -9,6 +9,31 @@ sudo poweroff
 
 
 
++
+vsaravan@sjcvl-ghrunner1:~$ openstack image show rhel86-iso-uefi -f yaml
+checksum: 19501666f46df6b5472db1254e86a339
+container_format: bare
+created_at: '2025-07-31T23:59:44Z'
+disk_format: qcow2
+file: /v2/images/7b161dc8-016b-4535-b370-821ba7d7787f/file
+id: 7b161dc8-016b-4535-b370-821ba7d7787f
+min_disk: 100
+min_ram: 0
+name: rhel86-iso-uefi
+owner: dcfb102e7fc940c39c0c21c48d77d3cf
+properties:
+  os_hash_algo: sha512
+  os_hash_value: 03589784e00d673f79d92615fe468fdafa955cfe9225b1c6f89dee82e4f374ddccbd5239c53dd6607a10766c80ed2d39e9f1b850de3f69bf5bb32451f5190c24
+  os_hidden: false
+  stores: default_backend
+protected: false
+schema: /v2/schemas/image
+size: 832438272
+status: active
+tags: []
+updated_at: '2025-08-01T00:00:16Z'
+virtual_size: 10737418240
+visibility: private
 
 
 
