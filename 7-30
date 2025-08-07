@@ -1,3 +1,52 @@
+Daily Status Report – August 7, 2025
+
+Goal:
+
+Run Packer on top of a base image and test the built image on a baremetal server.
+
+Validate GPU testing by creating a flavor with host aggregates and PCI passthrough support.
+
+Work Done:
+
+Initial builds failed due to debugging delays caused by AWS Secrets rotation, affecting both the deployment and Packer workflows.
+
+Attempted to build Packer on top of a snapshot, but faced issues copying to test environment due to resulting image size being 0 bytes.
+
+Rebuilt the Packer image from the base image instead. The base image allowed access only via cloud-user, so the Packer script was updated to include sudo permissions for successful installation of required libraries.
+
+The updated Packer build was tested on a baremetal machine and successfully booted with all necessary libraries installed.
+
+This image is now considered the default image built by Packer on top of the base.
+
+For GPU testing, created a flavor with both host aggregates and PCI passthrough. Found that the VM was being placed on the wrong node.
+
+Investigated and identified an issue with the Nova scheduler. Took corrective steps to fix the scheduler configuration and successfully provisioned the GPU VM on the correct host.
+
+Discussed the need for proper aggregate and flavor mapping in production, and the necessity to propose a solution to segregate flavors by host type.
+
+Scheduled and attended a meeting with Amir to address his questions regarding server placement and deployment status.
+
+Forwarded technical details to Sudesh and explained the work done so far to Amir, including a live demonstration.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 🧰 Step-by-Step Guide
 🔧 Step 1: Boot the Image in QEMU (UEFI Mode)
 bash
