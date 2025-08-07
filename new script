@@ -1,0 +1,247 @@
+packer {
+  required_plugins {
+    amazon = {
+      source  = "github.com/hashicorp/amazon"
+      version = ">= 1.1.5"
+    }
+    openstack = {
+      version = ">= 1.1.2"
+      source  = "github.com/hashicorp/openstack"
+    }
+    ansible = {
+      version = "~> 1"
+      source = "github.com/hashicorp/ansible"
+    }
+  }
+}
+
+locals {
+  date = formatdate("HHmm", timestamp())
+}
+
+source "openstack" "cadence-rhel88-goldenami" {
+  domain_id          = var.os_project_domain_id
+  domain_name        =  var.os_domain_name
+  identity_endpoint  =  var.os_url
+  image_name         = "${var.os_golden_image_name}-${timestamp()}"
+  username           =  var.os_ur_name
+  password           =  var.os_ur_passwd
+  region             =  var.os_region
+  source_image_filter  {
+     filters  {
+     name      = var.os_source_image_name
+    }
+    most_recent = true
+  }
+  #source_image       =  var.os_source_image_name
+  #ssh_username       =  "cloud-user"
+  ssh_username       =  var.os_user_name
+  ssh_password       =  var.os_os_user_password
+  communicator       =  "ssh"
+  flavor             =  var.Instance_type
+  networks           =  var.os_network_list
+  floating_ip        =  var.os_floating_ip
+  security_groups    =  var.os_sg_list
+}
+
+build {
+  sources = ["source.openstack.cadence-rhel88-goldenami"]
+
+  provisioner "file" {
+    source      = "./nslcd.conf"
+    destination = "/tmp/nslcd.conf"
+  }
+
+  provisioner "shell" {
+    inline = [" mv /tmp/nslcd.conf /etc/nslcd.conf &&  chown root:root /etc/nslcd.conf"]
+  }
+
+  provisioner "shell" {
+    inline = [
+      "rm /etc/sudo-ldap.conf",
+      "bash -c 'echo \"10.207.8.39 sj-sa-sat2 sj-sa-sat2.cadence.com\" >> /etc/hosts'",
+      "bash -c 'echo \"nameserver 127.0.0.53\" >> /etc/resolv.conf'"
+    ]
+  }
+
+  provisioner "file" {
+    destination = "/tmp/sudo-ldap.conf"
+    source      = "./sudo-ldap.conf"
+  }
+
+  provisioner "shell" {
+    inline = ["mv /tmp/sudo-ldap.conf /etc/sudo-ldap.conf &&   chown root:root /etc/sudo-ldap.conf "]
+  }
+
+  ###provisioner "shell" {
+  #  inline = [
+  #    "systemctl status nslcd",
+  #    "systemctl status nscd"
+  #  ]
+  #}
+
+  provisioner "file" {
+    destination = "/tmp/nsswitch.conf"
+    source      = "./nsswitch.conf"
+  }
+
+  provisioner "shell" {
+    inline = ["mv /tmp/nsswitch.conf /etc/nsswitch.conf &&   chown root:root /etc/nsswitch.conf "]
+  }
+
+  provisioner "file" {
+    destination = "/tmp/rhel.repo"
+    source      = "./rhel8.repo"
+  }
+
+  provisioner "shell" {
+    inline = ["mv /tmp/rhel.repo /etc/yum.repos.d/rhel.repo &&   chown root:root /etc/yum.repos.d/rhel.repo"]
+  }
+
+  provisioner "file" {
+    destination = "/tmp/package.sh"
+    source      = "./package.sh"
+   }
+
+  provisioner "shell" {
+    inline = [
+      " chmod +x /tmp/package.sh",
+      "  /tmp/package.sh",
+      "rm -fr /tmp/package.sh"
+    ]
+  }
+
+  provisioner "file" {
+    destination = "/tmp/munge.sh"
+    source      = "./munge.sh"
+  }
+
+#  provisioner "shell" {
+#    inline = [
+#      "chmod +x ~/munge.sh",
+#      "~/munge.sh"
+#    ]
+#  }
+
+  provisioner "file" {
+    destination = "/tmp/mate.sh"
+    source      = "./mate.sh"
+  }
+
+  provisioner "shell" {
+    inline = [
+      "  chmod +x /tmp/mate.sh",
+      "  /tmp/mate.sh",
+      "rm -fr /tmp/mate.sh"
+    ]
+  }
+  
+
+  provisioner "file" {
+    destination = "/tmp/java.sh"
+    source      = "./package-java.sh"
+  }
+
+  provisioner "shell" {
+    inline = ["  mv /tmp/java.sh /etc/profile.d/java.sh &&   chown root:root /etc/profile.d/java.sh "]
+  }
+
+  provisioner "shell" {
+    inline = [
+   "  useradd -d /opt/orchestrator -u 5002 orchestrator"
+  # "useradd -d /opt/cmls -u 5000 cmls"
+    ]
+  }
+
+##  provisioner "file" {
+#    destination = "/etc/init.d/orchestrator-getssh"
+#    source      = "./orchestrator-getssh"
+#  }
+
+
+
+  provisioner "shell" {
+    inline = [
+      "  timedatectl set-timezone UTC",
+      #"  /usr/sbin/hwclock --utc --systohc"
+    ]
+  }
+
+  provisioner "file" {
+    destination = "/tmp/cc_packages.sh"
+    source      = "./cc_packages.sh"
+  }
+
+  provisioner "shell" {
+    inline = [
+      "  chmod +x /tmp/cc_packages.sh",
+      "  bash /tmp/cc_packages.sh",
+      "rm -fr /tmp/cc_packages.sh"
+    ]
+  }
+
+  provisioner "shell" {
+    inline = [
+      "  rm -f /var/lib/rpm/.rpm.lock",
+      "  yum install cloud-init -y"
+    ]
+  }
+
+  provisioner "file" {
+    destination = "/tmp/cloud.cfg"
+    source      = "./cloud.cfg"
+  }
+
+  provisioner "shell" {
+    inline = ["  mv /tmp/cloud.cfg /etc/cloud/cloud.cfg &&   chown root:root /etc/cloud/cloud.cfg"]
+  }
+
+  provisioner "shell" {
+    inline = [
+   "cd ~/",
+   #"git clone https://github.com/ansible/ansible.git",
+   #"cd ansible/",
+   #"pip3 install --upgrade pip",
+   #"pip3 install ansible"
+    ]
+  }
+  
+   #provisioner "ansible-local" {
+   #   playbook_file = "hello-world.yaml"
+   # }
+  
+  provisioner "shell" {
+    inline = [
+      "  wget --no-check-certificate https://artifacts.cadence.com/repository/cadence-cloud-infra-repo/Tools/NessusAgent-10.7.2-el8.x86_64.rpm",
+      "  rpm -i NessusAgent-10.7.2-el8.x86_64.rpm"
+    ]
+  }
+
+  provisioner "shell" {
+    inline = [
+      "  wget --no-check-certificate https://artifacts.cadence.com/repository/cadence-cloud-infra-repo/Tools/SentinelAgent_linux_x86_64_v23_4_2_14.rpm",
+      "  rpm -i SentinelAgent_linux_x86_64_v23_4_2_14.rpm"
+    ]
+  }
+
+  provisioner "file" {
+    destination = "/tmp/cleanup.sh"
+    source      = "./cleanup.sh"
+  }
+
+  provisioner "shell" {
+    inline = [
+      "  chmod +x /tmp/cleanup.sh",
+      "  bash /tmp/cleanup.sh",
+      "rm -fr /tmp/cleanup.sh"
+    ]
+  }
+
+  post-processor "manifest" {
+    output = "manifest.json"
+    strip_path = true
+    custom_data = {
+      image_prefix = var.os_golden_image_name
+    }
+  }
+}
