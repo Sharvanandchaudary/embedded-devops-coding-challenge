@@ -3,6 +3,108 @@ rm -rf /var/lib/cloud/
 truncate -s 0 /etc/machine-id
 cloud-init clean
 
+
+
+✅ Fix: Correct Way to Create Image from Powered-Off Instance
+✅ Step 1: Confirm Instance Is Shut Down
+bash
+Copy
+Edit
+openstack server stop <instance-name>
+Wait 10–20 seconds:
+
+bash
+Copy
+Edit
+openstack server show <instance-name> -f value -c status
+# Should return: SHUTOFF
+✅ Step 2: Create the Image Again
+bash
+Copy
+Edit
+openstack server image create --name rhel86-root-enabled <instance-name>
+Wait ~1–2 minutes and check:
+
+bash
+Copy
+Edit
+openstack image show rhel86-root-enabled -f yaml | grep size
+If still 0, continue below.
+
+✅ Step 3: Is Your Instance Booted from a Volume?
+Check if the instance is booted from volume (Cinder) instead of image (Glance):
+
+bash
+Copy
+Edit
+openstack server show <instance-name> -f json | jq '.os-extended-volumes:volumes_attached'
+If there’s a volume ID there → ❗ You’re using a volume-backed instance.
+
+In that case, server image create will not include the actual disk — it creates an image placeholder with no data.
+
+✅ Solutions Based on Root Cause
+Cause	Fix
+Instance still running	Shut it down before image creation
+Volume-backed instance	✅ Use glance image-create --file <exported>.qcow2 instead
+Image still building	Wait and retry openstack image show
+Need file-based image	Use Packer or manually download with openstack server backup + qemu-img convert
+
+🔧 Workaround: Extract Image via qemu-img or nova image-download
+If you're stuck with a volume-backed instance:
+
+Boot it
+
+SSH in
+
+Create .qcow2 via dd or Packer
+
+Upload using:
+
+bash
+Copy
+Edit
+glance image-create --file rhel86-root-fixed.qcow2 \
+  --disk-format qcow2 \
+  --container-format bare \
+  --min-disk 40 \
+  --property hw_firmware_type=uefi \
+  --property hw_disk_bus=virtio \
+  --property hw_boot_menu=true \
+  --name rhel86-root-final
+Let me know:
+
+Did your instance boot from volume or image?
+
+Want help extracting and packaging the disk manually?
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # Shut down
 sudo poweroff
 
