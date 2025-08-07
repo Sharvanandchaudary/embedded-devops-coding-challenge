@@ -6,6 +6,14 @@ cloud-init clean
 # Shut down
 sudo poweroff
 
+openstack image set rhel86-root-enabled \
+  --property hw_firmware_type=uefi \
+  --property hw_disk_bus=virtio \
+  --property hw_boot_menu=true \
+  --property os_distro=rhel8 \
+  --property os_type=linux
+
+
 openstack image set rhel86-iso-uefi \
   --property hw_firmware_type=uefi \
   --property hw_disk_bus=virtio \
