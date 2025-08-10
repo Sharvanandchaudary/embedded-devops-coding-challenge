@@ -1,3 +1,579 @@
+
+vsaravan@sjcvl-ghrunner1:~$ ./create_bm.sh
+== auth/project/region ==
++------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Field      | Value                                                                                                                                                                                   |
++------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| expires    | 2025-08-10T08:13:40+0000                                                                                                                                                                |
+| id         | gAAAAABomEak-miRvwwZTCInfFIlPGieLgncgBe3OD2WPmmlf1uKHCM56yKls6nanO4I75E_xhh41rcKeYgILJzTWilBnuWYeoj7GmwKgLbIUWgYOd6_wDEOLQi4WNMD8YU5SVeAI35tN0iGETjUjq4KTx8aC8y4IN_Kn_tYwsn2R3wfD8xQsio |
+| project_id | 59c2d928ef6046069a0175d74dc3dc23                                                                                                                                                        |
+| user_id    | 64a837e9a22b4edf90375c7182a9f297                                                                                                                                                        |
++------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+description: ''
+domain_id: default
+enabled: true
+id: 59c2d928ef6046069a0175d74dc3dc23
+is_domain: false
+name: cc-test-oa-chm01-prj
+options: {}
+parent_id: default
+tags: []
++-----------+---------------+-------------+
+| Region    | Parent Region | Description |
++-----------+---------------+-------------+
+| regionOne | None          |             |
++-----------+---------------+-------------+
+== image ==
+checksum: e0f792e1b1b7d4662ce9573fe6549d01
+container_format: bare
+created_at: '2025-08-06T11:06:08Z'
+disk_format: qcow2
+file: /v2/images/ef40de67-b794-4d47-84f4-eb24fd6ca122/file
+id: ef40de67-b794-4d47-84f4-eb24fd6ca122
+min_disk: 10
+min_ram: 0
+name: cc-rhel810-v2.3.9
+owner: 59c2d928ef6046069a0175d74dc3dc23
+properties:
+  os_hash_algo: sha512
+  os_hash_value: 21d5e5796c5c6c6b7135d9df43dd00debc57bb4c20b9ce5b11eb44b93bd584def66fbf9ac87124f81dc0f15341231387273b2b21b82d12de9099f709e64c9b65
+  os_hidden: false
+  stores: default_backend
+protected: false
+schema: /v2/schemas/image
+size: 17810522112
+status: active
+tags: []
+updated_at: '2025-08-06T11:11:23Z'
+virtual_size: 75161927680
+visibility: private
+== flavor (discover baremetal flavors) ==
+| auto                                 | baremetal           | 1048576 | 1787 |         0 |   128 | True      |
+== network/subnet (existing baremetal/provider) ==
+admin_state_up: true
+availability_zone_hints: []
+availability_zones:
+- nova
+created_at: '2024-11-19T22:11:41Z'
+description: ''
+dns_domain: ''
+id: 5c79a1a8-b294-4435-a2e6-ef1b992735d3
+ipv4_address_scope: null
+ipv6_address_scope: null
+is_default: null
+is_vlan_transparent: null
+l2_adjacency: true
+mtu: 1500
+name: provisioning
+port_security_enabled: true
+project_id: 334ca1da01cc4820b35c604cb37a5c1e
+provider:network_type: flat
+provider:physical_network: baremetal
+provider:segmentation_id: null
+qos_policy_id: null
+revision_number: 2
+router:external: false
+segments: null
+shared: true
+status: ACTIVE
+subnets:
+- c83e54b1-822e-4931-ac73-b731d1f6c966
+tags: []
+tenant_id: 334ca1da01cc4820b35c604cb37a5c1e
+updated_at: '2024-11-19T22:13:59Z'
+allocation_pools:
+- end: 10.107.177.99
+  start: 10.107.177.40
+cidr: 10.107.177.0/24
+created_at: '2024-11-19T22:13:59Z'
+description: ''
+dns_nameservers: []
+dns_publish_fixed_ip: null
+enable_dhcp: true
+gateway_ip: 10.107.177.254
+host_routes: []
+id: c83e54b1-822e-4931-ac73-b731d1f6c966
+ip_version: 4
+ipv6_address_mode: null
+ipv6_ra_mode: null
+name: provisioning-subnet
+network_id: 5c79a1a8-b294-4435-a2e6-ef1b992735d3
+project_id: 334ca1da01cc4820b35c604cb37a5c1e
+revision_number: 0
+segment_id: null
+service_types: []
+subnetpool_id: null
+tags: []
+updated_at: '2024-11-19T22:13:59Z'
+provider details:
+flat
+None
+== external networks (only needed if we build a tenant router) ==
++--------------------------------------+------------------+--------------------------------------+
+| ID                                   | Name             | Subnets                              |
++--------------------------------------+------------------+--------------------------------------+
+| 3f0c25f8-fda8-47bf-8550-b7f21208988d | pro-net-vlan1168 | 3b80e294-b7de-47c0-8343-7e4c93d8125b |
+| 65cbffdf-5c84-42ca-9985-3245bed866ea | pro-net-vlan1184 | 4dfe6ba0-47f2-4972-89b9-e82764bdfd15 |
+| 71f53191-5311-4bc4-bad0-60050975005b | public           | 5041b9ec-f68e-44aa-a17a-b459a6cdd21f |
+| 7d3a0634-6494-4aaa-94b6-0cd1a4dc95f8 | pro-net-vlan1170 | 8df03b96-2704-4b43-a964-35df4f49c820 |
+| 8ea2d087-bf85-4835-a4e5-54fd51824ce3 | pro-net-vlan1162 | e33be8b2-02e2-41a5-87b5-830ba5d0db7a |
+| a253373d-7d4a-47d7-af5a-99d2b27af3b1 | pro-net-vlan1174 | 5fe9fd02-468d-4cfa-a65b-6687ca898fcd |
+| b2f48dee-846d-4307-a4bf-0b71f0100a13 | pro-net-vlan1183 | 38ca3e53-dcf3-4905-aa2d-d455173f9eff |
+| be2ab792-6ee3-4762-9020-a8386d7cb80b | pro-net-vlan1164 | c4e4900d-eac0-4aa5-b7b3-418e2f29dde6 |
+| cca38a6a-cb2a-44b2-8aab-0bc2e066f32f | pro-net-vlan1166 | 761dd727-ffe8-4aa4-a55a-1273af3b7bd3 |
+| d8d864c0-4edb-4688-ab31-9de994c651e7 | pro-net-vlan1191 | 41240666-c8f1-4540-bccc-8a786235a711 |
++--------------------------------------+------------------+--------------------------------------+
++--------------------------------------+----------------------------------+--------+-------+----------------------------------+
+| ID                                   | Name                             | Status | State | Project                          |
++--------------------------------------+----------------------------------+--------+-------+----------------------------------+
+| 066da784-520c-471d-827d-c08fffeeb5e2 | c30-tn-test-tn-08-RtbInternal-rt | ACTIVE | UP    | 59c2d928ef6046069a0175d74dc3dc23 |
+| 0c1b9717-9163-4f36-88f8-889574cb0400 | default-router                   | ACTIVE | UP    | 334ca1da01cc4820b35c604cb37a5c1e |
+| 41714073-6842-41df-989c-a46f82fd1ff9 | c30-tn-test-tn-03-RtbInternal-rt | ACTIVE | UP    | 59c2d928ef6046069a0175d74dc3dc23 |
+| 59a50ce7-04c6-4896-bc71-af68525537ba | c30-to-test-to-00-RtbInternal-rt | ACTIVE | UP    | 59c2d928ef6046069a0175d74dc3dc23 |
+| 6037af95-f66a-4c45-bc0c-ef2677df0d38 | private-router                   | ACTIVE | UP    | bec4a158d9384e6b881e4a12aa9c106e |
+| 84a2b4ac-6292-489f-96e2-e2321ab32aac | c30-to-test-to-01-RtbInternal-rt | ACTIVE | UP    | 59c2d928ef6046069a0175d74dc3dc23 |
+| a6615d27-2a9d-45ba-a3c8-9b452c154b13 | c30-tn-test-tn-02-RtbInternal-rt | ACTIVE | UP    | 59c2d928ef6046069a0175d74dc3dc23 |
+| c299f5b4-7bf6-4bf7-a8a5-db0fd46b4adf | c30-tn-test-tn-04-RtbInternal-rt | ACTIVE | UP    | 59c2d928ef6046069a0175d74dc3dc23 |
+| dac14b9a-12c0-4dd0-bb85-b3844906bf0c | c30-to-test-to-02-RtbInternal-rt | ACTIVE | UP    | 59c2d928ef6046069a0175d74dc3dc23 |
+| ea11dfea-dfda-45f9-8773-cce6ef166a61 | router1                          | ACTIVE | UP    | 334ca1da01cc4820b35c604cb37a5c1e |
+| ef5e3005-dfea-483a-88a4-348ce60ddbea | c30-tn-test-tn-00-RtbInternal-rt | ACTIVE | UP    | 59c2d928ef6046069a0175d74dc3dc23 |
++--------------------------------------+----------------------------------+--------+-------+----------------------------------+
+== security groups ==
++--------------------------------------+-------------------------------------------+-------------------------------------------+----------------------------------+---------------------------------------------+
+| ID                                   | Name                                      | Description                               | Project                          | Tags                                        |
++--------------------------------------+-------------------------------------------+-------------------------------------------+----------------------------------+---------------------------------------------+
+| 0745ea55-b5f4-4850-82b3-f76a08a17c5f | c30-tn-test-tn-04-CLA-SG-sg               | Cadence License Agent Security Group      | 59c2d928ef6046069a0175d74dc3dc23 | ['Backup:none', 'BU:IT',                    |
+|                                      |                                           |                                           |                                  | 'BusinessUnit:cloudeng', 'Environment:Non-  |
+|                                      |                                           |                                           |                                  | Production', 'OrganizationName:IT',         |
+|                                      |                                           |                                           |                                  | 'Sub_BU:VCAD', 'Terraform:false',           |
+|                                      |                                           |                                           |                                  | 'todestroy:false', 'tosuspend:false']       |
+| 0f2280e6-9124-499f-b573-e7860aaa2311 | default                                   | Default security group                    | bec4a158d9384e6b881e4a12aa9c106e | []                                          |
+| 1320ddfd-e090-4300-8d9c-c0d10dfaf84b | c30-tn-test-tn-02-Chm-AccessFromUtlSvr-sg | Utility Server Access from Chamber        | 59c2d928ef6046069a0175d74dc3dc23 | ['Backup:none', 'BU:IT',                    |
+|                                      |                                           |                                           |                                  | 'BusinessUnit:cloudeng', 'Environment:Non-  |
+|                                      |                                           |                                           |                                  | Production', 'OrganizationName:IT',         |
+|                                      |                                           |                                           |                                  | 'Sub_BU:VCAD', 'Terraform:false',           |
+|                                      |                                           |                                           |                                  | 'todestroy:false', 'tosuspend:false']       |
+| 22ea1cdc-b5b8-4248-9b21-b8cb17cf981f | c30-tn-test-tn-08-Chm-AccessFromUtlSvr-sg | Utility Server Access from Chamber        | 59c2d928ef6046069a0175d74dc3dc23 | ['Backup:none', 'BU:IT',                    |
+|                                      |                                           |                                           |                                  | 'BusinessUnit:cloudeng', 'Environment:Non-  |
+|                                      |                                           |                                           |                                  | Production', 'OrganizationName:IT',         |
+|                                      |                                           |                                           |                                  | 'Sub_BU:VCAD', 'Terraform:false',           |
+|                                      |                                           |                                           |                                  | 'todestroy:false', 'tosuspend:false']       |
+| 2689c0ac-3142-478e-b312-c068067858df | c30-to-test-to-00-00-SG-sg                | Admin (Utility) Server Security Group     | 59c2d928ef6046069a0175d74dc3dc23 | ['Backup:none', 'BU:IT',                    |
+|                                      |                                           |                                           |                                  | 'BusinessUnit:cloudeng', 'Environment:Non-  |
+|                                      |                                           |                                           |                                  | Production', 'hyperscaler:rhops',           |
+|                                      |                                           |                                           |                                  | 'OrganizationName:IT', 'Sub_BU:VCAD',       |
+|                                      |                                           |                                           |                                  | 'Terraform:false', 'todestroy:false',       |
+|                                      |                                           |                                           |                                  | 'tosuspend:false']                          |
+| 2f0be049-786a-428c-a8de-24efb1f76e52 | c30-tn-test-tn-03-PrivateSG-sg            | Private security group                    | 59c2d928ef6046069a0175d74dc3dc23 | ['Backup:none', 'BU:IT',                    |
+|                                      |                                           |                                           |                                  | 'BusinessUnit:cloudeng', 'Environment:Non-  |
+|                                      |                                           |                                           |                                  | Production', 'OrganizationName:IT',         |
+|                                      |                                           |                                           |                                  | 'Sub_BU:VCAD', 'Terraform:false',           |
+|                                      |                                           |                                           |                                  | 'todestroy:false', 'tosuspend:false']       |
+| 2fad9614-59f0-4eef-8bb9-0f9f69f1c1f4 | c30-to-test-to-01-Chm-AccessFromUtlSvr-sg | Utility Server Access from Chamber        | 59c2d928ef6046069a0175d74dc3dc23 | ['Backup:none', 'BU:IT',                    |
+|                                      |                                           |                                           |                                  | 'BusinessUnit:cloudeng', 'Environment:Non-  |
+|                                      |                                           |                                           |                                  | Production', 'hyperscaler:rhops',           |
+|                                      |                                           |                                           |                                  | 'OrganizationName:IT', 'Sub_BU:VCAD',       |
+|                                      |                                           |                                           |                                  | 'Terraform:false', 'todestroy:false',       |
+|                                      |                                           |                                           |                                  | 'tosuspend:false']                          |
+| 327f2009-8dd8-4d3c-97f8-46034bf0a54f | cloud-console-portal-SG                   | for cloud console portal node             | 59c2d928ef6046069a0175d74dc3dc23 | []                                          |
+| 3cc8fdcd-2f91-4b47-b07d-bda92c26b802 | c30-to-test-to-02-CLA-SG-sg               | Cadence License Agent Security Group      | 59c2d928ef6046069a0175d74dc3dc23 | ['Backup:none', 'BU:IT',                    |
+|                                      |                                           |                                           |                                  | 'BusinessUnit:cloudeng', 'Environment:Non-  |
+|                                      |                                           |                                           |                                  | Production', 'hyperscaler:rhops',           |
+|                                      |                                           |                                           |                                  | 'OrganizationName:IT', 'Sub_BU:VCAD',       |
+|                                      |                                           |                                           |                                  | 'Terraform:false', 'todestroy:false',       |
+|                                      |                                           |                                           |                                  | 'tosuspend:false']                          |
+| 3ff5394a-96c9-47be-abba-52896189b380 | default                                   | Default security group                    | 59c2d928ef6046069a0175d74dc3dc23 | []                                          |
+| 481a2329-e0d0-4460-8bb6-5883c99f90c6 | c30-tn-test-tn-00-AccessFromUtlSvr-sg     | Allow Access from UtlSvr                  | 59c2d928ef6046069a0175d74dc3dc23 | ['Backup:none', 'BU:IT',                    |
+|                                      |                                           |                                           |                                  | 'BusinessUnit:cloudeng', 'Environment:Non-  |
+|                                      |                                           |                                           |                                  | Production', 'hyperscaler:rhops',           |
+|                                      |                                           |                                           |                                  | 'OrganizationName:IT', 'Sub_BU:VCAD',       |
+|                                      |                                           |                                           |                                  | 'Terraform:false', 'todestroy:false',       |
+|                                      |                                           |                                           |                                  | 'tosuspend:false']                          |
+| 4acc8e30-ad8c-4da8-9606-2a6ee9b48824 | c30-tn-test-tn-04-Platform-SG-sg          | CC Platfom Security Group                 | 59c2d928ef6046069a0175d74dc3dc23 | ['Backup:none', 'BU:IT',                    |
+|                                      |                                           |                                           |                                  | 'BusinessUnit:cloudeng', 'Environment:Non-  |
+|                                      |                                           |                                           |                                  | Production', 'OrganizationName:IT',         |
+|                                      |                                           |                                           |                                  | 'Sub_BU:VCAD', 'Terraform:false',           |
+|                                      |                                           |                                           |                                  | 'todestroy:false', 'tosuspend:false']       |
+| 58269c3b-bd2d-4287-aedc-2e2f2c744c19 | c30-tn-test-tn-02-PrivateSG-sg            | Private security group                    | 59c2d928ef6046069a0175d74dc3dc23 | ['Backup:none', 'BU:IT',                    |
+|                                      |                                           |                                           |                                  | 'BusinessUnit:cloudeng', 'Environment:Non-  |
+|                                      |                                           |                                           |                                  | Production', 'OrganizationName:IT',         |
+|                                      |                                           |                                           |                                  | 'Sub_BU:VCAD', 'Terraform:false',           |
+|                                      |                                           |                                           |                                  | 'todestroy:false', 'tosuspend:false']       |
+| 5e066ff2-e6b0-4406-8c87-1df066fe5d8d | c30-tn-test-tn-03-Platform-SG-sg          | CC Platfom Security Group                 | 59c2d928ef6046069a0175d74dc3dc23 | ['Backup:none', 'BU:IT',                    |
+|                                      |                                           |                                           |                                  | 'BusinessUnit:cloudeng', 'Environment:Non-  |
+|                                      |                                           |                                           |                                  | Production', 'OrganizationName:IT',         |
+|                                      |                                           |                                           |                                  | 'Sub_BU:VCAD', 'Terraform:false',           |
+|                                      |                                           |                                           |                                  | 'todestroy:false', 'tosuspend:false']       |
+| 61bb3936-a88b-4bae-b7dd-291facb2e683 | c30-to-test-to-01-PrivateSG-sg            | Private security group                    | 59c2d928ef6046069a0175d74dc3dc23 | ['Backup:none', 'BU:IT',                    |
+|                                      |                                           |                                           |                                  | 'BusinessUnit:cloudeng', 'Environment:Non-  |
+|                                      |                                           |                                           |                                  | Production', 'hyperscaler:rhops',           |
+|                                      |                                           |                                           |                                  | 'OrganizationName:IT', 'Sub_BU:VCAD',       |
+|                                      |                                           |                                           |                                  | 'Terraform:false', 'todestroy:false',       |
+|                                      |                                           |                                           |                                  | 'tosuspend:false']                          |
+| 62ff30e5-5ea4-4e58-9639-b5c6e245c750 | c30-to-test-to-01-CLA-SG-sg               | Cadence License Agent Security Group      | 59c2d928ef6046069a0175d74dc3dc23 | ['Backup:none', 'BU:IT',                    |
+|                                      |                                           |                                           |                                  | 'BusinessUnit:cloudeng', 'Environment:Non-  |
+|                                      |                                           |                                           |                                  | Production', 'hyperscaler:rhops',           |
+|                                      |                                           |                                           |                                  | 'OrganizationName:IT', 'Sub_BU:VCAD',       |
+|                                      |                                           |                                           |                                  | 'Terraform:false', 'todestroy:false',       |
+|                                      |                                           |                                           |                                  | 'tosuspend:false']                          |
+| 65e6269e-c7d4-477b-942c-ac7a166d9cb5 | c30-tn-test-tn-03-Chm-AccessFromUtlSvr-sg | Utility Server Access from Chamber        | 59c2d928ef6046069a0175d74dc3dc23 | ['Backup:none', 'BU:IT',                    |
+|                                      |                                           |                                           |                                  | 'BusinessUnit:cloudeng', 'Environment:Non-  |
+|                                      |                                           |                                           |                                  | Production', 'OrganizationName:IT',         |
+|                                      |                                           |                                           |                                  | 'Sub_BU:VCAD', 'Terraform:false',           |
+|                                      |                                           |                                           |                                  | 'todestroy:false', 'tosuspend:false']       |
+| 667cd4cf-7603-47fe-84b7-81dd244f5ba6 | c30-to-test-to-01-PrivateSG-sg            | Private security group                    | 59c2d928ef6046069a0175d74dc3dc23 | ['Backup:none', 'BU:IT',                    |
+|                                      |                                           |                                           |                                  | 'BusinessUnit:cloudeng', 'Environment:Non-  |
+|                                      |                                           |                                           |                                  | Production', 'hyperscaler:rhops',           |
+|                                      |                                           |                                           |                                  | 'OrganizationName:IT', 'Sub_BU:VCAD',       |
+|                                      |                                           |                                           |                                  | 'Terraform:false', 'todestroy:false',       |
+|                                      |                                           |                                           |                                  | 'tosuspend:false']                          |
+| 6a6d4e73-1923-4c21-8611-6084e886c77e | c30-tn-test-tn-03-CLA-SG-sg               | Cadence License Agent Security Group      | 59c2d928ef6046069a0175d74dc3dc23 | ['Backup:none', 'BU:IT',                    |
+|                                      |                                           |                                           |                                  | 'BusinessUnit:cloudeng', 'Environment:Non-  |
+|                                      |                                           |                                           |                                  | Production', 'OrganizationName:IT',         |
+|                                      |                                           |                                           |                                  | 'Sub_BU:VCAD', 'Terraform:false',           |
+|                                      |                                           |                                           |                                  | 'todestroy:false', 'tosuspend:false']       |
+| 800fa9ca-45af-4fdc-86e2-494321537f82 | c30-to-test-to-00-CDNSLICENSE-SG-sg       | Security Group for License Server for     | 59c2d928ef6046069a0175d74dc3dc23 | ['Backup:none', 'BU:IT',                    |
+|                                      |                                           | Cadence Internal                          |                                  | 'BusinessUnit:cloudeng', 'Environment:Non-  |
+|                                      |                                           |                                           |                                  | Production', 'hyperscaler:rhops',           |
+|                                      |                                           |                                           |                                  | 'OrganizationName:IT', 'Sub_BU:VCAD',       |
+|                                      |                                           |                                           |                                  | 'Terraform:false', 'todestroy:false',       |
+|                                      |                                           |                                           |                                  | 'tosuspend:false']                          |
+| 8284b61c-1082-436a-9aa4-b5bf5bd96b44 | c30-tn-test-tn-04-Chm-AccessFromUtlSvr-sg | Utility Server Access from Chamber        | 59c2d928ef6046069a0175d74dc3dc23 | ['Backup:none', 'BU:IT',                    |
+|                                      |                                           |                                           |                                  | 'BusinessUnit:cloudeng', 'Environment:Non-  |
+|                                      |                                           |                                           |                                  | Production', 'OrganizationName:IT',         |
+|                                      |                                           |                                           |                                  | 'Sub_BU:VCAD', 'Terraform:false',           |
+|                                      |                                           |                                           |                                  | 'todestroy:false', 'tosuspend:false']       |
+| 891be336-3a79-4a3f-9aa5-c7aee32cec0e | c30-tn-test-tn-08-CLA-SG-sg               | Cadence License Agent Security Group      | 59c2d928ef6046069a0175d74dc3dc23 | ['Backup:none', 'BU:IT',                    |
+|                                      |                                           |                                           |                                  | 'BusinessUnit:cloudeng', 'Environment:Non-  |
+|                                      |                                           |                                           |                                  | Production', 'OrganizationName:IT',         |
+|                                      |                                           |                                           |                                  | 'Sub_BU:VCAD', 'Terraform:false',           |
+|                                      |                                           |                                           |                                  | 'todestroy:false', 'tosuspend:false']       |
+| 8b94efb7-d8e0-4a0d-83b5-b35e0728db96 | c30-to-test-to-00-LDAP-SG-sg              | Allow LDAP Access from UT Servers         | 59c2d928ef6046069a0175d74dc3dc23 | ['Backup:none', 'BU:IT',                    |
+|                                      |                                           |                                           |                                  | 'BusinessUnit:cloudeng', 'Environment:Non-  |
+|                                      |                                           |                                           |                                  | Production', 'hyperscaler:rhops',           |
+|                                      |                                           |                                           |                                  | 'OrganizationName:IT', 'Sub_BU:VCAD',       |
+|                                      |                                           |                                           |                                  | 'Terraform:false', 'todestroy:false',       |
+|                                      |                                           |                                           |                                  | 'tosuspend:false']                          |
+| 8eb1ca69-c4ee-418c-ae27-597319dd77a3 | c30-tn-test-tn-08-PrivateSG-sg            | Private security group                    | 59c2d928ef6046069a0175d74dc3dc23 | ['Backup:none', 'BU:IT',                    |
+|                                      |                                           |                                           |                                  | 'BusinessUnit:cloudeng', 'Environment:Non-  |
+|                                      |                                           |                                           |                                  | Production', 'OrganizationName:IT',         |
+|                                      |                                           |                                           |                                  | 'Sub_BU:VCAD', 'Terraform:false',           |
+|                                      |                                           |                                           |                                  | 'todestroy:false', 'tosuspend:false']       |
+| 8f432588-4a2a-4f3f-aef7-2235e942aff1 | c30-tn-test-tn-00-CDNSLICENSE-SG-sg       | Security Group for License Server for     | 59c2d928ef6046069a0175d74dc3dc23 | ['Backup:none', 'BU:IT',                    |
+|                                      |                                           | Cadence Internal                          |                                  | 'BusinessUnit:cloudeng', 'Environment:Non-  |
+|                                      |                                           |                                           |                                  | Production', 'hyperscaler:rhops',           |
+|                                      |                                           |                                           |                                  | 'OrganizationName:IT', 'Sub_BU:VCAD',       |
+|                                      |                                           |                                           |                                  | 'Terraform:false', 'todestroy:false',       |
+|                                      |                                           |                                           |                                  | 'tosuspend:false']                          |
+| 943ec452-c41b-45a7-9ade-067625b65bae | c30-to-test-to-02-PrivateSG-sg            | Private security group                    | 59c2d928ef6046069a0175d74dc3dc23 | ['Backup:none', 'BU:IT',                    |
+|                                      |                                           |                                           |                                  | 'BusinessUnit:cloudeng', 'Environment:Non-  |
+|                                      |                                           |                                           |                                  | Production', 'hyperscaler:rhops',           |
+|                                      |                                           |                                           |                                  | 'OrganizationName:IT', 'Sub_BU:VCAD',       |
+|                                      |                                           |                                           |                                  | 'Terraform:false', 'todestroy:false',       |
+|                                      |                                           |                                           |                                  | 'tosuspend:false']                          |
+| 9bf653be-f837-40b8-bb0e-ba93d2582a3f | default                                   | Default security group                    | 60cd93c58a394969bc3510716a187c16 | []                                          |
+| a4618691-165d-4b7e-a075-0965e5bd22ff | lb-health-mgr-sec-grp                     | lb-health-mgr-sec-grp                     | fc5826041a67468eb4223f75013c2525 | []                                          |
+| a842aa91-e8e3-4013-8c37-c951b3983d23 | c30-to-test-to-01-Platform-SG-sg          | CC Platfom Security Group                 | 59c2d928ef6046069a0175d74dc3dc23 | ['Backup:none', 'BU:IT',                    |
+|                                      |                                           |                                           |                                  | 'BusinessUnit:cloudeng', 'Environment:Non-  |
+|                                      |                                           |                                           |                                  | Production', 'hyperscaler:rhops',           |
+|                                      |                                           |                                           |                                  | 'OrganizationName:IT', 'Sub_BU:VCAD',       |
+|                                      |                                           |                                           |                                  | 'Terraform:false', 'todestroy:false',       |
+|                                      |                                           |                                           |                                  | 'tosuspend:false']                          |
+| af84f271-0815-47eb-8123-b0fc04e352a2 | default                                   | Default security group                    | fc5826041a67468eb4223f75013c2525 | []                                          |
+| b27d7011-43b7-41b8-ac8a-14380f2d6fe7 | c30-tn-test-tn-08-Platform-SG-sg          | CC Platfom Security Group                 | 59c2d928ef6046069a0175d74dc3dc23 | ['Backup:none', 'BU:IT',                    |
+|                                      |                                           |                                           |                                  | 'BusinessUnit:cloudeng', 'Environment:Non-  |
+|                                      |                                           |                                           |                                  | Production', 'OrganizationName:IT',         |
+|                                      |                                           |                                           |                                  | 'Sub_BU:VCAD', 'Terraform:false',           |
+|                                      |                                           |                                           |                                  | 'todestroy:false', 'tosuspend:false']       |
+| b3455868-8842-4b16-9f35-684e25f25f28 | c30-tn-test-tn-02-CLA-SG-sg               | Cadence License Agent Security Group      | 59c2d928ef6046069a0175d74dc3dc23 | ['Backup:none', 'BU:IT',                    |
+|                                      |                                           |                                           |                                  | 'BusinessUnit:cloudeng', 'Environment:Non-  |
+|                                      |                                           |                                           |                                  | Production', 'OrganizationName:IT',         |
+|                                      |                                           |                                           |                                  | 'Sub_BU:VCAD', 'Terraform:false',           |
+|                                      |                                           |                                           |                                  | 'todestroy:false', 'tosuspend:false']       |
+| b37dcf9b-2b17-4d23-bc4f-d81731bc89e6 | c30-to-test-to-00-AccessFromUtlSvr-sg     | Allow Access from UtlSvr                  | 59c2d928ef6046069a0175d74dc3dc23 | ['Backup:none', 'BU:IT',                    |
+|                                      |                                           |                                           |                                  | 'BusinessUnit:cloudeng', 'Environment:Non-  |
+|                                      |                                           |                                           |                                  | Production', 'hyperscaler:rhops',           |
+|                                      |                                           |                                           |                                  | 'OrganizationName:IT', 'Sub_BU:VCAD',       |
+|                                      |                                           |                                           |                                  | 'Terraform:false', 'todestroy:false',       |
+|                                      |                                           |                                           |                                  | 'tosuspend:false']                          |
+| b55263dc-2519-4fd0-b007-1416507f60ba | c30-tn-test-tn-04-PrivateSG-sg            | Private security group                    | 59c2d928ef6046069a0175d74dc3dc23 | ['Backup:none', 'BU:IT',                    |
+|                                      |                                           |                                           |                                  | 'BusinessUnit:cloudeng', 'Environment:Non-  |
+|                                      |                                           |                                           |                                  | Production', 'OrganizationName:IT',         |
+|                                      |                                           |                                           |                                  | 'Sub_BU:VCAD', 'Terraform:false',           |
+|                                      |                                           |                                           |                                  | 'todestroy:false', 'tosuspend:false']       |
+| b86a1fab-88ea-4b2a-875a-c5110cddd75c | c30-to-test-to-02-Platform-SG-sg          | CC Platfom Security Group                 | 59c2d928ef6046069a0175d74dc3dc23 | ['Backup:none', 'BU:IT',                    |
+|                                      |                                           |                                           |                                  | 'BusinessUnit:cloudeng', 'Environment:Non-  |
+|                                      |                                           |                                           |                                  | Production', 'hyperscaler:rhops',           |
+|                                      |                                           |                                           |                                  | 'OrganizationName:IT', 'Sub_BU:VCAD',       |
+|                                      |                                           |                                           |                                  | 'Terraform:false', 'todestroy:false',       |
+|                                      |                                           |                                           |                                  | 'tosuspend:false']                          |
+| ba85ab0c-c236-42c2-af7f-23a9cb48010a | c30-to-test-to-01-Platform-SG-sg          | CC Platfom Security Group                 | 59c2d928ef6046069a0175d74dc3dc23 | ['Backup:none', 'BU:IT',                    |
+|                                      |                                           |                                           |                                  | 'BusinessUnit:cloudeng', 'Environment:Non-  |
+|                                      |                                           |                                           |                                  | Production', 'hyperscaler:rhops',           |
+|                                      |                                           |                                           |                                  | 'OrganizationName:IT', 'Sub_BU:VCAD',       |
+|                                      |                                           |                                           |                                  | 'Terraform:false', 'todestroy:false',       |
+|                                      |                                           |                                           |                                  | 'tosuspend:false']                          |
+| c0ad8ef2-976c-40da-be63-3747cff4b7c6 | testing-rhel-sg                           | Allow SSH                                 | 59c2d928ef6046069a0175d74dc3dc23 | []                                          |
+| c0e0421c-4044-4240-81fc-120166bf37cc | c30-to-test-to-01-Chm-AccessFromUtlSvr-sg | Utility Server Access from Chamber        | 59c2d928ef6046069a0175d74dc3dc23 | ['Backup:none', 'BU:IT',                    |
+|                                      |                                           |                                           |                                  | 'BusinessUnit:cloudeng', 'Environment:Non-  |
+|                                      |                                           |                                           |                                  | Production', 'hyperscaler:rhops',           |
+|                                      |                                           |                                           |                                  | 'OrganizationName:IT', 'Sub_BU:VCAD',       |
+|                                      |                                           |                                           |                                  | 'Terraform:false', 'todestroy:false',       |
+|                                      |                                           |                                           |                                  | 'tosuspend:false']                          |
+| c48db466-c846-445b-8e92-4953eb90c9c7 | c30-tn-test-tn-00-00-SG-sg                | Admin (Utility) Server Security Group     | 59c2d928ef6046069a0175d74dc3dc23 | ['Backup:none', 'BU:IT',                    |
+|                                      |                                           |                                           |                                  | 'BusinessUnit:cloudeng', 'Environment:Non-  |
+|                                      |                                           |                                           |                                  | Production', 'hyperscaler:rhops',           |
+|                                      |                                           |                                           |                                  | 'OrganizationName:IT', 'Sub_BU:VCAD',       |
+|                                      |                                           |                                           |                                  | 'Terraform:false', 'todestroy:false',       |
+|                                      |                                           |                                           |                                  | 'tosuspend:false']                          |
+| c621b7d3-df41-4b74-afea-9055cac7c129 | c30-to-test-to-01-CLA-SG-sg               | Cadence License Agent Security Group      | 59c2d928ef6046069a0175d74dc3dc23 | ['Backup:none', 'BU:IT',                    |
+|                                      |                                           |                                           |                                  | 'BusinessUnit:cloudeng', 'Environment:Non-  |
+|                                      |                                           |                                           |                                  | Production', 'hyperscaler:rhops',           |
+|                                      |                                           |                                           |                                  | 'OrganizationName:IT', 'Sub_BU:VCAD',       |
+|                                      |                                           |                                           |                                  | 'Terraform:false', 'todestroy:false',       |
+|                                      |                                           |                                           |                                  | 'tosuspend:false']                          |
+| c741134d-43d3-4419-bb55-ba6e60bead75 | c30-tn-test-tn-02-Platform-SG-sg          | CC Platfom Security Group                 | 59c2d928ef6046069a0175d74dc3dc23 | ['Backup:none', 'BU:IT',                    |
+|                                      |                                           |                                           |                                  | 'BusinessUnit:cloudeng', 'Environment:Non-  |
+|                                      |                                           |                                           |                                  | Production', 'OrganizationName:IT',         |
+|                                      |                                           |                                           |                                  | 'Sub_BU:VCAD', 'Terraform:false',           |
+|                                      |                                           |                                           |                                  | 'todestroy:false', 'tosuspend:false']       |
+| cf7ff32b-5115-4d3f-83f9-2b64ba457763 | DRM SG                                    |                                           | 59c2d928ef6046069a0175d74dc3dc23 | []                                          |
+| dc436938-75a1-427e-8729-97a8404c9101 | c30-to-test-to-02-Chm-AccessFromUtlSvr-sg | Utility Server Access from Chamber        | 59c2d928ef6046069a0175d74dc3dc23 | ['Backup:none', 'BU:IT',                    |
+|                                      |                                           |                                           |                                  | 'BusinessUnit:cloudeng', 'Environment:Non-  |
+|                                      |                                           |                                           |                                  | Production', 'hyperscaler:rhops',           |
+|                                      |                                           |                                           |                                  | 'OrganizationName:IT', 'Sub_BU:VCAD',       |
+|                                      |                                           |                                           |                                  | 'Terraform:false', 'todestroy:false',       |
+|                                      |                                           |                                           |                                  | 'tosuspend:false']                          |
+| de7f3ef0-84ad-4624-94f6-3f07987f9b17 | test-arul                                 |                                           | 59c2d928ef6046069a0175d74dc3dc23 | []                                          |
+| deddd7ee-0e3d-47c1-988d-c9f7dfa94d23 | default                                   | Default security group                    | edd362364d404b329547e9c09fe4713f | []                                          |
+| e6e6f829-19f3-4009-a589-9a8ad3b25d07 | default                                   | Default security group                    | 334ca1da01cc4820b35c604cb37a5c1e | []                                          |
+| e95fb8bb-ff3d-44a6-9ef0-29277d99a967 | Worker test                               |                                           | 59c2d928ef6046069a0175d74dc3dc23 | []                                          |
+| edb05e29-9229-4e1c-a496-10eac9550c37 | default_egress                            |                                           | 59c2d928ef6046069a0175d74dc3dc23 | []                                          |
+| f5585a4c-d901-4290-b4c8-68ca2e7b5c85 | lb-mgmt-sec-grp                           | lb-mgmt-sec-grp                           | fc5826041a67468eb4223f75013c2525 | []                                          |
+| f9d18022-8031-41a3-abc1-7335c1aa5e2e | ssh-security-group                        |                                           | 59c2d928ef6046069a0175d74dc3dc23 | []                                          |
+| fccd1f1d-3075-4240-8fd1-5680e1811f44 | c30-tn-test-tn-00-LDAP-SG-sg              | Allow LDAP Access from UT Servers         | 59c2d928ef6046069a0175d74dc3dc23 | ['Backup:none', 'BU:IT',                    |
+|                                      |                                           |                                           |                                  | 'BusinessUnit:cloudeng', 'Environment:Non-  |
+|                                      |                                           |                                           |                                  | Production', 'hyperscaler:rhops',           |
+|                                      |                                           |                                           |                                  | 'OrganizationName:IT', 'Sub_BU:VCAD',       |
+|                                      |                                           |                                           |                                  | 'Terraform:false', 'todestroy:false',       |
+|                                      |                                           |                                           |                                  | 'tosuspend:false']                          |
++--------------------------------------+-------------------------------------------+-------------------------------------------+----------------------------------+---------------------------------------------+
+---- Chm-AccessFromUtlSvr ----
+Error while executing command: No SecurityGroup found for Chm-AccessFromUtlSvr
+missing: Chm-AccessFromUtlSvr
+No SecurityGroup found for Chm-AccessFromUtlSvr
+---- PrivateSG ----
+Error while executing command: No SecurityGroup found for PrivateSG
+missing: PrivateSG
+No SecurityGroup found for PrivateSG
+---- CLA-SG ----
+Error while executing command: No SecurityGroup found for CLA-SG
+missing: CLA-SG
+No SecurityGroup found for CLA-SG
+---- Platform-SG ----
+Error while executing command: No SecurityGroup found for Platform-SG
+missing: Platform-SG
+No SecurityGroup found for Platform-SG
+== keypair ==
++-------------------------------------------+-------------------------------------------------+------+
+| Name                                      | Fingerprint                                     | Type |
++-------------------------------------------+-------------------------------------------------+------+
+| c30-drm-keypair                           | 0d:d5:94:75:ce:bc:fd:b5:92:b2:f3:33:2e:65:e1:f8 | ssh  |
+| c30-tn-test-tn-00-cdls-arbitr-keypair     | 14:fd:28:f5:df:fe:fb:f5:fb:bd:2c:92:19:25:58:a4 | ssh  |
+| c30-tn-test-tn-00-cdls-mstr-keypair       | 14:fd:28:f5:df:fe:fb:f5:fb:bd:2c:92:19:25:58:a4 | ssh  |
+| c30-tn-test-tn-00-cdls-stndby-keypair     | 14:fd:28:f5:df:fe:fb:f5:fb:bd:2c:92:19:25:58:a4 | ssh  |
+| c30-tn-test-tn-00-ldap-master-keypair     | 14:fd:28:f5:df:fe:fb:f5:fb:bd:2c:92:19:25:58:a4 | ssh  |
+| c30-tn-test-tn-00-ldap-replica-01-keypair | 14:fd:28:f5:df:fe:fb:f5:fb:bd:2c:92:19:25:58:a4 | ssh  |
+| c30-tn-test-tn-00-ldap-replica-02-keypair | 14:fd:28:f5:df:fe:fb:f5:fb:bd:2c:92:19:25:58:a4 | ssh  |
+| c30-tn-test-tn-00-repo01-keypair          | 14:fd:28:f5:df:fe:fb:f5:fb:bd:2c:92:19:25:58:a4 | ssh  |
+| c30-tn-test-tn-00-st01-keypair            | 14:fd:28:f5:df:fe:fb:f5:fb:bd:2c:92:19:25:58:a4 | ssh  |
+| c30-tn-test-tn-02-haproxy-keypair         | 14:fd:28:f5:df:fe:fb:f5:fb:bd:2c:92:19:25:58:a4 | ssh  |
+| c30-tn-test-tn-02-ls01-keypair            | 14:fd:28:f5:df:fe:fb:f5:fb:bd:2c:92:19:25:58:a4 | ssh  |
+| c30-tn-test-tn-03-haproxy-keypair         | 14:fd:28:f5:df:fe:fb:f5:fb:bd:2c:92:19:25:58:a4 | ssh  |
+| c30-tn-test-tn-03-ls01-keypair            | 14:fd:28:f5:df:fe:fb:f5:fb:bd:2c:92:19:25:58:a4 | ssh  |
+| c30-tn-test-tn-04-haproxy-keypair         | 14:fd:28:f5:df:fe:fb:f5:fb:bd:2c:92:19:25:58:a4 | ssh  |
+| c30-tn-test-tn-04-ls01-keypair            | 14:fd:28:f5:df:fe:fb:f5:fb:bd:2c:92:19:25:58:a4 | ssh  |
+| c30-tn-test-tn-08-haproxy-keypair         | 14:fd:28:f5:df:fe:fb:f5:fb:bd:2c:92:19:25:58:a4 | ssh  |
+| c30-tn-test-tn-08-ls01-keypair            | 14:fd:28:f5:df:fe:fb:f5:fb:bd:2c:92:19:25:58:a4 | ssh  |
+| c30-tn-test-tn-08-lsf-master-keypair      | 14:fd:28:f5:df:fe:fb:f5:fb:bd:2c:92:19:25:58:a4 | ssh  |
+| c30-to-test-to-00-cdls-arbitr-keypair     | 14:fd:28:f5:df:fe:fb:f5:fb:bd:2c:92:19:25:58:a4 | ssh  |
+| c30-to-test-to-00-cdls-mstr-keypair       | 14:fd:28:f5:df:fe:fb:f5:fb:bd:2c:92:19:25:58:a4 | ssh  |
+| c30-to-test-to-00-cdls-stndby-keypair     | 14:fd:28:f5:df:fe:fb:f5:fb:bd:2c:92:19:25:58:a4 | ssh  |
+| c30-to-test-to-00-ldap-master-keypair     | 14:fd:28:f5:df:fe:fb:f5:fb:bd:2c:92:19:25:58:a4 | ssh  |
+| c30-to-test-to-00-ldap-replica-01-keypair | 14:fd:28:f5:df:fe:fb:f5:fb:bd:2c:92:19:25:58:a4 | ssh  |
+| c30-to-test-to-00-ldap-replica-02-keypair | 14:fd:28:f5:df:fe:fb:f5:fb:bd:2c:92:19:25:58:a4 | ssh  |
+| c30-to-test-to-00-st01-keypair            | 14:fd:28:f5:df:fe:fb:f5:fb:bd:2c:92:19:25:58:a4 | ssh  |
+| c30-to-test-to-01-wrk01-keypair           | 14:fd:28:f5:df:fe:fb:f5:fb:bd:2c:92:19:25:58:a4 | ssh  |
+| c30-to-test-to-02-haproxy-keypair         | 14:fd:28:f5:df:fe:fb:f5:fb:bd:2c:92:19:25:58:a4 | ssh  |
+| cloud-console-key                         | cb:e3:2e:15:cb:a8:f6:a8:c5:8b:7e:d7:ef:58:fc:2c | ssh  |
++-------------------------------------------+-------------------------------------------------+------+
+No Keypair found for testingRHELtestvm
+missing keypair: testingRHELtestvm
+== existing port/server with our names ==
+No Port found for to01-wrk01-port
+port to01-wrk01-port not found
+No Server found for to01-wrk01
+server to01-wrk01 not found
+ports on target network (first 30):
++--------------------------------------+-------------+-------------------+-------------------------------------------------------------------------------+--------+
+| ID                                   | Name        | MAC Address       | Fixed IP Addresses                                                            | Status |
++--------------------------------------+-------------+-------------------+-------------------------------------------------------------------------------+--------+
+| 24cfa46e-9a84-43d5-9df0-d3f57635ff38 |             | fa:16:3e:d4:ed:48 | ip_address='10.107.177.43', subnet_id='c83e54b1-822e-4931-ac73-b731d1f6c966'  | ACTIVE |
+| 449c9d51-9c3b-43af-9f72-41b52a0182a0 |             | fa:16:3e:1d:d0:7c | ip_address='10.107.177.93', subnet_id='c83e54b1-822e-4931-ac73-b731d1f6c966'  | DOWN   |
+| 45ab2cb0-6746-446a-8982-654456fcf476 | baremetal-1 | c4:cb:e1:ab:8f:a8 | ip_address='10.107.177.98', subnet_id='c83e54b1-822e-4931-ac73-b731d1f6c966'  | ACTIVE |
+| c0e9f605-0572-4d49-9c36-7aba37e3c939 |             | fa:16:3e:80:85:29 | ip_address='10.107.177.40', subnet_id='c83e54b1-822e-4931-ac73-b731d1f6c966'  | DOWN   |
+| c16fd492-12d8-4437-b3f9-f0b4b2b1c183 |             | fa:16:3e:06:41:87 | ip_address='10.107.177.42', subnet_id='c83e54b1-822e-4931-ac73-b731d1f6c966'  | ACTIVE |
+| cc483c71-adbd-413c-8243-3108965d6350 |             | fa:16:3e:4a:f8:db | ip_address='10.107.177.66', subnet_id='c83e54b1-822e-4931-ac73-b731d1f6c966'  | DOWN   |
+| ef0c588b-a925-4988-ba41-0c0e4e1cfdeb |             | fa:16:3e:a3:c7:1a | ip_address='10.107.177.41', subnet_id='c83e54b1-822e-4931-ac73-b731d1f6c966'  | ACTIVE |
+| fba274d3-9e34-45e7-9761-79311faaf623 |             | fa:16:3e:cc:6e:cf | ip_address='10.107.177.254', subnet_id='c83e54b1-822e-4931-ac73-b731d1f6c966' | ACTIVE |
++--------------------------------------+-------------+-------------------+-------------------------------------------------------------------------------+--------+
+== quotas/limits ==
+usage: openstack limits show [-h] [-f {csv,json,table,value,yaml}] [-c COLUMN] [--quote {all,minimal,none,nonnumeric}] [--noindent] [--max-width <integer>] [--fit-width] [--print-empty]
+                             [--sort-column SORT_COLUMN] [--sort-ascending | --sort-descending] (--absolute | --rate) [--reserved] [--project <project>] [--domain <domain>]
+openstack limits show: error: one of the arguments --absolute --rate is required
+- Limit: 608
+  Resource: cores
+- Limit: 400
+  Resource: instances
+- Limit: 5155763
+  Resource: ram
+- Limit: 1000
+  Resource: volumes
+- Limit: 30
+  Resource: snapshots
+- Limit: 30000
+  Resource: gigabytes
+- Limit: 10
+  Resource: backups
+- Limit: -1
+  Resource: volumes_netapp_iscsi
+- Limit: -1
+  Resource: gigabytes_netapp_iscsi
+- Limit: -1
+  Resource: snapshots_netapp_iscsi
+- Limit: -1
+  Resource: volumes_netapp_iscsi_enc
+- Limit: -1
+  Resource: gigabytes_netapp_iscsi_enc
+- Limit: -1
+  Resource: snapshots_netapp_iscsi_enc
+- Limit: -1
+  Resource: volumes_netapp
+- Limit: -1
+  Resource: gigabytes_netapp
+- Limit: -1
+  Resource: snapshots_netapp
+- Limit: -1
+  Resource: volumes_tripleo
+- Limit: -1
+  Resource: gigabytes_tripleo
+- Limit: -1
+  Resource: snapshots_tripleo
+- Limit: 10
+  Resource: groups
+- Limit: -1
+  Resource: trunk
+- Limit: 100
+  Resource: networks
+- Limit: 500
+  Resource: ports
+- Limit: 10
+  Resource: rbac_policies
+- Limit: 150
+  Resource: routers
+- Limit: 100
+  Resource: subnets
+- Limit: -1
+  Resource: subnet_pools
+- Limit: -1
+  Resource: fixed-ips
+- Limit: 10240
+  Resource: injected-file-size
+- Limit: 255
+  Resource: injected-path-size
+- Limit: 5
+  Resource: injected-files
+- Limit: 400
+  Resource: key-pairs
+- Limit: 128
+  Resource: properties
+- Limit: 10
+  Resource: server-groups
+- Limit: 10
+  Resource: server-group-members
+- Limit: 500
+  Resource: floating-ips
+- Limit: 1000
+  Resource: secgroup-rules
+- Limit: 250
+  Resource: secgroups
+- Limit: 1000
+  Resource: backup-gigabytes
+- Limit: -1
+  Resource: per-volume-gigabytes
+== ironic capacity/state ==
++--------------------------------------+------------------+---------------+-------------+--------------------+-------------+
+| UUID                                 | Name             | Instance UUID | Power State | Provisioning State | Maintenance |
++--------------------------------------+------------------+---------------+-------------+--------------------+-------------+
+| 16dec879-ba80-4cac-8486-59318d688037 | baremetal-node-1 | None          | power off   | deploy failed      | False       |
++--------------------------------------+------------------+---------------+-------------+--------------------+-------------+
+== control plane health (nova/neutron agents) ==
++--------------------------------------+----------------+----------------------------------------------------+----------+---------+-------+----------------------------+
+| ID                                   | Binary         | Host                                               | Zone     | Status  | State | Updated At                 |
++--------------------------------------+----------------+----------------------------------------------------+----------+---------+-------+----------------------------+
+| 95f0b8a3-1ff0-4917-89cf-030449194e58 | nova-conductor | tst-overcloud-controller-03.openstack.cadence.com  | internal | enabled | up    | 2025-08-10T07:14:50.000000 |
+| 6c1a11ff-e502-49b3-93cd-1a2e08f827f0 | nova-conductor | tst-overcloud-controller-02.openstack.cadence.com  | internal | enabled | up    | 2025-08-10T07:14:49.000000 |
+| f306c94d-0fdd-4dd0-a6de-565e637b11b2 | nova-scheduler | tst-overcloud-controller-02.openstack.cadence.com  | internal | enabled | up    | 2025-08-10T07:14:49.000000 |
+| c9ebc620-d141-4caa-8830-8accf531a773 | nova-scheduler | tst-overcloud-controller-03.openstack.cadence.com  | internal | enabled | up    | 2025-08-10T07:14:49.000000 |
+| f23a9807-c6af-44e4-af75-630f8400a4f3 | nova-scheduler | tst-overcloud-controller-01.openstack.cadence.com  | internal | enabled | up    | 2025-08-10T07:14:48.000000 |
+| b86ff12f-a7c7-4c74-8506-1cc1e44dc5e5 | nova-conductor | tst-overcloud-controller-01.openstack.cadence.com  | internal | enabled | up    | 2025-08-10T07:14:50.000000 |
+| c048b96c-d050-4c4e-be91-f122c62944bc | nova-compute   | tst-overcloud-compute-01.openstack.cadence.com     | nova     | enabled | up    | 2025-08-10T07:14:49.000000 |
+| 451b6f5d-b4ab-48ac-b35e-4947bca93fe8 | nova-compute   | tst-overcloud-compute-02.openstack.cadence.com     | nova     | enabled | up    | 2025-08-10T07:14:44.000000 |
+| 30e73871-e166-492f-b4b5-5c9dfc53956c | nova-compute   | tst-overcloud-compute-03.openstack.cadence.com     | nova     | enabled | up    | 2025-08-10T07:14:40.000000 |
+| f9ad78a1-6809-4c29-b2fd-fbb6222b1083 | nova-compute   | tst-overcloud-compute-08.openstack.cadence.com     | nova     | enabled | up    | 2025-08-10T07:14:44.000000 |
+| c4f1c360-0cb4-4398-ac8e-f866b11d9ecf | nova-compute   | tst-overcloud-controller-03.openstack.cadence.com  | nova     | enabled | up    | 2025-08-10T07:14:43.000000 |
+| 15971da4-601e-47f7-9793-60a3c84ae6ad | nova-compute   | tst-overcloud-controller-02.openstack.cadence.com  | nova     | enabled | up    | 2025-08-10T07:14:44.000000 |
+| 72e48345-c505-4e98-b09f-b637c586fb3f | nova-compute   | tst-overcloud-controller-01.openstack.cadence.com  | nova     | enabled | up    | 2025-08-10T07:14:48.000000 |
+| ec4c5f77-2af2-4393-9dcd-bd59476487d5 | nova-compute   | tst-overcloud-compute-gpu-09.openstack.cadence.com | nova     | enabled | up    | 2025-08-10T07:14:47.000000 |
++--------------------------------------+----------------+----------------------------------------------------+----------+---------+-------+----------------------------+
++--------------------------------------+------------------------------+----------------------------------------------------+-------------------+-------+-------+----------------------------+
+| ID                                   | Agent Type                   | Host                                               | Availability Zone | Alive | State | Binary                     |
++--------------------------------------+------------------------------+----------------------------------------------------+-------------------+-------+-------+----------------------------+
+| 53666c1e-4e24-4f87-a934-562154a9b282 | Baremetal Node               | 16dec879-ba80-4cac-8486-59318d688037               | None              | :-)   | UP    | ironic-neutron-agent       |
+| 6c6d2159-beb8-4f84-83ae-446b7a67abf9 | DHCP agent                   | tst-overcloud-controller-02.openstack.cadence.com  | nova              | :-)   | UP    | neutron-dhcp-agent         |
+| d0f2cb91-24d6-498f-880a-037919856504 | DHCP agent                   | tst-overcloud-controller-01.openstack.cadence.com  | nova              | :-)   | UP    | neutron-dhcp-agent         |
+| e7f21402-a79c-4ccc-96f8-ab1a4f189a26 | Baremetal Node               | 86769e8a-3421-4ceb-b0ef-b9914be9c924               | None              | XXX   | UP    | ironic-neutron-agent       |
+| ef59b194-0460-443c-b507-19b1306d7f48 | DHCP agent                   | tst-overcloud-controller-03.openstack.cadence.com  | nova              | :-)   | UP    | neutron-dhcp-agent         |
+| ddffdcc5-d00a-4dac-abdb-3aeef20c58ca | OVN Controller Gateway agent | tst-overcloud-controller-01.openstack.cadence.com  |                   | :-)   | UP    | ovn-controller             |
+| 86b1508b-0183-4729-ad54-20d29ec2202d | OVN Controller Gateway agent | tst-overcloud-controller-02.openstack.cadence.com  |                   | :-)   | UP    | ovn-controller             |
+| 51d9d552-420b-5487-87ba-60428429a475 | OVN Metadata agent           | tst-overcloud-compute-02.openstack.cadence.com     |                   | :-)   | UP    | neutron-ovn-metadata-agent |
+| e18ee6f5-2871-4307-8eb8-2d7aee87cea7 | OVN Controller agent         | tst-overcloud-compute-02.openstack.cadence.com     |                   | :-)   | UP    | ovn-controller             |
+| c0664ef2-7e85-5fba-92c5-4cd790dc7793 | OVN Metadata agent           | tst-overcloud-compute-08.openstack.cadence.com     |                   | :-)   | UP    | neutron-ovn-metadata-agent |
+| 64dea745-1ac8-41cc-b603-1dfe6d696f8f | OVN Controller agent         | tst-overcloud-compute-08.openstack.cadence.com     |                   | :-)   | UP    | ovn-controller             |
+| 995a3897-a3b5-580a-91fd-3f5fd682ab90 | OVN Metadata agent           | tst-overcloud-compute-01.openstack.cadence.com     |                   | :-)   | UP    | neutron-ovn-metadata-agent |
+| 233c9eba-276f-446b-b3f8-c273df7cd712 | OVN Controller agent         | tst-overcloud-compute-01.openstack.cadence.com     |                   | :-)   | UP    | ovn-controller             |
+| c3c7709d-0988-5eff-9ff5-72c9e642625f | OVN Metadata agent           | tst-overcloud-compute-03.openstack.cadence.com     |                   | :-)   | UP    | neutron-ovn-metadata-agent |
+| 6327abfa-33dd-4828-a971-cf6023de1482 | OVN Controller agent         | tst-overcloud-compute-03.openstack.cadence.com     |                   | :-)   | UP    | ovn-controller             |
+| 907da5d0-6e9c-5261-8f8f-40f053c75f3b | OVN Metadata agent           | tst-overcloud-compute-04.openstack.cadence.com     |                   | XXX   | UP    | neutron-ovn-metadata-agent |
+| 0c6efcdc-1e62-4649-b055-10d9407a8eaa | OVN Controller agent         | tst-overcloud-compute-04.openstack.cadence.com     |                   | XXX   | UP    | ovn-controller             |
+| 72f5936f-fc8d-49b5-80e7-bf3921e97fd5 | OVN Controller Gateway agent | tst-overcloud-controller-03.openstack.cadence.com  |                   | :-)   | UP    | ovn-controller             |
+| 467ac4d0-d2e2-5e84-8713-ad8bcc09760c | OVN Metadata agent           | tst-overcloud-compute-gpu-09.openstack.cadence.com |                   | :-)   | UP    | neutron-ovn-metadata-agent |
+| 2b4c6b31-a427-4587-88c9-0b52690d281e | OVN Controller agent         | tst-overcloud-compute-gpu-09.openstack.cadence.com |                   | :-)   | UP    | ovn-controller             |
++--------------------------------------+------------------------------+----------------------------------------------------+-------------------+-------+-------+----------------------------+
++--------------------------------------+------------+---------------------------------------------------+-------------------+-------+-------+--------------------+
+| ID                                   | Agent Type | Host                                              | Availability Zone | Alive | State | Binary             |
++--------------------------------------+------------+---------------------------------------------------+-------------------+-------+-------+--------------------+
+| d0f2cb91-24d6-498f-880a-037919856504 | DHCP agent | tst-overcloud-controller-01.openstack.cadence.com | nova              | :-)   | UP    | neutron-dhcp-agent |
+| 6c6d2159-beb8-4f84-83ae-446b7a67abf9 | DHCP agent | tst-overcloud-controller-02.openstack.cadence.com | nova              | :-)   | UP    | neutron-dhcp-agent |
+| ef59b194-0460-443c-b507-19b1306d7f48 | DHCP agent | tst-overcloud-controller-03.openstack.cadence.com | nova              | :-)   | UP    | neutron-dhcp-agent |
++--------------------------------------+------------+---------------------------------------------------+-------------------+-------+-------+--------------------+
+
+
+
+
+
+
+
 # ==== set from your tfvars ====
 IMAGE_ID="ef40de67-b794-4d47-84f4-eb24fd6ca122"
 NET_ID="5c79a1a8-b294-4435-a2e6-ef1b992735d3"
