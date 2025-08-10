@@ -1,3 +1,133 @@
+#!/bin/bash
+set -euo pipefail
+
+# ===== fixed from your env =====
+NAME_PREFIX="to01"
+VM_NAME="${NAME_PREFIX}-wrk01"
+PORT_NAME="${NAME_PREFIX}-wrk01-port"
+
+IMAGE_ID="ef40de67-b794-4d47-84f4-eb24fd6ca122"
+
+NET_ID="5c79a1a8-b294-4435-a2e6-ef1b992735d3"
+SUBNET_ID="c83e54b1-822e-4931-ac73-b731d1f6c966"
+
+# Use the SGs that actually exist in your project for to-01
+SG_CHM="c0e0421c-4044-4240-81fc-120166bf37cc"  # c30-to-test-to-01-Chm-AccessFromUtlSvr-sg
+SG_PRIV="61bb3936-a88b-4bae-b7dd-291facb2e683" # c30-to-test-to-01-PrivateSG-sg
+SG_CLA="c621b7d3-df41-4b74-afea-9055cac7c129"  # c30-to-test-to-01-CLA-SG-sg
+SG_PLAT="ba85ab0c-c236-42c2-af7f-23a9cb48010a" # c30-to-test-to-01-Platform-SG-sg
+SEC_GROUPS=("$SG_CHM" "$SG_PRIV" "$SG_CLA" "$SG_PLAT")
+
+KEY_NAME="c30-to-test-to-01-wrk01-keypair"     # exists
+POLL_SECS=20
+TIMEOUT_SECS=$((45*60))
+
+say() { echo -e "[$(date +%H:%M:%S)] $*"; }
+
+# --- discover a baremetal flavor automatically if FLAVOR_ID not provided ---
+discover_flavor() {
+  # try JSON first
+  if openstack flavor list -f json >/dev/null 2>&1; then
+    local f
+    f=$(openstack flavor list -f json | jq -r '.[] | select((.Name|test("bare|metal|bm";"i")) or (.Description|test("bare|metal|bm";"i"))) | .ID' | head -n1)
+    [[ -n "$f" ]] && { echo "$f"; return; }
+  fi
+  # fallback: grep the table
+  openstack flavor list -f table | egrep -i 'bare|metal|bm' | awk '{print $2}' | head -n1
+}
+
+FLAVOR_ID="${FLAVOR_ID:-}"
+if [[ -z "$FLAVOR_ID" || "$FLAVOR_ID" == "REPLACE_WITH_BAREMETAL_FLAVOR_ID" ]]; then
+  say "Auto-discovering a baremetal flavor..."
+  FLAVOR_ID="$(discover_flavor || true)"
+fi
+if [[ -z "$FLAVOR_ID" ]]; then
+  echo "ERROR: Could not auto-discover a baremetal flavor. Set FLAVOR_ID and re-run." >&2
+  exit 1
+fi
+say "Using FLAVOR_ID=$FLAVOR_ID"
+
+# --- sanity/auth ---
+openstack token issue >/dev/null
+say "Project OK. Image/Network/Subnet sanity..."
+openstack image show "$IMAGE_ID" >/dev/null
+openstack network show "$NET_ID" >/dev/null
+openstack subnet show "$SUBNET_ID" >/dev/null
+
+# --- Ironic preflight: require an AVAILABLE node (not 'deploy failed') ---
+AVAILABLE_CNT=$(openstack baremetal node list -f value -c "Provisioning State" | grep -ci '^available$' || true)
+if [[ "$AVAILABLE_CNT" -eq 0 ]]; then
+  echo "ERROR: No AVAILABLE Ironic nodes. Current nodes:" >&2
+  openstack baremetal node list -f table | sed 's/^/  /'
+  echo "Tip: move a node to manageable -> provide (available), or fix the 'deploy failed' node before retry." >&2
+  exit 2
+fi
+
+# --- create or reuse port ---
+if openstack port show "$PORT_NAME" >/dev/null 2>&1; then
+  PORT_ID=$(openstack port show "$PORT_NAME" -f value -c id)
+  say "Reusing port: $PORT_ID"
+else
+  say "Creating port on NET=$NET_ID SUBNET=$SUBNET_ID"
+  PORT_ID=$(openstack port create \
+    --network "$NET_ID" \
+    --fixed-ip subnet="$SUBNET_ID" \
+    --enable \
+    "$PORT_NAME" -f value -c id)
+  say "Created port: $PORT_ID"
+fi
+
+# apply SGs (idempotent)
+for sg in "${SEC_GROUPS[@]}"; do
+  openstack port set --security-group "$sg" "$PORT_ID"
+done
+
+# --- create server (boot from image) ---
+if openstack server show "$VM_NAME" >/dev/null 2>&1; then
+  say "Server $VM_NAME already exists; skipping create."
+else
+  say "Creating bare metal server from IMAGE (no volume). This can take ~20–40 min..."
+  openstack server create \
+    --flavor "$FLAVOR_ID" \
+    --image  "$IMAGE_ID" \
+    --port   "$PORT_ID" \
+    --key-name "$KEY_NAME" \
+    $(printf -- '--security-group %s ' "${SEC_GROUPS[@]}") \
+    "$VM_NAME" >/dev/null
+fi
+
+# --- poll until ACTIVE/ERROR ---
+say "Waiting for ACTIVE (timeout ${TIMEOUT_SECS}s, poll ${POLL_SECS}s)..."
+elapsed=0
+while :; do
+  STATUS=$(openstack server show "$VM_NAME" -f value -c status || echo "?")
+  TASK=$(openstack server show "$VM_NAME" -f value -c OS-EXT-STS:task_state || echo "-")
+  POWER=$(openstack server show "$VM_NAME" -f value -c OS-EXT-STS:power_state || echo "-")
+  say "status=$STATUS task=$TASK power=$POWER"
+  [[ "$STATUS" == "ACTIVE" ]] && break
+  if [[ "$STATUS" == "ERROR" ]]; then
+    echo "Server in ERROR. Details:" >&2
+    openstack server show "$VM_NAME" -f yaml || true
+    openstack console log show "$VM_NAME" || true
+    exit 3
+  fi
+  (( elapsed >= TIMEOUT_SECS )) && { echo "Timed out."; openstack server show "$VM_NAME" -f yaml || true; exit 4; }
+  sleep "$POLL_SECS"
+  (( elapsed += POLL_SECS ))
+done
+
+say "Server ACTIVE."
+openstack server show "$VM_NAME" -f yaml | sed 's/^/  /'
+say "Port binding:"
+openstack port show "$PORT_ID" -f yaml | sed 's/^/  /'
+HOST=$(openstack server show "$VM_NAME" -f value -c OS-EXT-SRV-ATTR:host || true)
+[[ -n "$HOST" ]] && say "Placed on host: $HOST"
+
+
+
+
+
+
 
 vsaravan@sjcvl-ghrunner1:~$ ./create_bm.sh
 == auth/project/region ==
