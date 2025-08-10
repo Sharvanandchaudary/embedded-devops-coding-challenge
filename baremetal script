@@ -1,3 +1,45 @@
+vsaravan@sjcvl-ghrunner1:~$ ./create_bm.sh
+[00:32:08] Auto-discovering a baremetal flavor...
+jq: error (at <stdin>:164): null (null) cannot be matched, as it is not a string
+[00:32:19] Using FLAVOR_ID=auto
+[00:32:21] Project OK. Image/Network/Subnet sanity...
+ERROR: No AVAILABLE Ironic nodes. Current nodes:
+  +--------------------------------------+------------------+---------------+-------------+--------------------+-------------+
+  | UUID                                 | Name             | Instance UUID | Power State | Provisioning State | Maintenance |
+  +--------------------------------------+------------------+---------------+-------------+--------------------+-------------+
+  | 16dec879-ba80-4cac-8486-59318d688037 | baremetal-node-1 | None          | power off   | deploy failed      | False       |
+  +--------------------------------------+------------------+---------------+-------------+--------------------+-------------+
+Tip: move a node to manageable -> provide (available), or fix the 'deploy failed' node before retry.
+vsaravan@sjcvl-ghrunner1:~$ rm -rf  create_bm.sh
+vsaravan@sjcvl-ghrunner1:~$ nano create_bm.sh
+vsaravan@sjcvl-ghrunner1:~$ chmod +x create_bm.sh
+vsaravan@sjcvl-ghrunner1:~$ ./create_bm.sh
+./create_bm.sh: line 23: FLAVOR_ID: Set FLAVOR_ID env var to your baremetal flavor name or ID
+vsaravan@sjcvl-ghrunner1:~$ nano create_bm.sh
+vsaravan@sjcvl-ghrunner1:~$ ./create_bm.sh
+ERROR: No AVAILABLE Ironic nodes. Fix/provide a node, then re-run.
+  +--------------------------------------+------------------+---------------+-------------+--------------------+-------------+
+  | UUID                                 | Name             | Instance UUID | Power State | Provisioning State | Maintenance |
+  +--------------------------------------+------------------+---------------+-------------+--------------------+-------------+
+  | 16dec879-ba80-4cac-8486-59318d688037 | baremetal-node-1 | None          | power off   | deploy failed      | False       |
+  +--------------------------------------+------------------+---------------+-------------+--------------------+-------------+
+vsaravan@sjcvl-ghrunner1:~$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 #!/bin/bash
 set -euo pipefail
 
