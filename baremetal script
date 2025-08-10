@@ -1,3 +1,67 @@
+SUBNET_ID="3b80e294-b7de-47c0-8343-7e4c93d8125b"
+
+echo "=== Disabling DHCP ==="
+openstack subnet set --no-dhcp "$SUBNET_ID" || true
+
+echo "=== Deleting DHCP ports ==="
+for PID in $(openstack port list --fixed-ip subnet="$SUBNET_ID" --device-owner network:dhcp -f value -c ID); do
+  echo "Deleting DHCP port $PID"
+  openstack port delete "$PID" || true
+done
+
+echo "=== Detaching from routers ==="
+for RID in $(openstack port list --fixed-ip subnet="$SUBNET_ID" \
+            -f value -c Device_Owner -c Device_ID | awk '/router_interface/ {print $2}' | sort -u); do
+  echo "Removing subnet from router $RID"
+  openstack router remove subnet "$RID" "$SUBNET_ID" || true
+done
+
+echo "=== Deleting any remaining ports ==="
+for PID in $(openstack port list --fixed-ip subnet="$SUBNET_ID" -f value -c ID); do
+  echo "Deleting port $PID"
+  openstack port delete "$PID" || true
+done
+
+echo "=== Deleting subnet ==="
+openstack subnet delete "$SUBNET_ID" || true
+
+echo "=== Verifying no leftover ports ==="
+PORT_COUNT=$(openstack port list --fixed-ip subnet="$SUBNET_ID" -f value -c ID | wc -l)
+if [[ "$PORT_COUNT" -gt 0 ]]; then
+  echo "ERROR: $PORT_COUNT ports still exist on subnet $SUBNET_ID — cleanup incomplete."
+  openstack port list --fixed-ip subnet="$SUBNET_ID" -f table
+  exit 1
+else
+  echo "SUCCESS: No ports remain for subnet $SUBNET_ID."
+fi
+
+echo "=== Verifying subnet deletion ==="
+if openstack subnet show "$SUBNET_ID" >/dev/null 2>&1; then
+  echo "ERROR: Subnet $SUBNET_ID still exists, cleanup not complete."
+  exit 1
+else
+  echo "SUCCESS: Subnet $SUBNET_ID is gone."
+fi
+
+echo "=== Removing from Terragrunt state ==="
+terragrunt state rm 'module.provider-network.openstack_networking_subnet_v2.subnet["subnet-1168"]' || true
+
+echo "=== Re-applying Terragrunt ==="
+terragrunt apply -auto-approve
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 vsaravan@sjcvl-ghrunner1:~$ chmod +x create_bm.sh
 vsaravan@sjcvl-ghrunner1:~$ ./create_bm.sh
 +Failed to prepare to deploy: No VIFs found for node 16dec879-ba80-4cac-8486-59318d688037 when attempting to update DHCP BOOT options.
