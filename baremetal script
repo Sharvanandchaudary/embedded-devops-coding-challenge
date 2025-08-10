@@ -1,4 +1,18 @@
 SUBNET_ID="3b80e294-b7de-47c0-8343-7e4c93d8125b"
+openstack port list --fixed-ip subnet="$SUBNET_ID" -f value -c Device_Owner | egrep -q 'compute:|baremetal:' \
+  && echo "IN USE by servers — do NOT delete" \
+  || echo "No server NICs attached — safe to proceed with cleanup"
+
+
+
+
+
+
+
+
+
+
+SUBNET_ID="3b80e294-b7de-47c0-8343-7e4c93d8125b"
 
 echo "=== Disabling DHCP ==="
 openstack subnet set --no-dhcp "$SUBNET_ID" || true
