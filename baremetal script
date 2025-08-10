@@ -1,3 +1,183 @@
+vsaravan@sjcvl-ghrunner1:~$ chmod +x create_bm.sh
+vsaravan@sjcvl-ghrunner1:~$ ./create_bm.sh
++Failed to prepare to deploy: No VIFs found for node 16dec879-ba80-4cac-8486-59318d688037 when attempting to update DHCP BOOT options.
+False
+None
+deploy failed
+allocation_uuid: null
+automated_clean: null
+bios_interface: no-bios
+boot_interface: ipxe
+chassis_uuid: null
+clean_step: {}
+conductor: tst-overcloud-controller-03.openstack.cadence.com
+conductor_group: ''
+console_enabled: false
+console_interface: ipmitool-socat
+created_at: '2025-03-06T16:21:06+00:00'
+deploy_interface: direct
+deploy_step: {}
+description: null
+driver: ipmi
+driver_info:
+  deploy_kernel: 8d0994b4-3745-49bb-bd21-4bb08289515d
+  deploy_ramdisk: a54b1998-1937-4c84-af1b-7f5c8f52188e
+  ipmi_address: 10.107.131.54
+  ipmi_password: '******'
+  ipmi_username: admin
+  rescue_kernel: 8d0994b4-3745-49bb-bd21-4bb08289515d
+  rescue_ramdisk: a54b1998-1937-4c84-af1b-7f5c8f52188e
+driver_internal_info:
+  agent_cached_clean_steps_refreshed: '2025-08-09 09:47:16.625528'
+  agent_cached_deploy_steps_refreshed: '2025-08-07 21:55:08.522095'
+  agent_continue_if_ata_erase_failed: false
+  agent_continue_if_secure_erase_failed: false
+  agent_enable_ata_secure_erase: true
+  agent_enable_nvme_secure_erase: true
+  agent_erase_devices_iterations: 1
+  agent_erase_devices_zeroize: true
+  agent_erase_skip_read_only: false
+  agent_last_heartbeat: '2025-08-09T09:47:26.418724'
+  agent_version: 7.1.1.dev6
+  clean_steps: null
+  deploy_boot_mode: uefi
+  deploy_steps: null
+  disk_erasure_concurrency: 1
+  hardware_manager_version:
+    generic_hardware_manager: '1.1'
+  is_whole_disk_image: true
+  last_power_state_change: '2025-08-09T09:47:26.487528'
+extra: {}
+fault: null
+inspect_interface: inspector
+inspection_finished_at: null
+inspection_started_at: null
+instance_info:
+  image_checksum: null
+  image_container_format: bare
+  image_disk_format: raw
+  image_os_hash_algo: sha512
+  image_os_hash_value: 337b5f4e4d88a57f3c6a1f3ae05b8f81b5a56245cdc069d36be4539fd9b714915fd08c2e37dc014ae6881444cefd53abc351db162d4a4c3e5d1714e1369a3f89
+  image_properties:
+    direct_url: file:///var/lib/glance/images/3e852977-5e3b-4b60-9b99-1b2901a0098c
+    locations:
+    - metadata:
+        store: default_backend
+      url: file:///var/lib/glance/images/3e852977-5e3b-4b60-9b99-1b2901a0098c
+    os_hidden: false
+    stores: default_backend
+    virtual_size: 75161927680
+  image_source: 3e852977-5e3b-4b60-9b99-1b2901a0098c
+  image_tags: []
+  image_type: whole-disk-image
+  image_url: '******'
+  root_gb: 100
+  volumes:
+  - size: 100
+    type: sata
+instance_uuid: null
+last_error: 'Failed to prepare to deploy: No VIFs found for node 16dec879-ba80-4cac-8486-59318d688037
+  when attempting to update DHCP BOOT options.'
+lessee: null
+maintenance: false
+maintenance_reason: null
+management_interface: ipmitool
+name: baremetal-node-1
+network_data: {}
+network_interface: flat
+owner: null
+power_interface: ipmitool
+power_state: power off
+properties:
+  capabilities: cpu_vt:true,cpu_aes:true,cpu_hugepages:true,cpu_hugepages_1g:true,cpu_txt:true
+  cpu_arch: x86_64
+  cpus: 128
+  local_gb: 1787
+  memory_mb: 1048576
+  vendor: dell inc
+protected: false
+protected_reason: null
+provision_state: deploy failed
+provision_updated_at: '2025-08-09T19:56:56+00:00'
+raid_config: {}
+raid_interface: no-raid
+rescue_interface: agent
+reservation: null
+resource_class: BAREMETAL-LARGE
+retired: false
+retired_reason: null
+storage_interface: noop
+target_power_state: null
+target_provision_state: active
+target_raid_config: {}
+traits: []
+updated_at: '2025-08-09T19:56:56+00:00'
+uuid: 16dec879-ba80-4cac-8486-59318d688037
+vendor_interface: ipmitool
+{'clean_steps': None
+'last_power_state_change': '2025-08-09T09:47:26.487528'
+'agent_last_heartbeat': '2025-08-09T09:47:26.418724'
+'agent_cached_clean_steps_refreshed': '2025-08-09 09:47:16.625528'
+'deploy_steps': None
+'agent_cached_deploy_steps_refreshed': '2025-08-07 21:55:08.522095'
+'deploy_boot_mode': 'uefi'
++------------+--------+-------------------------------------------------------------------------------------------------------------------------+
+| Interface  | Result | Reason                                                                                                                  |
++------------+--------+-------------------------------------------------------------------------------------------------------------------------+
+| bios       | False  | Driver ipmi does not support bios (disabled or not implemented).                                                        |
+| boot       | True   |                                                                                                                         |
+| console    | False  | Either missing 'ipmi_terminal_port' parameter in node's driver_info or [console]port_range is not configured            |
+| deploy     | True   |                                                                                                                         |
+| inspect    | True   |                                                                                                                         |
+| management | True   |                                                                                                                         |
+| network    | True   |                                                                                                                         |
+| power      | True   |                                                                                                                         |
+| raid       | False  | Driver ipmi does not support raid (disabled or not implemented).                                                        |
+| rescue     | False  | Node 16dec879-ba80-4cac-8486-59318d688037 is missing 'instance_info/rescue_password'. It is required for rescuing node. |
+| storage    | True   |                                                                                                                         |
++------------+--------+-------------------------------------------------------------------------------------------------------------------------+
++--------------------------------------+-------------------+
+| UUID                                 | Address           |
++--------------------------------------+-------------------+
+| 31cdcec5-ab6b-4f81-bb2f-fbfdc6d5b7e4 | c4:cb:e1:dd:19:6e |
+| 3112f148-b6f6-4e5b-ad3d-e08bf1db550b | 6c:92:cf:27:ce:50 |
++--------------------------------------+-------------------+
+direct
+{'ipmi_address': '10.107.131.54', 'ipmi_username': 'admin', 'ipmi_password': '******', 'deploy_kernel': '8d0994b4-3745-49bb-bd21-4bb08289515d', 'deploy_ramdisk': 'a54b1998-1937-4c84-af1b-7f5c8f52188e', 'rescue_kernel': '8d0994b4-3745-49bb-bd21-4bb08289515d', 'rescue_ramdisk': 'a54b1998-1937-4c84-af1b-7f5c8f52188e'}
+{'image_source': '3e852977-5e3b-4b60-9b99-1b2901a0098c', 'root_gb': 100, 'volumes': [{'size': 100, 'type': 'sata'}], 'image_url': '******', 'image_checksum': None, 'image_os_hash_algo': 'sha512', 'image_os_hash_value': '337b5f4e4d88a57f3c6a1f3ae05b8f81b5a56245cdc069d36be4539fd9b714915fd08c2e37dc014ae6881444cefd53abc351db162d4a4c3e5d1714e1369a3f89', 'image_disk_format': 'raw', 'image_container_format': 'bare', 'image_tags': [], 'image_properties': {'stores': 'default_backend', 'os_hidden': False, 'direct_url': 'file:///var/lib/glance/images/3e852977-5e3b-4b60-9b99-1b2901a0098c', 'locations': [{'url': 'file:///var/lib/glance/images/3e852977-5e3b-4b60-9b99-1b2901a0098c', 'metadata': {'store': 'default_backend'}}], 'virtual_size': 75161927680}, 'image_type': 'whole-disk-image'}
+{'capabilities': 'cpu_vt:true,cpu_aes:true,cpu_hugepages:true,cpu_hugepages_1g:true,cpu_txt:true', 'cpus': 128, 'vendor': 'dell inc', 'memory_mb': 1048576, 'local_gb': 1787, 'cpu_arch': 'x86_64'}
+provisioning
+flat
+baremetal
+[{'start': '10.107.177.40', 'end': '10.107.177.99'}]
+10.107.177.0/24
+True
+10.107.177.254
++--------------------------------------+------------+---------------------------------------------------+-------------------+-------+-------+--------------------+
+| ID                                   | Agent Type | Host                                              | Availability Zone | Alive | State | Binary             |
++--------------------------------------+------------+---------------------------------------------------+-------------------+-------+-------+--------------------+
+| d0f2cb91-24d6-498f-880a-037919856504 | DHCP agent | tst-overcloud-controller-01.openstack.cadence.com | nova              | :-)   | UP    | neutron-dhcp-agent |
+| 6c6d2159-beb8-4f84-83ae-446b7a67abf9 | DHCP agent | tst-overcloud-controller-02.openstack.cadence.com | nova              | :-)   | UP    | neutron-dhcp-agent |
+| ef59b194-0460-443c-b507-19b1306d7f48 | DHCP agent | tst-overcloud-controller-03.openstack.cadence.com | nova              | :-)   | UP    | neutron-dhcp-agent |
++--------------------------------------+------------+---------------------------------------------------+-------------------+-------+-------+--------------------+
+Failed to prepare to deploy: No VIFs found for node 16dec879-ba80-4cac-8486-59318d688037 when attempting to update DHCP BOOT options.
+False
+None
+deploy failed
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 NODE=16dec879-ba80-4cac-8486-59318d688037
 
