@@ -1,3 +1,101 @@
+# ==== set from your tfvars ====
+IMAGE_ID="ef40de67-b794-4d47-84f4-eb24fd6ca122"
+NET_ID="5c79a1a8-b294-4435-a2e6-ef1b992735d3"
+SUBNET_ID="c83e54b1-822e-4931-ac73-b731d1f6c966"
+NAME_PREFIX="to01"
+VM_NAME="${NAME_PREFIX}-wrk01"
+PORT_NAME="${NAME_PREFIX}-wrk01-port"
+KEY_NAME="testingRHELtestvm"
+SEC_GROUPS=("Chm-AccessFromUtlSvr" "PrivateSG" "CLA-SG" "Platform-SG")
+CUSTOMER_VPC_CIDR="10.154.180.0/23"   # only if we decide to create a tenant net
+# optional: if you already know the baremetal flavor id/name, set it here
+FLAVOR_ID="${FLAVOR_ID:-}"
+
+echo "== auth/project/region =="
+openstack token issue
+openstack project show "$(openstack token issue -f value -c project_id)" -f yaml
+openstack region list -f table
+
+echo "== image =="
+openstack image show "$IMAGE_ID" -f yaml || echo "image not found"
+
+echo "== flavor (discover baremetal flavors) =="
+openstack flavor list -f table | egrep -i 'bm|bare|metal|ironic|physical|baremetal' || true
+[ -n "$FLAVOR_ID" ] && openstack flavor show "$FLAVOR_ID" -f yaml || true
+
+echo "== network/subnet (existing baremetal/provider) =="
+openstack network show "$NET_ID" -f yaml || echo "network not found"
+openstack subnet show "$SUBNET_ID" -f yaml || echo "subnet not found"
+echo "provider details:"
+openstack network show "$NET_ID" -f value -c "provider:network_type" -c "provider:segmentation_id" || true
+
+echo "== external networks (only needed if we build a tenant router) =="
+openstack network list --external -f table || true
+openstack router list -f table || true
+
+echo "== security groups =="
+openstack security group list -f table
+for sg in "${SEC_GROUPS[@]}"; do
+  echo "---- $sg ----"
+  openstack security group show "$sg" -f yaml || echo "missing: $sg"
+  openstack security group rule list "$sg" -f table || true
+done
+
+echo "== keypair =="
+openstack keypair list -f table
+openstack keypair show "$KEY_NAME" -f yaml || echo "missing keypair: $KEY_NAME"
+
+echo "== existing port/server with our names =="
+openstack port show "$PORT_NAME" -f yaml || echo "port $PORT_NAME not found"
+openstack server show "$VM_NAME" -f yaml || echo "server $VM_NAME not found"
+echo "ports on target network (first 30):"
+openstack port list --network "$NET_ID" -f table | head -n 30
+
+echo "== quotas/limits =="
+openstack limits show -f yaml || true
+openstack quota show "$(openstack token issue -f value -c project_id)" -f yaml || true
+
+echo "== ironic capacity/state =="
+openstack baremetal node list -f table | head -n 30 || true
+
+echo "== control plane health (nova/neutron agents) =="
+openstack compute service list -f table || true
+openstack network agent list -f table || true
+openstack network agent list --agent-type dhcp -f table || true
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 {
   "tags": {
     "hyperscaler": "rhops"
