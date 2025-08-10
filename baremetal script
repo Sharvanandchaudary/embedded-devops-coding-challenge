@@ -1,3 +1,33 @@
+
+NODE=16dec879-ba80-4cac-8486-59318d688037
+
+# 1) What exactly failed?
+openstack baremetal node show $NODE -f value -c last_error -c provision_state -c maintenance -c maintenance_reason
+openstack baremetal node show $NODE -f yaml | sed -n '1,120p'   # full snapshot
+
+# Driver internals: last/ongoing step
+openstack baremetal node show $NODE -f value -c driver_internal_info | sed 's/, /\n/g' | egrep -i 'last|step|error|deploy'
+
+# 2) Validate all interfaces (flags config drift)
+openstack baremetal node validate $NODE -f table
+openstack baremetal node validate $NODE -f json | jq -r '.[] | select(.result==false) | .interface + ": " + (.reason // "unknown")'
+
+# 3) PXE NICs: do we have the right MAC and is PXE enabled?
+openstack baremetal port list --node $NODE -f table
+# For EACH PORT_UUID returned, run:
+#   openstack baremetal port show <PORT_UUID> -f yaml | egrep -i 'address:|pxe_enabled:|local_link_connection:|neutron_port_id:'
+
+# 4) Boot mode & deploy interface (image/firmware mismatch often shows up here)
+openstack baremetal node show $NODE -f value -c properties -c instance_info -c driver_info -c deploy_interface
+
+# 5) DHCP actually serving the provisioning net (quick Neutron side)
+openstack network show 5c79a1a8-b294-4435-a2e6-ef1b992735d3 -f value -c name -c 'provider:network_type' -c 'provider:physical_network'
+openstack subnet show  c83e54b1-822e-4931-ac73-b731d1f6c966 -f value -c cidr -c gateway_ip -c allocation_pools -c enable_dhcp
+openstack network agent list --agent-type dhcp -f table
+
+
+
+
 vsaravan@sjcvl-ghrunner1:~$ ./create_bm.sh
 [00:32:08] Auto-discovering a baremetal flavor...
 jq: error (at <stdin>:164): null (null) cannot be matched, as it is not a string
