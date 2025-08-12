@@ -43,6 +43,30 @@ Any floating IPs tied to it
 
 Do you want me to also give the exact detach commands for when you find the attached routers and floating IPs? That way, we can free VLAN 1168 so Terraform can create the network.
 
+vsaravan@sjcvl-ghrunner1:~$
+vsaravan@sjcvl-ghrunner1:~$ openstack network list --long \
+>   -c ID -c Name -c "Provider Physical Network" -c "Provider Segmentation ID" | grep 1168
+| 3f0c25f8-fda8-47bf-8550-b7f21208988d | pro-net-vlan1168          |
+vsaravan@sjcvl-ghrunner1:~$ openstack subnet list --network 3f0c25f8-fda8-47bf-8550-b7f21208988d
++--------------------------------------+-----------------+--------------------------------------+-----------------+
+| ID                                   | Name            | Network                              | Subnet          |
++--------------------------------------+-----------------+--------------------------------------+-----------------+
+| 3b80e294-b7de-47c0-8343-7e4c93d8125b | pro-subnet-1168 | 3f0c25f8-fda8-47bf-8550-b7f21208988d | 10.107.168.0/23 |
++--------------------------------------+-----------------+--------------------------------------+-----------------+
+vsaravan@sjcvl-ghrunner1:~$ openstack port list --network 3f0c25f8-fda8-47bf-8550-b7f21208988d --device-owner network:router_gateway
++--------------------------------------+------+-------------------+-----------------------------------------+--------+
+| ID                                   | Name | MAC Address       | Fixed IP Addresses                      | Status |
++--------------------------------------+------+-------------------+-----------------------------------------+--------+
+| e6b82a90-3df3-4b40-9dc7-26e7c6872e6e |      | fa:16:3e:d0:25:53 | ip_address='10.107.168.1', subnet_id='3 | ACTIVE |
+|                                      |      |                   | b80e294-b7de-47c0-8343-7e4c93d8125b'    |        |
++--------------------------------------+------+-------------------+-----------------------------------------+--------+
+vsaravan@sjcvl-ghrunner1:~$ openstack port list --network 3f0c25f8-fda8-47bf-8550-b7f21208988d --device-owner network:router_interface
+
+vsaravan@sjcvl-ghrunner1:~$ openstack floating ip list --long | grep 3f0c25f8-fda8-47bf-8550-b7f21208988d
+| 77b67cca-3e2b-4266-b078-c9005bbfc657 | 10.107.168.52       | None             | None                                 | 3f0c25f8-fda8-47bf-8550-b7f21208988d | 59c2d928ef6046069a0175d74dc3dc23 | None                                 | DOWN   |                      | []   |          |            |
+| 99e17e17-14b5-4e69-b391-b5b814847a93 | 10.107.168.51       | None             | None                                 | 3f0c25f8-fda8-47bf-8550-b7f21208988d | 59c2d928ef6046069a0175d74dc3dc23 | None                                 | DOWN   |                      | []   |          |            |
+vsaravan@sjcvl-ghrunner1:~$
+
 
 
 
