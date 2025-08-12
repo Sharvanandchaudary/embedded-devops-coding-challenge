@@ -1,0 +1,147 @@
+state list
+15:06:44.055 WARN   Using `terragrunt.hcl` as the root of Terragrunt configurations is an anti-pattern, and no longer recommended. In a future version of Terragrunt, this will result in an error. You are advised to use a differently named file like `root.hcl` instead. For more information, see https://terragrunt.gruntwork.io/docs/migrate/migrating-from-root-terragrunt-hcl
+data.aws_secretsmanager_secret.mirror_secrets
+data.aws_secretsmanager_secret_version.aws_current
+data.terraform_remote_state.cc_admin_chamber
+module.aws_utils.data.aws_regions.complete
+module.aws_utils.data.aws_regions.default
+module.aws_utils.data.aws_regions.not_opted_in
+module.aws_utils.data.aws_regions.opted_in
+module.network.openstack_networking_network_v2.generic
+module.network.openstack_networking_subnet_v2.subnet["ComputeSubnet2a"]
+module.network.openstack_networking_subnet_v2.subnet["ComputeSubnet2b"]
+module.network.openstack_networking_subnet_v2.subnet["ComputeSubnet2c"]
+module.network.openstack_networking_subnet_v2.subnet["StorageSubnet"]
+module.router.data.openstack_networking_subnet_v2.subnets["0"]
+module.router.data.openstack_networking_subnet_v2.subnets["1"]
+module.router.data.openstack_networking_subnet_v2.subnets["2"]
+module.router.data.openstack_networking_subnet_v2.subnets["3"]
+module.security-groups["CLA-SG"].openstack_networking_secgroup_rule_v2.ingress_rules["100000"]
+module.security-groups["CLA-SG"].openstack_networking_secgroup_rule_v2.ingress_rules["100010"]
+module.security-groups["CLA-SG"].openstack_networking_secgroup_rule_v2.ingress_rules["100020"]
+module.security-groups["CLA-SG"].openstack_networking_secgroup_rule_v2.ingress_rules["100030"]
+module.security-groups["CLA-SG"].openstack_networking_secgroup_rule_v2.ingress_rules["101000"]
+module.security-groups["CLA-SG"].openstack_networking_secgroup_rule_v2.ingress_rules["101010"]
+module.security-groups["CLA-SG"].openstack_networking_secgroup_rule_v2.ingress_rules["101020"]
+module.security-groups["CLA-SG"].openstack_networking_secgroup_rule_v2.ingress_rules["101030"]
+module.security-groups["CLA-SG"].openstack_networking_secgroup_v2.sg
+module.security-groups["Chm-AccessFromUtlSvr"].openstack_networking_secgroup_rule_v2.ingress_rules["100000"]
+module.security-groups["Chm-AccessFromUtlSvr"].openstack_networking_secgroup_rule_v2.ingress_rules["100010"]
+module.security-groups["Chm-AccessFromUtlSvr"].openstack_networking_secgroup_rule_v2.ingress_rules["101000"]
+module.security-groups["Chm-AccessFromUtlSvr"].openstack_networking_secgroup_rule_v2.ingress_rules["101010"]
+module.security-groups["Chm-AccessFromUtlSvr"].openstack_networking_secgroup_rule_v2.ingress_rules["103000"]
+module.security-groups["Chm-AccessFromUtlSvr"].openstack_networking_secgroup_rule_v2.ingress_rules["103010"]
+module.security-groups["Chm-AccessFromUtlSvr"].openstack_networking_secgroup_rule_v2.ingress_rules["103020"]
+module.security-groups["Chm-AccessFromUtlSvr"].openstack_networking_secgroup_rule_v2.ingress_rules["103030"]
+module.security-groups["Chm-AccessFromUtlSvr"].openstack_networking_secgroup_rule_v2.ingress_rules["103040"]
+module.security-groups["Chm-AccessFromUtlSvr"].openstack_networking_secgroup_rule_v2.ingress_rules["103050"]
+module.security-groups["Chm-AccessFromUtlSvr"].openstack_networking_secgroup_rule_v2.ingress_rules["103060"]
+module.security-groups["Chm-AccessFromUtlSvr"].openstack_networking_secgroup_rule_v2.ingress_rules["103070"]
+module.security-groups["Chm-AccessFromUtlSvr"].openstack_networking_secgroup_v2.sg
+module.security-groups["Platform-SG"].openstack_networking_secgroup_rule_v2.egress_rules["100000"]
+module.security-groups["Platform-SG"].openstack_networking_secgroup_rule_v2.egress_rules["100010"]
+module.security-groups["Platform-SG"].openstack_networking_secgroup_rule_v2.egress_rules["100020"]
+module.security-groups["Platform-SG"].openstack_networking_secgroup_rule_v2.egress_rules["100030"]
+module.security-groups["Platform-SG"].openstack_networking_secgroup_rule_v2.egress_rules["100040"]
+module.security-groups["Platform-SG"].openstack_networking_secgroup_rule_v2.egress_rules["101000"]
+module.security-groups["Platform-SG"].openstack_networking_secgroup_rule_v2.egress_rules["102000"]
+module.security-groups["Platform-SG"].openstack_networking_secgroup_rule_v2.egress_rules["103000"]
+module.security-groups["Platform-SG"].openstack_networking_secgroup_rule_v2.ingress_rules["100000"]
+module.security-groups["Platform-SG"].openstack_networking_secgroup_v2.sg
+module.security-groups["PrivateSG"].openstack_networking_secgroup_rule_v2.egress_rules["100000"]
+module.security-groups["PrivateSG"].openstack_networking_secgroup_rule_v2.egress_rules["101000"]
+module.security-groups["PrivateSG"].openstack_networking_secgroup_rule_v2.egress_rules["102000"]
+module.security-groups["PrivateSG"].openstack_networking_secgroup_rule_v2.egress_rules["103000"]
+module.security-groups["PrivateSG"].openstack_networking_secgroup_rule_v2.egress_rules["104000"]
+module.security-groups["PrivateSG"].openstack_networking_secgroup_rule_v2.egress_rules["105000"]
+module.security-groups["PrivateSG"].openstack_networking_secgroup_rule_v2.egress_rules["106000"]
+module.security-groups["PrivateSG"].openstack_networking_secgroup_rule_v2.egress_rules["107000"]
+module.security-groups["PrivateSG"].openstack_networking_secgroup_rule_v2.egress_rules["108000"]
+module.security-groups["PrivateSG"].openstack_networking_secgroup_rule_v2.egress_rules["109000"]
+module.security-groups["PrivateSG"].openstack_networking_secgroup_rule_v2.egress_rules["110000"]
+module.security-groups["PrivateSG"].openstack_networking_secgroup_rule_v2.egress_rules["111000"]
+module.security-groups["PrivateSG"].openstack_networking_secgroup_rule_v2.egress_rules["112000"]
+module.security-groups["PrivateSG"].openstack_networking_secgroup_rule_v2.egress_rules["113000"]
+module.security-groups["PrivateSG"].openstack_networking_secgroup_rule_v2.egress_rules["113010"]
+module.security-groups["PrivateSG"].openstack_networking_secgroup_rule_v2.egress_rules["113020"]
+module.security-groups["PrivateSG"].openstack_networking_secgroup_rule_v2.egress_rules["114000"]
+module.security-groups["PrivateSG"].openstack_networking_secgroup_rule_v2.egress_rules["115000"]
+module.security-groups["PrivateSG"].openstack_networking_secgroup_rule_v2.egress_rules["116000"]
+module.security-groups["PrivateSG"].openstack_networking_secgroup_rule_v2.egress_rules["117000"]
+module.security-groups["PrivateSG"].openstack_networking_secgroup_rule_v2.egress_rules["119000"]
+module.security-groups["PrivateSG"].openstack_networking_secgroup_rule_v2.egress_rules["119010"]
+module.security-groups["PrivateSG"].openstack_networking_secgroup_rule_v2.egress_rules["120000"]
+module.security-groups["PrivateSG"].openstack_networking_secgroup_rule_v2.egress_rules["120010"]
+module.security-groups["PrivateSG"].openstack_networking_secgroup_rule_v2.egress_rules["121000"]
+module.security-groups["PrivateSG"].openstack_networking_secgroup_rule_v2.egress_rules["122000"]
+module.security-groups["PrivateSG"].openstack_networking_secgroup_rule_v2.egress_rules["130000"]
+module.security-groups["PrivateSG"].openstack_networking_secgroup_rule_v2.egress_rules["131000"]
+module.security-groups["PrivateSG"].openstack_networking_secgroup_rule_v2.egress_rules["132000"]
+module.security-groups["PrivateSG"].openstack_networking_secgroup_rule_v2.egress_rules["133000"]
+module.security-groups["PrivateSG"].openstack_networking_secgroup_rule_v2.egress_rules["134000"]
+module.security-groups["PrivateSG"].openstack_networking_secgroup_rule_v2.egress_rules["135000"]
+module.security-groups["PrivateSG"].openstack_networking_secgroup_rule_v2.egress_rules["136000"]
+module.security-groups["PrivateSG"].openstack_networking_secgroup_rule_v2.egress_rules["137000"]
+module.security-groups["PrivateSG"].openstack_networking_secgroup_rule_v2.egress_rules["138000"]
+module.security-groups["PrivateSG"].openstack_networking_secgroup_rule_v2.egress_rules["139000"]
+module.security-groups["PrivateSG"].openstack_networking_secgroup_rule_v2.egress_rules["140000"]
+module.security-groups["PrivateSG"].openstack_networking_secgroup_rule_v2.egress_rules["141000"]
+module.security-groups["PrivateSG"].openstack_networking_secgroup_rule_v2.egress_rules["142000"]
+module.security-groups["PrivateSG"].openstack_networking_secgroup_rule_v2.egress_rules["143000"]
+module.security-groups["PrivateSG"].openstack_networking_secgroup_rule_v2.egress_rules["144000"]
+module.security-groups["PrivateSG"].openstack_networking_secgroup_rule_v2.egress_rules["145000"]
+module.security-groups["PrivateSG"].openstack_networking_secgroup_rule_v2.egress_rules["146000"]
+module.security-groups["PrivateSG"].openstack_networking_secgroup_rule_v2.egress_rules["147000"]
+module.security-groups["PrivateSG"].openstack_networking_secgroup_rule_v2.egress_rules["148000"]
+module.security-groups["PrivateSG"].openstack_networking_secgroup_rule_v2.egress_rules["149000"]
+module.security-groups["PrivateSG"].openstack_networking_secgroup_rule_v2.egress_rules["150000"]
+module.security-groups["PrivateSG"].openstack_networking_secgroup_rule_v2.egress_rules["151000"]
+module.security-groups["PrivateSG"].openstack_networking_secgroup_rule_v2.ingress_rules["100000"]
+module.security-groups["PrivateSG"].openstack_networking_secgroup_rule_v2.ingress_rules["101000"]
+module.security-groups["PrivateSG"].openstack_networking_secgroup_rule_v2.ingress_rules["102000"]
+module.security-groups["PrivateSG"].openstack_networking_secgroup_rule_v2.ingress_rules["103000"]
+module.security-groups["PrivateSG"].openstack_networking_secgroup_rule_v2.ingress_rules["104000"]
+module.security-groups["PrivateSG"].openstack_networking_secgroup_rule_v2.ingress_rules["105000"]
+module.security-groups["PrivateSG"].openstack_networking_secgroup_rule_v2.ingress_rules["106000"]
+module.security-groups["PrivateSG"].openstack_networking_secgroup_rule_v2.ingress_rules["107000"]
+module.security-groups["PrivateSG"].openstack_networking_secgroup_rule_v2.ingress_rules["108000"]
+module.security-groups["PrivateSG"].openstack_networking_secgroup_rule_v2.ingress_rules["109000"]
+module.security-groups["PrivateSG"].openstack_networking_secgroup_rule_v2.ingress_rules["109010"]
+module.security-groups["PrivateSG"].openstack_networking_secgroup_rule_v2.ingress_rules["109020"]
+module.security-groups["PrivateSG"].openstack_networking_secgroup_rule_v2.ingress_rules["110000"]
+module.security-groups["PrivateSG"].openstack_networking_secgroup_v2.sg?
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Plan: 18 to add, 0 to change, 0 to destroy.
+module.provider-network.openstack_networking_network_v2.generic: Creating...
+╷
+│ Error: Error creating openstack_networking_network_v2: Expected HTTP response code [201 202] when accessing [POST https://test.openstack.***.com:13696/v2.0/networks], but got 409 instead
+│ {"NeutronError": {"type": "VlanIdInUse", "message": "Unable to create the network. The VLAN 1168 on physical network datacentre is in use.", "detail": ""}}
+│ 
+│   with module.provider-network.openstack_networking_network_v2.generic,
+│   on .terraform/modules/provider-network/main.tf line 6, in resource "openstack_networking_network_v2" "generic":
+│    6: resource "openstack_networking_network_v2" "generic" {
+│ 
+╵
+time=2025-08-12T19:15:21Z level=error msg=terraform invocation failed in /gh-runner/_work/terraform-***cld-openstack/terraform-***cld-openstack/terraform-***cld-openstack/CustomerVPC/terraform/config/envs/non-prod/qa/test-2/to01/.terragrunt-cache/LVnBplEKxa4JGVjQ_6fqkfV9t20/VA3PJ6_NbE18hkpxgGxMPzEed4E prefix=[/gh-runner/_work/terraform-***cld-openstack/terraform-***cld-openstack/terraform-***cld-openstack/CustomerVPC/terraform/config/envs/non-prod/qa/test-2/to01] 
+time=2025-08-12T19:15:21Z level=error msg=1 error occurred:
+	* [/gh-runner/_work/terraform-***cld-openstack/terraform-***cld-openstack/terraform-***cld-openstack/CustomerVPC/terraform/config/envs/non-prod/qa/test-2/to01/.terragrunt-cache/LVnBplEKxa4JGVjQ_6fqkfV9t20/VA3PJ6_NbE18hkpxgGxMPzEed4E] exit status 1
+
+
+
+
+
+
+we delete all th enetwork and roiuter uinterrfaces so caso we need to remove from stae list all og these or eaht
