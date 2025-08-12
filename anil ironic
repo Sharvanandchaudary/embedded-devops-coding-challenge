@@ -1,0 +1,90 @@
+
+Deploy the Baremetal Node
+Deploy the baremetal node using the image in Glance.
+7.1 Create and Attach Virtual Network Interface
+openstack port create --network provisioning  <VIF_NAME>
+•	<VIF_NAME>: VIF_NAME for the node, name convention should match the node name
+7.2 Attach Virtual Network Interface to baremetal node port
+baremetal node vif attach \
+    --port-uuid <BAREMETAL_NODE_PORT> \
+    <BAREMETAL_NODE> \
+    <VIF_PORT_UUID>
+7.3 Attach Image source for baremetal node, source image to deploy to node
+baremetal node set <UUID> \
+--instance-info image_source=<IMAGE_UUID>
+7.4 Run Baremetal Deploy
+baremetal node deploy <UUID>
+Example:
+(tst-cloud) [stack@director ~]$ openstack port create --network provisioning baremetal-1
++-------------------------+------------------------------------------------------------------------------------------------------+
+| Field                   | Value                                                                                                |
++-------------------------+------------------------------------------------------------------------------------------------------+
+| admin_state_up          | UP                                                                                                   |
+| allowed_address_pairs   |                                                                                                      |
+| binding_host_id         |                                                                                                      |
+| binding_profile         |                                                                                                      |
+| binding_vif_details     |                                                                                                      |
+| binding_vif_type        | unbound                                                                                              |
+| binding_vnic_type       | normal                                                                                               |
+| created_at              | 2024-11-19T22:33:36Z                                                                                 |
+| data_plane_status       | None                                                                                                 |
+| description             |                                                                                                      |
+| device_id               |                                                                                                      |
+| device_owner            |                                                                                                      |
+| device_profile          | None                                                                                                 |
+| dns_assignment          | fqdn='host-10-107-177-98.openstacklocal.', hostname='host-10-107-177-98', ip_address='10.107.177.98' |
+| dns_domain              |                                                                                                      |
+| dns_name                |                                                                                                      |
+| extra_dhcp_opts         |                                                                                                      |
+| fixed_ips               | ip_address='10.107.177.98', subnet_id='c83e54b1-822e-4931-ac73-b731d1f6c966'                         |
+| id                      | 45ab2cb0-6746-446a-8982-654456fcf476                                                                 |
+| ip_allocation           | immediate                                                                                            |
+| mac_address             | fa:16:3e:50:01:62                                                                                    |
+| name                    | baremetal-1                                                                                          |
+| network_id              | 5c79a1a8-b294-4435-a2e6-ef1b992735d3                                                                 |
+| numa_affinity_policy    | None                                                                                                 |
+| port_security_enabled   | True                                                                                                 |
+| project_id              | 334ca1da01cc4820b35c604cb37a5c1e                                                                     |
+| propagate_uplink_status | None                                                                                                 |
+| qos_network_policy_id   | None                                                                                                 |
+| qos_policy_id           | None                                                                                                 |
+| resource_request        | None                                                                                                 |
+| revision_number         | 1                                                                                                    |
+| security_group_ids      | e6e6f829-19f3-4009-a589-9a8ad3b25d07                                                                 |
+| status                  | DOWN                                                                                                 |
+| tags                    |                                                                                                      |
+| trunk_details           | None                                                                                                 |
+| updated_at              | 2024-11-19T22:33:36Z                                                                                 |
++-------------------------+------------------------------------------------------------------------------------------------------+
+(tst-cloud) [stack@director ~]$ baremetal node list
++--------------------------------------+------------------+---------------+-------------+--------------------+-------------+
+| UUID                                 | Name             | Instance UUID | Power State | Provisioning State | Maintenance |
++--------------------------------------+------------------+---------------+-------------+--------------------+-------------+
+| 86769e8a-3421-4ceb-b0ef-b9914be9c924 | baremetal-node-1 | None          | power off   | available          | False       |
++--------------------------------------+------------------+---------------+-------------+--------------------+-------------+
+
+(tst-cloud) [stack@director ~]$ baremetal port list
++--------------------------------------+-------------------+
+| UUID                                 | Address           |
++--------------------------------------+-------------------+
+| bd04d5fb-0d98-439d-b4b3-e90db531c441 | c4:cb:e1:ab:8f:a8 |
++--------------------------------------+-------------------+
+
+(tst-cloud) [stack@director ~]$ baremetal node vif attach \
+    --port-uuid bd04d5fb-0d98-439d-b4b3-e90db531c441 \
+    86769e8a-3421-4ceb-b0ef-b9914be9c924 \
+    45ab2cb0-6746-446a-8982-654456fcf476
+
+(tst-cloud) [stack@director ~]$ baremetal node set 86769e8a-3421-4ceb-b0ef-b9914be9c924 \
+--instance-info image_source=b401a65a-bec3-4762-9ed7-eaf2bcab036b
+
+(tst-cloud) [stack@director ~]$ baremetal node deploy 86769e8a-3421-4ceb-b0ef-b9914be9c924
+
+(tst-cloud) [stack@director ~]$ baremetal node list
++--------------------------------------+------------------+---------------+-------------+--------------------+-------------+
+| UUID                                 | Name             | Instance UUID | Power State | Provisioning State | Maintenance |
++--------------------------------------+------------------+---------------+-------------+--------------------+-------------+
+| 86769e8a-3421-4ceb-b0ef-b9914be9c924 | baremetal-node-1 | None          | power off   | deploying          | False       |
++--------------------------------------+------------------+---------------+-------------+--------------------+-------------+
+8. Verify the Deployment
+This setup should deploy the baremetal node using the specified image in Glance and allow login if configured correctly. The image_source allows Ironic to locate and deploy the selected image on baremetal, integrating seamlessly with OpenStack's instance management and provisioning tools.
