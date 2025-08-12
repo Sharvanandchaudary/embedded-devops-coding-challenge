@@ -1,3 +1,17 @@
+
+
+openstack server create "$SERVER_NAME" \
+  --flavor "$WRK01_FLAVOR_NAME" \
+  --volume "$BOOT_VOL_NAME" \
+  --nic "port-id=$(openstack port show "$BM_PORT_NAME" -f value -c id)" \
+  --key-name "$OS_KEYPAIR" \
+  --user-data "$USER_DATA_FILE" \
+  --property env="$ENVIRONMENT" \
+  --property hyperscaler="$HYPERSCALER_TAG" >/dev/null
+
+
+
+
 #!/usr/bin/env bash
 # Minimal baremetal bring-up (expects OS_* already sourced)
 
