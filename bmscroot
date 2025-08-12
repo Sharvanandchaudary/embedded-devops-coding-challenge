@@ -34,9 +34,9 @@ WRK01_HOSTNUM="101"
 OS_PROJECT_ID_EXPECTED="59c2d928ef6046069a0175d74dc3dc23"
 OS_PROJECT_NAME_EXPECTED="cc-test-oa-chm01-prj"
 
-# === Keypair bits (auto-create if missing) ===
-OS_KEYPAIR="${OS_KEYPAIR:-cloud30-default-kp}"            # keypair name in OpenStack
-PUB_KEY_FILE="${PUB_KEY_FILE:-$HOME/.ssh/id_rsa.pub}"     # local public key path
+# Keypair (auto-create if missing)
+OS_KEYPAIR="${OS_KEYPAIR:-cloud30-default-kp}"
+PUB_KEY_FILE="${PUB_KEY_FILE:-$HOME/.ssh/id_rsa.pub}"
 
 RECIPE_TAR="s3://cadencecloud-mirrors-eu-central-1/projects/orchestrator/c30-cust/to01/awscbtb02slurm01/to01.json"
 ORCH_HOME="/opt/orchestrator"
@@ -193,27 +193,6 @@ cat > "${USER_DATA_FILE}" <<YAML
 #cloud-config
 package_update: true
 package_upgrade: false
-
-write_files:
-  - path: /etc/orchestrator/config.json
-    permissions: '0644'
-    owner: root:root
-    content: |
-      {
-        "node_name":      "${SERVER_NAME}",
-        "recipe_tar":     "${RECIPE_TAR}",
-        "orchestrator": {
-          "home":         "${ORCH_HOME}",
-          "chef_dir":     "${ORCH_CHEF_DIR}",
-          "chef_log_dir": "${ORCH_LOG_PATH}",
-          "chef_solo":    "${CHEF_SOLO_PATH}",
-          "embedded":     "${CHEF_SOLO_EMBEDDED}"
-        },
-        "env_relative_path": "${ENV_REL_PATH}",
-        "region":            "${REGION}",
-        "mirror":            "${MIRROR}",
-        "mirror_dir":        "${MIRROR_DIR}"
-      }
 
 runcmd:
   - [ bash, -lc, "mkdir -p ${ORCH_HOME} ${ORCH_CHEF_DIR} ${ORCH_LOG_PATH}" ]
