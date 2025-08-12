@@ -1,0 +1,5 @@
+openstack router show $(
+    openstack port show $(
+        openstack floating ip show 274cea42-c0fb-4219-86d2-22ef3fde00e4 -c Port_ID -f value
+    ) -c device_id -f value
+) -c name -c id
