@@ -1,0 +1,277 @@
+#!/usr/bin/env bash
+# Baremetal bring-up with robust checks + debug diagnostics
+# Requires: OpenStack CLI env sourced (OS_*), proper roles/quotas
+
+set -euo pipefail
+
+########### user toggles ###########
+DEBUG="${DEBUG:-0}"                       # set DEBUG=1 to enable bash -x tracing
+CLEANUP_ON_FAIL="${CLEANUP_ON_FAIL:-0}"   # set 1 to auto-clean on failure
+WAIT_SEC_VOLUME="${WAIT_SEC_VOLUME:-900}" # 15 min
+WAIT_SEC_SERVER="${WAIT_SEC_SERVER:-1800}"# 30 min
+POLL_INTERVAL="${POLL_INTERVAL:-5}"
+####################################
+
+[[ "$DEBUG" == "1" ]] && set -x
+
+# ============
+# STATIC VARS
+# ============
+HYPERSCALER_TAG="rhops"
+ENVIRONMENT="test-2"
+NAME_PREFIX="to01"
+NODE_NAME="wrk01"
+SERVER_NAME="${NAME_PREFIX}-${NODE_NAME}-vm"
+
+WRK01_IMAGE_ID="4a31915b-213a-4173-97ad-a582c72ff9f2"
+WRK01_BOOT_SIZE_GB="100"
+WRK01_FLAVOR_NAME="baremetal"
+
+BAREMETAL_NET_ID="5c79a1a8-b294-4435-a2e6-ef1b992735d3"
+BAREMETAL_SUBNET_ID="c83e54b1-822e-4931-ac73-b731d1f6c966"
+WRK01_HOSTNUM="101"
+
+OS_PROJECT_ID_EXPECTED="59c2d928ef6046069a0175d74dc3dc23"
+OS_PROJECT_NAME_EXPECTED="cc-test-oa-chm01-prj"
+
+# === Keypair bits (auto-create if missing) ===
+OS_KEYPAIR="${OS_KEYPAIR:-cloud30-default-kp}"   # name to use in OpenStack
+PUB_KEY_FILE="${PUB_KEY_FILE:-$HOME/.ssh/id_rsa.pub}"  # local public key path
+
+RECIPE_TAR="s3://cadencecloud-mirrors-eu-central-1/projects/orchestrator/c30-cust/to01/awscbtb02slurm01/to01.json"
+ORCH_HOME="/opt/orchestrator"
+ENV_REL_PATH="envs/non-prod/qa/${ENVIRONMENT}"
+REGION="${OS_REGION_NAME}"
+MIRROR="cadencecloud-mirrors-eu-central-1"
+MIRROR_DIR="/mirrors"
+ORCH_CHEF_DIR="/opt/orchestrator/chef"
+CHEF_SOLO_EMBEDDED="/opt/chef/embedded/bin"
+ORCH_LOG_PATH="/var/log/chef"
+CHEF_SOLO_PATH="/opt/chef/bin/chef-solo"
+
+BOOT_VOL_NAME="${SERVER_NAME}-root"
+BM_PORT_NAME="${SERVER_NAME}-bm-port"
+
+# logging
+RUN_ID="$(date +%Y%m%d-%H%M%S)"
+LOG_FILE="${LOG_FILE:-./deploy_${SERVER_NAME}_${RUN_ID}.log}"
+exec > >(tee -a "$LOG_FILE") 2>&1
+
+# ---- helpers ----
+die() { echo "ERROR: $*" >&2; exit 1; }
+
+require_cmd() {
+  command -v "$1" >/dev/null 2>&1 || die "Missing required command: $1"
+}
+
+wait_for_status() {
+  local cmd="$1" want="$2" timeout="$3" started now status
+  started="$(date +%s)"
+  while true; do
+    status="$($cmd || true)"
+    [[ "$status" == "$want" ]] && return 0
+    now="$(date +%s)"
+    if (( now - started > timeout )); then
+      echo "Timed out waiting for status '$want'. Last status: '$status'"
+      return 1
+    fi
+    sleep "$POLL_INTERVAL"
+  done
+}
+
+ensure_local_pubkey() {
+  if [[ ! -f "$PUB_KEY_FILE" ]]; then
+    echo "Local public key not found at $PUB_KEY_FILE — generating a new SSH keypair..."
+    mkdir -p "$HOME/.ssh"
+    # $PUB_KEY_FILE like /home/user/.ssh/id_rsa.pub -> base without .pub:
+    local base="${PUB_KEY_FILE%.pub}"
+    ssh-keygen -t rsa -b 4096 -f "$base" -N ""
+    echo "Generated $(basename "$base") and $(basename "$PUB_KEY_FILE")"
+  fi
+}
+
+ensure_os_keypair() {
+  if ! openstack keypair list -f value -c Name | grep -qx "$OS_KEYPAIR"; then
+    echo "OpenStack keypair '$OS_KEYPAIR' not found — creating it from $PUB_KEY_FILE ..."
+    openstack keypair create --public-key "$PUB_KEY_FILE" "$OS_KEYPAIR" >/dev/null
+    echo "Created OpenStack keypair: $OS_KEYPAIR"
+  else
+    echo "OpenStack keypair '$OS_KEYPAIR' already exists."
+  fi
+}
+
+# Resource IDs captured for cleanup/diagnostics
+BM_PORT_ID=""
+VOL_ID=""
+
+on_error() {
+  local rc=$?
+  echo "----- FAILURE DIAGNOSTICS (rc=$rc) -----"
+
+  # Server diagnostics (if created)
+  if openstack server show "$SERVER_NAME" &>/dev/null; then
+    echo "Server show:"
+    openstack server show "$SERVER_NAME" || true
+    echo "Server faults/events:"
+    if command -v jq >/dev/null 2>&1; then
+      openstack server show "$SERVER_NAME" -f json | jq -r '.fault // "no fault reported"' || true
+    else
+      echo "(jq not found, skipping JSON fault view)"; true
+    fi
+    openstack server event list "$SERVER_NAME" || true
+    echo "Console log (last 200 lines):"
+    openstack console log show "$SERVER_NAME" --lines 200 || true
+  else
+    echo "Server '${SERVER_NAME}' not found (creation likely failed before server stage)."
+  fi
+
+  # Port diagnostics
+  if [[ -n "${BM_PORT_ID}" ]]; then
+    echo "Baremetal port diagnostics:"
+    openstack port show "$BM_PORT_ID" || true
+  else
+    echo "Baremetal port not created."
+  fi
+
+  # Volume diagnostics
+  if [[ -n "${VOL_ID}" ]]; then
+    echo "Volume diagnostics:"
+    openstack volume show "$VOL_ID" || true
+  else
+    echo "Volume not created."
+  fi
+
+  # Flavor/Image/Network quick checks
+  echo "Quick sanity checks:"
+  openstack flavor list --long | grep -E "\b${WRK01_FLAVOR_NAME}\b" || echo "Flavor '${WRK01_FLAVOR_NAME}' not found in list."
+  openstack image show "$WRK01_IMAGE_ID" || echo "Image '${WRK01_IMAGE_ID}' not found."
+  openstack network show "$BAREMETAL_NET_ID" || echo "Network '${BAREMETAL_NET_ID}' not found."
+  openstack subnet show "$BAREMETAL_SUBNET_ID" || echo "Subnet '${BAREMETAL_SUBNET_ID}' not found."
+
+  # Optional: Ironic node peek (if perms exist)
+  if command -v openstack &>/dev/null; then
+    echo "Ironic nodes (limited view; may require permissions):"
+    openstack baremetal node list || true
+  fi
+
+  # Optional cleanup
+  if [[ "$CLEANUP_ON_FAIL" == "1" ]]; then
+    echo "Cleanup on failure enabled; tearing down partial resources..."
+    if openstack server show "$SERVER_NAME" &>/dev/null; then
+      openstack server delete "$SERVER_NAME" || true
+    fi
+    if [[ -n "${BM_PORT_ID}" ]] && openstack port show "$BM_PORT_ID" &>/dev/null; then
+      openstack port delete "$BM_PORT_ID" || true
+    fi
+    if [[ -n "${VOL_ID}" ]] && openstack volume show "$VOL_ID" &>/dev/null; then
+      # detach if attached
+      openstack server remove volume "$SERVER_NAME" "$VOL_ID" 2>/dev/null || true
+      openstack volume set --read-only False "$VOL_ID" 2>/dev/null || true
+      openstack volume delete "$VOL_ID" || true
+    fi
+  fi
+
+  echo "Logs saved to: $LOG_FILE"
+  exit $rc
+}
+trap on_error ERR
+
+echo "=== Context check ==="
+require_cmd openstack
+require_cmd ssh-keygen
+: "${OS_PROJECT_ID:?OS_* env not set. source your openrc first.}"
+: "${OS_PROJECT_NAME:?OS_* env not set. source your openrc first.}"
+: "${OS_REGION_NAME:?OS_* env not set. source your openrc first.}"
+echo "OS_PROJECT_ID: ${OS_PROJECT_ID} (expected: ${OS_PROJECT_ID_EXPECTED})"
+echo "OS_PROJECT_NAME: ${OS_PROJECT_NAME} (expected: ${OS_PROJECT_NAME_EXPECTED})"
+echo "OS_REGION_NAME: ${OS_REGION_NAME}"
+if [[ "${OS_PROJECT_ID}" != "${OS_PROJECT_ID_EXPECTED}" ]]; then
+  echo "WARNING: project ID differs from expected."
+fi
+if [[ "${OS_PROJECT_NAME}" != "${OS_PROJECT_NAME_EXPECTED}" ]]; then
+  echo "WARNING: project name differs from expected."
+fi
+
+echo "=== Pre-flight validations ==="
+openstack flavor show "$WRK01_FLAVOR_NAME" >/dev/null || die "Flavor '${WRK01_FLAVOR_NAME}' not found."
+openstack image show "$WRK01_IMAGE_ID" >/dev/null || die "Image '${WRK01_IMAGE_ID}' not found."
+openstack network show "$BAREMETAL_NET_ID" >/dev/null || die "Network '${BAREMETAL_NET_ID}' not found."
+openstack subnet show "$BAREMETAL_SUBNET_ID" >/dev/null || die "Subnet '${BAREMETAL_SUBNET_ID}' not found."
+
+# --- NEW: ensure keypair exists (auto-create if missing) ---
+echo "=== Ensuring keypair '${OS_KEYPAIR}' exists ==="
+ensure_local_pubkey
+ensure_os_keypair
+
+echo "=== Create cloud-init user_data ==="
+USER_DATA_FILE="$(pwd)/${SERVER_NAME}_user_data.yaml"
+cat > "${USER_DATA_FILE}" <<YAML
+#cloud-config
+package_update: true
+package_upgrade: false
+
+write_files:
+  - path: /etc/orchestrator/config.json
+    permissions: '0644'
+    owner: root:root
+    content: |
+      {
+        "node_name":      "${SERVER_NAME}",
+        "recipe_tar":     "${RECIPE_TAR}",
+        "orchestrator": {
+          "home":         "${ORCH_HOME}",
+          "chef_dir":     "${ORCH_CHEF_DIR}",
+          "chef_log_dir": "${ORCH_LOG_PATH}",
+          "chef_solo":    "${CHEF_SOLO_PATH}",
+          "embedded":     "${CHEF_SOLO_EMBEDDED}"
+        },
+        "env_relative_path": "${ENV_REL_PATH}",
+        "region":            "${REGION}",
+        "mirror":            "${MIRROR}",
+        "mirror_dir":        "${MIRROR_DIR}"
+      }
+
+runcmd:
+  - [ bash, -lc, "mkdir -p ${ORCH_HOME} ${ORCH_CHEF_DIR} ${ORCH_LOG_PATH}" ]
+  - [ bash, -lc, "echo 'Cloud-init completed for ${SERVER_NAME}' | tee /var/log/cloud-init-orchestrator.log" ]
+YAML
+echo "user_data -> ${USER_DATA_FILE}"
+
+echo "=== Create boot volume from image ==="
+openstack volume create "${BOOT_VOL_NAME}" \
+  --size "${WRK01_BOOT_SIZE_GB}" \
+  --image "${WRK01_IMAGE_ID}" \
+  --description "${SERVER_NAME} root volume" >/dev/null
+VOL_ID="$(openstack volume show "${BOOT_VOL_NAME}" -f value -c id)"
+echo "Volume ID: ${VOL_ID}"
+echo "Waiting (up to ${WAIT_SEC_VOLUME}s) for volume to become 'available'..."
+wait_for_status "openstack volume show ${BOOT_VOL_NAME} -f value -c status" "available" "${WAIT_SEC_VOLUME}" \
+  || die "Volume did not become available in time."
+
+echo "=== Create baremetal port ==="
+openstack port create "${BM_PORT_NAME}" \
+  --network "${BAREMETAL_NET_ID}" \
+  --fixed-ip "subnet=${BAREMETAL_SUBNET_ID}" \
+  --disable-port-security >/dev/null
+BM_PORT_ID="$(openstack port show "${BM_PORT_NAME}" -f value -c id)"
+echo "Baremetal port ID: ${BM_PORT_ID}"
+
+echo "=== Boot server ==="
+openstack server create "${SERVER_NAME}" \
+  --flavor "${WRK01_FLAVOR_NAME}" \
+  --volume "${BOOT_VOL_NAME}" \
+  --nic "port-id=${BM_PORT_ID}" \
+  --key-name "${OS_KEYPAIR}" \
+  --user-data "${USER_DATA_FILE}" \
+  --tag "env=${ENVIRONMENT}" \
+  --tag "hyperscaler=${HYPERSCALER_TAG}" >/dev/null
+
+echo "Waiting (up to ${WAIT_SEC_SERVER}s) for server to become 'ACTIVE'..."
+wait_for_status "openstack server show ${SERVER_NAME} -f value -c status" "ACTIVE" "${WAIT_SEC_SERVER}" \
+  || die "Server did not reach ACTIVE in time."
+
+echo "=== Success ==="
+openstack server show "${SERVER_NAME}"
+openstack port show "${BM_PORT_ID}"
+openstack volume show "${BOOT_VOL_NAME}"
+echo "Log file: ${LOG_FILE}"
