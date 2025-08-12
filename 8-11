@@ -1,3 +1,63 @@
+e6b82a90-3df3-4b40-9dc7-26e7c6872e6e  (on NET_ID=3f0c25f8-...  VLAN 1168)
+SUBNET_ID=3b80e294-b7de-47c0-8343-7e4c93d8125b  (10.107.168.0/23)
+Use these commands:
+
+Get the router ID from that gateway port
+
+bash
+Copy
+Edit
+openstack port show e6b82a90-3df3-4b40-9dc7-26e7c6872e6e -c device_id -f value
+Show router details (name and attachments)
+
+bash
+Copy
+Edit
+ROUTER_ID=$(openstack port show e6b82a90-3df3-4b40-9dc7-26e7c6872e6e -c device_id -f value)
+openstack router show $ROUTER_ID -c name -c id -c external_gateway_info -c interfaces_info
+Quick notes:
+
+Your floating ip list shows the FIPs on this network are unassociated (None Port_ID) → nothing to detach there.
+
+If you need to free VLAN 1168 so Terraform can create a new network:
+
+Detach from the router, then delete subnet/network:
+
+bash
+Copy
+Edit
+# remove router’s external gateway (the gateway port you saw)
+openstack router unset --external-gateway $ROUTER_ID
+
+# if there are any internal interfaces shown in interfaces_info, remove them:
+# (only if present; your earlier list showed none)
+# openstack router remove subnet $ROUTER_ID 3b80e294-b7de-47c0-8343-7e4c93d8125b
+
+# now you can delete subnet and network (if that’s your goal)
+# openstack subnet delete 3b80e294-b7de-47c0-8343-7e4c93d8125b
+# openstack network delete 3f0c25f8-fda8-47bf-8550-b7f21208988d
+That’s it: port → router ID → router info.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 1. Find the network using VLAN 1168
 
 bash
