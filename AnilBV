@@ -1,3 +1,140 @@
+sjcvl-ghrunner1:~% bash
+vsaravan@sjcvl-ghrunner1:~$ source /home/srinip/test_os.sh
+Please enter your OpenStack Password for project cc-test-oa-chm01-prj as user svc-account-dev-01:
+vsaravan@sjcvl-ghrunner1:~$ NODE="16dec879-ba80-4cac-8486-59318d688037"
+vsaravan@sjcvl-ghrunner1:~$ PROV_NET_ID="5c79a1a8-b294-4435-a2e6-ef1b992735d3"
+vsaravan@sjcvl-ghrunner1:~$ PROV_SUBNET_ID="c83e54b1-822e-4931-ac73-b731d1f6c966"
+vsaravan@sjcvl-ghrunner1:~$ IMG_ID="4a31915b-213a-4173-97ad-a582c72ff9f2"
+vsaravan@sjcvl-ghrunner1:~$ FLAVOR="baremetal"
+vsaravan@sjcvl-ghrunner1:~$ openstack baremetal node show "$NODE" -f yaml | egrep -i \
+> 'uuid:|name:|provision_state:|last_error:|maintenance:|power_state:|deploy_boot_mode:|instance_uuid:'
+allocation_uuid: null
+chassis_uuid: null
+  ipmi_username: admin
+  deploy_boot_mode: uefi
+instance_uuid: null
+last_error: null
+maintenance: true
+name: baremetal-node-1
+power_state: power off
+provision_state: deploy failed
+target_power_state: null
+target_provision_state: active
+uuid: 16dec879-ba80-4cac-8486-59318d688037
+vsaravan@sjcvl-ghrunner1:~$ openstack baremetal port list --node "$NODE" -f yaml
+- Address: c4:cb:e1:dd:19:6e
+  UUID: 31cdcec5-ab6b-4f81-bb2f-fbfdc6d5b7e4
+- Address: 6c:92:cf:27:ce:50
+  UUID: 3112f148-b6f6-4e5b-ad3d-e08bf1db550b
+vsaravan@sjcvl-ghrunner1:~$ openstack baremetal vif list "$NODE" -f yaml || echo "vif list not available"
+openstack: 'baremetal vif list 16dec879-ba80-4cac-8486-59318d688037 -f yaml' is not an openstack command. See 'openstack --help'.
+
+
+vsaravan@sjcvl-ghrunner1:~$ openstack port list --network "$PROV_NET_ID" -f yaml | egrep -i \
+> ^C
+vsaravan@sjcvl-ghrunner1:~$ openstack port list --network "$PROV_NET_ID" -f yaml | egrep -i \
+> 'id:|name:|status:|binding_vnic_type:|port_security_enabled:|device_owner:|fixed_ips:'
+    subnet_id: c83e54b1-822e-4931-ac73-b731d1f6c966
+  ID: 24cfa46e-9a84-43d5-9df0-d3f57635ff38
+  Name: ''
+  Status: ACTIVE
+    subnet_id: c83e54b1-822e-4931-ac73-b731d1f6c966
+  ID: 449c9d51-9c3b-43af-9f72-41b52a0182a0
+  Name: ''
+  Status: DOWN
+    subnet_id: c83e54b1-822e-4931-ac73-b731d1f6c966
+  ID: 45ab2cb0-6746-446a-8982-654456fcf476
+  Name: baremetal-1
+  Status: ACTIVE
+    subnet_id: c83e54b1-822e-4931-ac73-b731d1f6c966
+  ID: 8b660750-4906-4d25-aea2-7a60c1557f89
+  Name: ''
+  Status: DOWN
+    subnet_id: c83e54b1-822e-4931-ac73-b731d1f6c966
+  ID: 9eeeaad6-a641-488f-a12f-99b014cf9334
+  Name: to01-wrk01-vm-bm-port
+  Status: DOWN
+    subnet_id: c83e54b1-822e-4931-ac73-b731d1f6c966
+  ID: c0e9f605-0572-4d49-9c36-7aba37e3c939
+  Name: ''
+  Status: DOWN
+    subnet_id: c83e54b1-822e-4931-ac73-b731d1f6c966
+  ID: c16fd492-12d8-4437-b3f9-f0b4b2b1c183
+  Name: ''
+  Status: ACTIVE
+    subnet_id: c83e54b1-822e-4931-ac73-b731d1f6c966
+  ID: cc483c71-adbd-413c-8243-3108965d6350
+  Name: ''
+  Status: DOWN
+    subnet_id: c83e54b1-822e-4931-ac73-b731d1f6c966
+  ID: ef0c588b-a925-4988-ba41-0c0e4e1cfdeb
+  Name: ''
+  Status: ACTIVE
+    subnet_id: c83e54b1-822e-4931-ac73-b731d1f6c966
+  ID: fba274d3-9e34-45e7-9761-79311faaf623
+  Name: ''
+  Status: ACTIVE
+vsaravan@sjcvl-ghrunner1:~$ ^C
+vsaravan@sjcvl-ghrunner1:~$ IR_MACS=$(openstack baremetal port list --node "$NODE" -f value -c Address)
+vsaravan@sjcvl-ghrunner1:~$ echo "$IR_MACS" | while read -r mac; do
+>   echo "---- Neutron ports with MAC $mac ----"
+>   openstack port list --mac-address "$mac" -f yaml | egrep -i \
+>   'id:|name:|network_id:|status:|binding_vnic_type:|port_security_enabled:|fixed_ips:|device_owner:' || true
+> done
+---- Neutron ports with MAC c4:cb:e1:dd:19:6e ----
+    subnet_id: 23492042-0c36-4895-9224-03b798c3921b
+  ID: 5687c175-72fd-4b02-ae7c-e838e89c39ca
+  Name: ''
+  Status: DOWN
+    subnet_id: 0c8eab23-6f0b-4e81-864b-77a143a4d1b3
+  ID: b88407d2-ea0d-4ae3-bb63-c7bbee100741
+  Name: ''
+  Status: DOWN
+---- Neutron ports with MAC 6c:92:cf:27:ce:50 ----
+    subnet_id: c83e54b1-822e-4931-ac73-b731d1f6c966
+  ID: 9eeeaad6-a641-488f-a12f-99b014cf9334
+  Name: to01-wrk01-vm-bm-port
+  Status: DOWN
+vsaravan@sjcvl-ghrunner1:~$ openstack network show "$PROV_NET_ID" -f yaml | egrep -i \
+> 'name:|id:|provider:network_type:|provider:physical_network:|provider:segmentation_id:|shared:|port_security_enabled:'
+id: 5c79a1a8-b294-4435-a2e6-ef1b992735d3
+name: provisioning
+port_security_enabled: true
+project_id: 334ca1da01cc4820b35c604cb37a5c1e
+provider:network_type: flat
+provider:physical_network: baremetal
+provider:segmentation_id: null
+qos_policy_id: null
+shared: true
+tenant_id: 334ca1da01cc4820b35c604cb37a5c1e
+vsaravan@sjcvl-ghrunner1:~$ openstack subnet show "$PROV_SUBNET_ID" -f yaml | egrep -i \
+> 'name:|id:|cidr:|enable_dhcp:|gateway_ip:'
+cidr: 10.107.177.0/24
+enable_dhcp: true
+gateway_ip: 10.107.177.254
+id: c83e54b1-822e-4931-ac73-b731d1f6c966
+name: provisioning-subnet
+network_id: 5c79a1a8-b294-4435-a2e6-ef1b992735d3
+project_id: 334ca1da01cc4820b35c604cb37a5c1e
+segment_id: null
+subnetpool_id: null
+vsaravan@sjcvl-ghrunner1:~$ openstack image show "$IMG_ID" -f yaml | egrep -i 'name:|disk_format:|container_format:|min_disk:|hw_firmware_type:|status:'
+
+container_format: bare
+disk_format: qcow2
+min_disk: 100
+name: cc-rhel86-baremetal-uefi
+status: active
+vsaravan@sjcvl-ghrunner1:~$ openstack flavor show "$FLAVOR" -f yaml | egrep -i 'name:|id:|properties:|resources:'
+id: auto
+name: baremetal
+properties:
+  resources:CUSTOM_BAREMETAL_LARGE: '1'
+  resources:DISK_GB: '0'
+  resources:MEMORY_MB: '0'
+  resources:VCPU: '0'
+vsaravan@sjcvl-ghrunner1:~$
+
 vsaravan@sjcvl-ghrunner1:~$ openstack baremetal node list
 
 
