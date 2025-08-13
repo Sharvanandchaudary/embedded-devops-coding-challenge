@@ -130,15 +130,17 @@ echo "Booting server $SERVER_NAME from image with auto-created volume..."
 SERVER_ID="$(
   openstack server create "$SERVER_NAME" \
     --flavor "$WRK01_FLAVOR_NAME" \
+    --image "$WRK01_IMAGE_ID" \
+    --boot-from-volume "$WRK01_BOOT_SIZE_GB" \
     --nic "port-id=$PORT_ID" \
     --key-name "$OS_KEYPAIR" \
     --user-data "$USER_DATA_FILE" \
-    --block-device source=image,id="$WRK01_IMAGE_ID",dest=volume,size="$WRK01_BOOT_SIZE_GB",bootindex=0 \
     --property env="$ENVIRONMENT" \
     --property hyperscaler="$HYPERSCALER_TAG" \
     -f value -c id
 )"
 echo "SERVER_ID=$SERVER_ID"
+
 
 echo "Waiting for server ACTIVE..."
 wait_for_status "openstack server show $SERVER_ID -f value -c status" "ACTIVE" "$WAIT_SEC_SERVER"
