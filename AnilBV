@@ -1,3 +1,71 @@
+# === IDs you already have ===
+NODE="16dec879-ba80-4cac-8486-59318d688037"
+
+# Ironic port that matches the MAC which already has a Neutron port record
+IR_PORT_UUID="3112f148-b6f6-4e5b-ad3d-e08bf1db550b"   # MAC 6c:92:cf:27:ce:50
+
+# Existing Neutron port you found on the provisioning subnet (Status: DOWN)
+NEUTRON_PORT_ID="9eeeaad6-a641-488f-a12f-99b014cf9334"  # Name: to01-wrk01-vm-bm-port
+
+# Glance image you want to deploy
+IMG_ID="4a31915b-213a-4173-97ad-a582c72ff9f2"          # cc-rhel86-baremetal-uefi
+
+
+# --- 1) Make sure node is clean & AVAILABLE (no destructive wipe) ---
+openstack baremetal node maintenance set "$NODE" || true
+openstack baremetal node unset "$NODE" --instance-info || true
+openstack baremetal node unset "$NODE" --instance-uuid || true
+openstack baremetal node power off "$NODE" 2>/dev/null || true
+openstack baremetal node maintenance unset "$NODE" || true
+openstack baremetal node manage "$NODE" || true
+openstack baremetal node provide "$NODE" || true
+until [[ "$(openstack baremetal node show "$NODE" -f value -c provision_state)" == "available" ]]; do sleep 2; done
+openstack baremetal node show "$NODE" -f value -c provision_state
+
+
+# --- 2) Attach the EXISTING Neutron VIF to the chosen Ironic (hardware) port ---
+# (Requires the ironic plugin; see note below if this command isn’t recognized)
+openstack baremetal node vif attach \
+  --port-uuid "$IR_PORT_UUID" \
+  "$NODE" \
+  "$NEUTRON_PORT_ID"
+
+# sanity: the Neutron port should now show a device_owner/device_id after attach (optional)
+openstack port show "$NEUTRON_PORT_ID"
+
+
+# --- 3) Tell Ironic which image to deploy, then deploy ---
+openstack baremetal node set "$NODE" --instance-info "image_source=$IMG_ID"
+
+openstack baremetal node deploy "$NODE"
+
+# follow progress
+watch -n 5 "openstack baremetal node show $NODE -f value -c provision_state -c last_error"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 sjcvl-ghrunner1:~% bash
 vsaravan@sjcvl-ghrunner1:~$ source /home/srinip/test_os.sh
 Please enter your OpenStack Password for project cc-test-oa-chm01-prj as user svc-account-dev-01:
