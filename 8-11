@@ -1,3 +1,55 @@
+Daily Status Report
+Date: August 13, 2025
+
+Goal:
+To debug the issue related to the Neuron port error where baremetal deployment was failing mid-way. The router network and subnet were also facing issues. Currently focusing on the scripting part required to bring up baremetal.
+
+Work Done:
+
+Debugged the issue where baremetal deployment was getting stuck mid-way and resulting in deletion of infrastructure components.
+
+Identified that network routers and subnets were being left in a reserved or inconsistent state.
+
+Cleaned up all problematic network resources (router, subnet) to enable Terraform to deploy successfully.
+
+Found that baremetal node was in a "deploy error" state, blocking further deployments via script.
+
+Identified repeated network creation and deletion as the root cause of the issue.
+
+Manually deleted conflicting network, subnet, and router to reset the environment.
+
+Verified that the node status has now changed to "Available".
+
+Developed a minimal deployment script using default values intended for testing purposes only.
+
+Script is ready for testing once the node remains in a stable available state.
+
+Followed up with Partha on DSVE setup and raised access request for AW60 chamber.
+
+Participated in a debug call with Wade and Abhishek.
+
+Participated in the Nexum call.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 e6b82a90-3df3-4b40-9dc7-26e7c6872e6e  (on NET_ID=3f0c25f8-...  VLAN 1168)
 SUBNET_ID=3b80e294-b7de-47c0-8343-7e4c93d8125b  (10.107.168.0/23)
 Use these commands:
