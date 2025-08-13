@@ -154,19 +154,22 @@ echo "Log: $LOG_FILE"
 
 
 
-vsaravan@sjcvl-ghrunner1:~$ openstack server show  64e54de3-011d-4cfc-b76f-525c9a685dc5 -f yaml | grep -i boot
-image: N/A (booted from volume)
-vsaravan@sjcvl-ghrunner1:~$ openstack server show  64e54de3-011d-4cfc-b76f-525c9a685dc5 -f yaml
+
+
+
+vsaravan@sjcvl-ghrunner1:~$ openstack server list | grep -i baremetal
+| db140632-1936-468b-8725-e228df19271a | to01-wrk01-vm                                    | BUILD   |                                                          | N/A (booted from volume) | baremetal          |
+vsaravan@sjcvl-ghrunner1:~$ openstack server show db140632-1936-468b-8725-e228df19271a -f yaml
 OS-DCF:diskConfig: MANUAL
 OS-EXT-AZ:availability_zone: nova
 OS-EXT-SRV-ATTR:host: null
 OS-EXT-SRV-ATTR:hostname: to01-wrk01-vm
 OS-EXT-SRV-ATTR:hypervisor_hostname: null
-OS-EXT-SRV-ATTR:instance_name: instance-0000132a
+OS-EXT-SRV-ATTR:instance_name: instance-0000132d
 OS-EXT-SRV-ATTR:kernel_id: ''
 OS-EXT-SRV-ATTR:launch_index: 0
 OS-EXT-SRV-ATTR:ramdisk_id: ''
-OS-EXT-SRV-ATTR:reservation_id: r-ghfvlw60
+OS-EXT-SRV-ATTR:reservation_id: r-u3lskqr8
 OS-EXT-SRV-ATTR:root_device_name: /dev/sda
 OS-EXT-SRV-ATTR:user_data: I2Nsb3VkLWNvbmZpZwpwYWNrYWdlX3VwZGF0ZTogdHJ1ZQpwYWNrYWdlX3VwZ3JhZGU6IGZhbHNlCnJ1bmNtZDoKICAtIGVjaG8gImNsb3VkLWluaXQgY29tcGxldGVkIiB8IHRlZSAvdmFyL2xvZy9jbG91ZC1pbml0LW9yY2hlc3RyYXRvci5sb2cK
 OS-EXT-STS:power_state: 0
@@ -178,7 +181,7 @@ accessIPv4: ''
 accessIPv6: ''
 addresses: {}
 config_drive: ''
-created: '2025-08-13T08:08:29Z'
+created: '2025-08-13T08:33:36Z'
 description: to01-wrk01-vm
 flavor:
   description: null
@@ -201,7 +204,7 @@ flavor:
   vcpus: 128
 hostId: ''
 host_status: ''
-id: 64e54de3-011d-4cfc-b76f-525c9a685dc5
+id: db140632-1936-468b-8725-e228df19271a
 image: N/A (booted from volume)
 key_name: cloud30-default-kp
 locked: false
@@ -217,9 +220,24 @@ server_groups: []
 status: BUILD
 tags: []
 trusted_image_certificates: null
-updated: '2025-08-13T08:08:43Z'
+updated: '2025-08-13T08:33:49Z'
 user_id: 64a837e9a22b4edf90375c7182a9f297
 volumes_attached:
 - delete_on_termination: false
-  id: bd6e7263-8433-4d4e-804e-708c94c6be24
+  id: a05c8023-c7c3-49e2-a7c5-9fa599ab516a
+vsaravan@sjcvl-ghrunner1:~$ openstack baremetal node show 16dec879-ba80-4cac-8486-59318d688037 -f yaml | grep -E 'uuid|name|
+provision_state|resource_class|boot_interface|deploy_interface|storage_interface|capabilities'
+allocation_uuid: null
+boot_interface: ipxe
+chassis_uuid: null
+deploy_interface: direct
+  ipmi_username: admin
+instance_uuid: null
+name: baremetal-node-1
+  capabilities: cpu_vt:true,cpu_aes:true,cpu_hugepages:true,cpu_hugepages_1g:true,cpu_txt:true
+provision_state: available
+resource_class: BAREMETAL-LARGE
+storage_interface: cinder
+target_provision_state: null
+uuid: 16dec879-ba80-4cac-8486-59318d688037
 vsaravan@sjcvl-ghrunner1:~$
