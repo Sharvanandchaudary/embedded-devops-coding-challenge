@@ -154,78 +154,72 @@ echo "Log: $LOG_FILE"
 
 
 
-ate_bm_new1: Permission denied
-vsaravan@sjcvl-ghrunner2:~$ chmod +x create_bm_new1
-vsaravan@sjcvl-ghrunner2:~$ ./create_bm_new1
-Keypair 'cloud30-default-kp' exists.
-Creating baremetal port to01-wrk01-vm-bm-port ...
-PORT_ID=3ff686af-3695-4a5c-8b47-4dad92857a6b
-Booting server to01-wrk01-vm from image with auto-created volume...
-usage: openstack server create [-h] [-f {json,shell,table,value,yaml}]
-                               [-c COLUMN] [--noindent] [--prefix PREFIX]
-                               [--max-width <integer>] [--fit-width]
-                               [--print-empty]
-                               (--image <image> | --image-property <key=value> | --volume <volume>)
-                               --flavor <flavor>
-                               [--security-group <security-group>]
-                               [--key-name <key-name>]
-                               [--property <key=value>]
-                               [--file <dest-filename=source-filename>]
-                               [--user-data <user-data>]
-                               [--description <description>]
-                               [--availability-zone <zone-name>]
-                               [--host <host>]
-                               [--hypervisor-hostname <hypervisor-hostname>]
-                               [--boot-from-volume <volume-size>]
-                               [--block-device-mapping <dev-name=mapping>]
-                               [--nic <net-id=net-uuid,v4-fixed-ip=ip-addr,v6-fixed-ip=ip-addr,port-id=port-uuid,auto,none>]
-                               [--network <network>] [--port <port>]
-                               [--hint <key=value>]
-                               [--config-drive <config-drive-volume>|True]
-                               [--min <count>] [--max <count>] [--wait]
-                               <server-name>
-openstack server create: error: one of the arguments --image --image-property --volume is required
----- FAIL (rc=2). Last 80 log lines ----
-Keypair 'cloud30-default-kp' exists.
-Creating baremetal port to01-wrk01-vm-bm-port ...
-PORT_ID=3ff686af-3695-4a5c-8b47-4dad92857a6b
-Booting server to01-wrk01-vm from image with auto-created volume...
-usage: openstack server create [-h] [-f {json,shell,table,value,yaml}]
-                               [-c COLUMN] [--noindent] [--prefix PREFIX]
-                               [--max-width <integer>] [--fit-width]
-                               [--print-empty]
-                               (--image <image> | --image-property <key=value> | --volume <volume>)
-                               --flavor <flavor>
-                               [--security-group <security-group>]
-                               [--key-name <key-name>]
-                               [--property <key=value>]
-                               [--file <dest-filename=source-filename>]
-                               [--user-data <user-data>]
-                               [--description <description>]
-                               [--availability-zone <zone-name>]
-                               [--host <host>]
-                               [--hypervisor-hostname <hypervisor-hostname>]
-                               [--boot-from-volume <volume-size>]
-                               [--block-device-mapping <dev-name=mapping>]
-                               [--nic <net-id=net-uuid,v4-fixed-ip=ip-addr,v6-fixed-ip=ip-addr,port-id=port-uuid,auto,none>]
-                               [--network <network>] [--port <port>]
-                               [--hint <key=value>]
-                               [--config-drive <config-drive-volume>|True]
-                               [--min <count>] [--max <count>] [--wait]
-                               <server-name>
-openstack server create: error: one of the arguments --image --image-property --volume is required
----- FAIL (rc=2). Last 80 log lines ----
---- cleanup starting ---
-Deleting port 3ff686af-3695-4a5c-8b47-4dad92857a6b ...
---- cleanup done ---
-vsaravan@sjcvl-ghrunner2:~$
-
-
-
-
-
-
-
-vsaravan@sjcvl-ghrunner1:~$ openstack server list | grep -i baremetal
-| 64e54de3-011d-4cfc-b76f-525c9a685dc5 | to01-wrk01-vm                                    | BUILD   |                                                          | N/A (booted from volume) | baremetal          |
+vsaravan@sjcvl-ghrunner1:~$ openstack server show  64e54de3-011d-4cfc-b76f-525c9a685dc5 -f yaml | grep -i boot
+image: N/A (booted from volume)
+vsaravan@sjcvl-ghrunner1:~$ openstack server show  64e54de3-011d-4cfc-b76f-525c9a685dc5 -f yaml
+OS-DCF:diskConfig: MANUAL
+OS-EXT-AZ:availability_zone: nova
+OS-EXT-SRV-ATTR:host: null
+OS-EXT-SRV-ATTR:hostname: to01-wrk01-vm
+OS-EXT-SRV-ATTR:hypervisor_hostname: null
+OS-EXT-SRV-ATTR:instance_name: instance-0000132a
+OS-EXT-SRV-ATTR:kernel_id: ''
+OS-EXT-SRV-ATTR:launch_index: 0
+OS-EXT-SRV-ATTR:ramdisk_id: ''
+OS-EXT-SRV-ATTR:reservation_id: r-ghfvlw60
+OS-EXT-SRV-ATTR:root_device_name: /dev/sda
+OS-EXT-SRV-ATTR:user_data: I2Nsb3VkLWNvbmZpZwpwYWNrYWdlX3VwZGF0ZTogdHJ1ZQpwYWNrYWdlX3VwZ3JhZGU6IGZhbHNlCnJ1bmNtZDoKICAtIGVjaG8gImNsb3VkLWluaXQgY29tcGxldGVkIiB8IHRlZSAvdmFyL2xvZy9jbG91ZC1pbml0LW9yY2hlc3RyYXRvci5sb2cK
+OS-EXT-STS:power_state: 0
+OS-EXT-STS:task_state: null
+OS-EXT-STS:vm_state: building
+OS-SRV-USG:launched_at: null
+OS-SRV-USG:terminated_at: null
+accessIPv4: ''
+accessIPv6: ''
+addresses: {}
+config_drive: ''
+created: '2025-08-13T08:08:29Z'
+description: to01-wrk01-vm
+flavor:
+  description: null
+  disk: 1787
+  ephemeral: 0
+  extra_specs:
+    resources:CUSTOM_BAREMETAL_LARGE: '1'
+    resources:DISK_GB: '0'
+    resources:MEMORY_MB: '0'
+    resources:VCPU: '0'
+  id: baremetal
+  is_disabled: null
+  is_public: true
+  location: null
+  name: baremetal
+  original_name: baremetal
+  ram: 1048576
+  rxtx_factor: null
+  swap: 0
+  vcpus: 128
+hostId: ''
+host_status: ''
+id: 64e54de3-011d-4cfc-b76f-525c9a685dc5
+image: N/A (booted from volume)
+key_name: cloud30-default-kp
+locked: false
+locked_reason: null
+name: to01-wrk01-vm
+pinned_availability_zone: null
+progress: 0
+project_id: 59c2d928ef6046069a0175d74dc3dc23
+properties:
+  env: test-2
+  hyperscaler: rhops
+server_groups: []
+status: BUILD
+tags: []
+trusted_image_certificates: null
+updated: '2025-08-13T08:08:43Z'
+user_id: 64a837e9a22b4edf90375c7182a9f297
+volumes_attached:
+- delete_on_termination: false
+  id: bd6e7263-8433-4d4e-804e-708c94c6be24
 vsaravan@sjcvl-ghrunner1:~$
