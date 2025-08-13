@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Minimal baremetal bring-up (expects OS_* already sourced)
-# Auto-cleans volume/port/server on failure.
+# Minimal baremetal bring-up from image (expects OS_* already sourced)
+# Auto-cleans port/server on failure.
 
 set -euo pipefail
 [[ "${DEBUG:-0}" == "1" ]] && set -x
 
-# ======== Config you likely keep ========
+# ======== Config ========
 HYPERSCALER_TAG="rhops"
 ENVIRONMENT="test-2"
 NAME_PREFIX="to01"
@@ -13,16 +13,15 @@ NODE_NAME="wrk01"
 SERVER_NAME="${NAME_PREFIX}-${NODE_NAME}-vm"
 
 WRK01_IMAGE_ID="4a31915b-213a-4173-97ad-a582c72ff9f2"
-WRK01_BOOT_SIZE_GB="100"
 WRK01_FLAVOR_NAME="baremetal"
 
 BAREMETAL_NET_ID="5c79a1a8-b294-4435-a2e6-ef1b992735d3"
 BAREMETAL_SUBNET_ID="c83e54b1-822e-4931-ac73-b731d1f6c966"
 
-OS_KEYPAIR="${OS_KEYPAIR:-cloud30-default-kp}"       # auto-created if missing
+OS_KEYPAIR="${OS_KEYPAIR:-cloud30-default-kp}"
 PUB_KEY_FILE="${PUB_KEY_FILE:-$HOME/.ssh/id_rsa.pub}"
 
-WAIT_SEC_SERVER="${WAIT_SEC_SERVER:-1800}"  # 30m
+WAIT_SEC_SERVER="${WAIT_SEC_SERVER:-1800}"
 POLL_INTERVAL="${POLL_INTERVAL:-5}"
 
 BM_PORT_NAME="${SERVER_NAME}-bm-port"
@@ -32,7 +31,7 @@ RUN_ID="$(date +%Y%m%d-%H%M%S)"
 LOG_FILE="${LOG_FILE:-./deploy_${SERVER_NAME}_${RUN_ID}.log}"
 exec > >(tee -a "$LOG_FILE") 2>&1
 
-# ============ State for cleanup ============
+# ============ State ============
 PORT_ID=""
 SERVER_ID=""
 
@@ -70,14 +69,12 @@ ensure_os_keypair(){
 
 cleanup(){
   echo "--- cleanup starting ---"
-  # delete server if exists
   if [[ -n "$SERVER_ID" ]] && openstack server show "$SERVER_ID" &>/dev/null; then
     echo "Deleting server $SERVER_ID ..."
     openstack server delete "$SERVER_ID" || true
     until ! openstack server show "$SERVER_ID" &>/dev/null; do sleep 3; done
   fi
 
-  # delete port
   if [[ -n "$PORT_ID" ]] && openstack port show "$PORT_ID" &>/dev/null; then
     echo "Deleting port $PORT_ID ..."
     openstack port delete "$PORT_ID" || true
@@ -106,7 +103,7 @@ openstack subnet show  "$BAREMETAL_SUBNET_ID" >/dev/null || die "Subnet  '$BAREM
 ensure_local_pubkey
 ensure_os_keypair
 
-# ============ Cloud-init (minimal) ============
+# ============ Cloud-init ============
 USER_DATA_FILE="$(pwd)/${SERVER_NAME}_user_data.yaml"
 cat > "$USER_DATA_FILE" <<'YAML'
 #cloud-config
@@ -125,22 +122,21 @@ openstack port create "$BM_PORT_NAME" \
 PORT_ID="$(openstack port show "$BM_PORT_NAME" -f value -c id)"
 echo "PORT_ID=$PORT_ID"
 
-# ============ Server ============
-echo "Booting server $SERVER_NAME from image with auto-created volume..."
+# ============ Server (direct from image) ============
+echo "Booting baremetal server $SERVER_NAME from image..."
 SERVER_ID="$(
   openstack server create "$SERVER_NAME" \
     --flavor "$WRK01_FLAVOR_NAME" \
     --image "$WRK01_IMAGE_ID" \
-    --boot-from-volume "$WRK01_BOOT_SIZE_GB" \
     --nic "port-id=$PORT_ID" \
     --key-name "$OS_KEYPAIR" \
     --user-data "$USER_DATA_FILE" \
     --property env="$ENVIRONMENT" \
     --property hyperscaler="$HYPERSCALER_TAG" \
+    --property capabilities:boot_option="local" \
     -f value -c id
 )"
 echo "SERVER_ID=$SERVER_ID"
-
 
 echo "Waiting for server ACTIVE..."
 wait_for_status "openstack server show $SERVER_ID -f value -c status" "ACTIVE" "$WAIT_SEC_SERVER"
@@ -148,6 +144,7 @@ wait_for_status "openstack server show $SERVER_ID -f value -c status" "ACTIVE" "
 echo "=== SUCCESS ==="
 openstack server show "$SERVER_ID"
 echo "Log: $LOG_FILE"
+
 
 
 
