@@ -1,3 +1,595 @@
+Terraform will perform the following actions:
+
+  # null_resource.config_chef will be created
+  + resource "null_resource" "config_chef" {
+      + id       = (known after apply)
+      + triggers = {
+          + "always_run" = (known after apply)
+        }
+    }
+
+  # openstack_networking_floatingip_v2.fips["cla-eni"] will be created
+  + resource "openstack_networking_floatingip_v2" "fips" {
+      + address    = "10.107.168.51"
+      + all_tags   = (known after apply)
+      + dns_domain = (known after apply)
+      + dns_name   = (known after apply)
+      + fixed_ip   = (known after apply)
+      + id         = (known after apply)
+      + pool       = "pro-net-vlan1168"
+      + port_id    = (known after apply)
+      + region     = (known after apply)
+      + subnet_id  = (known after apply)
+      + tenant_id  = (known after apply)
+    }
+
+  # openstack_networking_floatingip_v2.fips["haproxy-eni"] will be created
+  + resource "openstack_networking_floatingip_v2" "fips" {
+      + address    = "10.107.168.52"
+      + all_tags   = (known after apply)
+      + dns_domain = (known after apply)
+      + dns_name   = (known after apply)
+      + fixed_ip   = (known after apply)
+      + id         = (known after apply)
+      + pool       = "pro-net-vlan1168"
+      + port_id    = (known after apply)
+      + region     = (known after apply)
+      + subnet_id  = (known after apply)
+      + tenant_id  = (known after apply)
+    }
+
+  # module.baremetal-vm["wrk01"].openstack_compute_instance_v2.instance will be created
+  + resource "openstack_compute_instance_v2" "instance" {
+      + access_ip_v4        = (known after apply)
+      + access_ip_v6        = (known after apply)
+      + all_metadata        = (known after apply)
+      + all_tags            = (known after apply)
+      + availability_zone   = (known after apply)
+      + created             = (known after apply)
+      + flavor_id           = (known after apply)
+      + flavor_name         = "baremetal"
+      + force_delete        = false
+      + id                  = (known after apply)
+      + image_id            = "34504ee6-d6ed-4ba7-a366-647bfee3cd49"
+      + image_name          = (known after apply)
+      + key_pair            = "c30-to-test-to-01-wrk01-keypair"
+      + name                = "to01wrk01"
+      + power_state         = "active"
+      + region              = (known after apply)
+      + security_groups     = (known after apply)
+      + stop_before_destroy = false
+      + tags                = [
+          + "BU:IT",
+          + "Backup:none",
+          + "BusinessUnit:cloudeng",
+          + "Environment:Non-Production",
+          + "OrganizationName:IT",
+          + "Sub_BU:VCAD",
+          + "Terraform:false",
+          + "hyperscaler:rhops",
+          + "todestroy:false",
+          + "tosuspend:false",
+        ]
+      + updated             = (known after apply)
+      + user_data           = (sensitive value)
+
+      + network {
+          + access_network = false
+          + fixed_ip_v4    = (known after apply)
+          + fixed_ip_v6    = (known after apply)
+          + mac            = (known after apply)
+          + name           = (known after apply)
+          + port           = (known after apply)
+          + uuid           = (known after apply)
+        }
+      + network {
+          + access_network = false
+          + fixed_ip_v4    = (known after apply)
+          + fixed_ip_v6    = (known after apply)
+          + mac            = (known after apply)
+          + name           = (known after apply)
+          + port           = (known after apply)
+          + uuid           = (known after apply)
+        }
+    }
+
+  # module.baremetal-vm["wrk01"].openstack_compute_keypair_v2.keypair will be created
+  + resource "openstack_compute_keypair_v2" "keypair" {
+      + fingerprint = (known after apply)
+      + id          = (known after apply)
+      + name        = "c30-to-test-to-01-wrk01-keypair"
+      + private_key = (sensitive value)
+      + public_key  = <<-EOT
+            ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQCxUDoGoVa1PkHdBD3AFsFYVCgn3CDi0DuNRyoVxbQ32USl45KbFzrE8nQ5C3+jX/wbZMBuPqM6sWFF8101RcjMxRRyetU126gVqZ3EOLmvAMwKI9SrIqvoalZaWha6HjT+nXfyKAz5v46A/nc/x6iaUqwaTqfc+NtDybhaz3ydb2dlTArCBtKGDV2voy9Qwwyhvbz9jdW7OwRI/FSMTqHZdIGSanJjuM6lUXDZbjrUR8uyUkxjWw+Yfvy9OhySXJW7gu39W+R4XYjdVSiyx1lDY8KL92gq7q0YFm/EAas8MFZXEA6VsEx7BbmC+ZFgrO50+O+rBLVVjty6GLDWGNKSGR3moWZz/KfrBeEpwz/koDEdtONDuXxXBocovckjSi1UVKsP5lGacoZSydnTHxoUiykPgmolbh9Be5opNYEolQqteQ+fGC0ddKIIlNgfZ/f5Pg7jAY24GmdS5JwaGqSHcF9cnB+EqjJocHFJkZf5fa9A1P8dvsVdRjT0VntBjFq4nEVOQ67GYzpwWOqm5vj8WdjdVm36jXuH9d7hJ7IaeWAj0Ep1CAabbEDhZRX0vWDdz/yEahVOJZ2qTGN3Yt23zbn40yu9CCSLLpqxK+gIx/0hq1bRSX5v+0/gAVxPLKOa0FN2qygVdAfVA82IEHIIevIl09ontqFEvuFdDNO6Tw== orchestrator@cc.***.com
+        EOT
+      + region      = (known after apply)
+      + user_id     = (known after apply)
+    }
+
+  # module.baremetal-vm["wrk01"].openstack_networking_port_v2.baremetal_provisioning[0] will be created
+  + resource "openstack_networking_port_v2" "baremetal_provisioning" {
+      + admin_state_up         = true
+      + all_fixed_ips          = (known after apply)
+      + all_security_group_ids = (known after apply)
+      + all_tags               = (known after apply)
+      + device_id              = (known after apply)
+      + device_owner           = (known after apply)
+      + dns_assignment         = (known after apply)
+      + dns_name               = (known after apply)
+      + id                     = (known after apply)
+      + mac_address            = (known after apply)
+      + network_id             = "5c79a1a8-b294-4435-a2e6-ef1b992735d3"
+      + port_security_enabled  = (known after apply)
+      + qos_policy_id          = (known after apply)
+      + region                 = (known after apply)
+      + tenant_id              = (known after apply)
+
+      + binding (known after apply)
+    }
+
+  # module.baremetal-vm["wrk01"].openstack_networking_port_v2.port_1 will be created
+  + resource "openstack_networking_port_v2" "port_1" {
+      + admin_state_up         = true
+      + all_fixed_ips          = (known after apply)
+      + all_security_group_ids = (known after apply)
+      + all_tags               = (known after apply)
+      + device_id              = (known after apply)
+      + device_owner           = (known after apply)
+      + dns_assignment         = (known after apply)
+      + dns_name               = (known after apply)
+      + id                     = (known after apply)
+      + mac_address            = (known after apply)
+      + network_id             = (known after apply)
+      + port_security_enabled  = (known after apply)
+      + qos_policy_id          = (known after apply)
+      + region                 = (known after apply)
+      + security_group_ids     = [
+          + "13d31d0a-cd07-4b72-bd93-4e615d38775e",
+          + "457b2f12-8770-44ef-b94f-57851ec7f18b",
+          + "b0812e2a-b6c3-4c60-96b6-ce138448f747",
+          + "dbdb464d-50dd-459f-bcf0-51772c729c23",
+        ]
+      + tenant_id              = (known after apply)
+
+      + binding (known after apply)
+
+      + fixed_ip {
+          + ip_address = "10.107.168.101"
+          + subnet_id  = (known after apply)
+        }
+    }
+
+  # module.provider-network.openstack_networking_network_v2.generic will be created
+  + resource "openstack_networking_network_v2" "generic" {
+      + admin_state_up          = true
+      + all_tags                = (known after apply)
+      + availability_zone_hints = (known after apply)
+      + description             = "Add description"
+      + dns_domain              = (known after apply)
+      + external                = true
+      + id                      = (known after apply)
+      + mtu                     = (known after apply)
+      + name                    = "pro-net-vlan1168"
+      + port_security_enabled   = (known after apply)
+      + qos_policy_id           = (known after apply)
+      + region                  = "regionOne"
+      + shared                  = false
+      + tags                    = [
+          + "BU:IT",
+          + "Backup:none",
+          + "BusinessUnit:cloudeng",
+          + "Environment:Non-Production",
+          + "OrganizationName:IT",
+          + "Sub_BU:VCAD",
+          + "Terraform:false",
+          + "hyperscaler:rhops",
+          + "todestroy:false",
+          + "tosuspend:false",
+        ]
+      + tenant_id               = (known after apply)
+      + transparent_vlan        = (known after apply)
+
+      + segments {
+          + network_type     = "vlan"
+          + physical_network = "datacentre"
+          + segmentation_id  = 1168
+        }
+    }
+
+  # module.provider-network.openstack_networking_subnet_v2.subnet["subnet-1168"] will be created
+  + resource "openstack_networking_subnet_v2" "subnet" {
+      + all_tags          = (known after apply)
+      + cidr              = "10.107.168.0/23"
+      + dns_nameservers   = [
+          + "10.202.56.11",
+          + "10.202.56.12",
+        ]
+      + enable_dhcp       = true
+      + gateway_ip        = "10.107.169.254"
+      + id                = (known after apply)
+      + ip_version        = 4
+      + ipv6_address_mode = (known after apply)
+      + ipv6_ra_mode      = (known after apply)
+      + name              = "pro-subnet-1168"
+      + network_id        = (known after apply)
+      + no_gateway        = false
+      + region            = "regionOne"
+      + service_types     = (known after apply)
+      + tags              = [
+          + "BU:IT",
+          + "Backup:none",
+          + "BusinessUnit:cloudeng",
+          + "Environment:Non-Production",
+          + "OrganizationName:IT",
+          + "Sub_BU:VCAD",
+          + "Terraform:false",
+          + "hyperscaler:rhops",
+          + "todestroy:false",
+          + "tosuspend:false",
+        ]
+      + tenant_id         = (known after apply)
+
+      + allocation_pool {
+          + end   = "10.107.169.232"
+          + start = "10.107.168.2"
+        }
+    }
+
+  # module.router.openstack_networking_port_v2.router_ports["0"] will be created
+  + resource "openstack_networking_port_v2" "router_ports" {
+      + admin_state_up         = true
+      + all_fixed_ips          = (known after apply)
+      + all_security_group_ids = (known after apply)
+      + all_tags               = (known after apply)
+      + device_id              = (known after apply)
+      + device_owner           = (known after apply)
+      + dns_assignment         = (known after apply)
+      + dns_name               = (known after apply)
+      + id                     = (known after apply)
+      + mac_address            = (known after apply)
+      + name                   = "c30-to-test-to-01-rt-000-port"
+      + network_id             = "8d28eca5-da32-485f-98c5-d26abaf86d54"
+      + port_security_enabled  = true
+      + qos_policy_id          = (known after apply)
+      + region                 = (known after apply)
+      + tenant_id              = (known after apply)
+
+      + binding (known after apply)
+
+      + fixed_ip {
+          + ip_address = "10.154.181.161"
+          + subnet_id  = "ad141c60-a177-4d9c-90d5-7d47c37fa590"
+        }
+    }
+
+  # module.router.openstack_networking_port_v2.router_ports["1"] will be created
+  + resource "openstack_networking_port_v2" "router_ports" {
+      + admin_state_up         = true
+      + all_fixed_ips          = (known after apply)
+      + all_security_group_ids = (known after apply)
+      + all_tags               = (known after apply)
+      + device_id              = (known after apply)
+      + device_owner           = (known after apply)
+      + dns_assignment         = (known after apply)
+      + dns_name               = (known after apply)
+      + id                     = (known after apply)
+      + mac_address            = (known after apply)
+      + name                   = "c30-to-test-to-01-rt-001-port"
+      + network_id             = "8d28eca5-da32-485f-98c5-d26abaf86d54"
+      + port_security_enabled  = true
+      + qos_policy_id          = (known after apply)
+      + region                 = (known after apply)
+      + tenant_id              = (known after apply)
+
+      + binding (known after apply)
+
+      + fixed_ip {
+          + ip_address = "10.154.180.1"
+          + subnet_id  = "f09dc8d8-5b9e-4ed2-9ea6-10cbfb3130ec"
+        }
+    }
+
+  # module.router.openstack_networking_port_v2.router_ports["2"] will be created
+  + resource "openstack_networking_port_v2" "router_ports" {
+      + admin_state_up         = true
+      + all_fixed_ips          = (known after apply)
+      + all_security_group_ids = (known after apply)
+      + all_tags               = (known after apply)
+      + device_id              = (known after apply)
+      + device_owner           = (known after apply)
+      + dns_assignment         = (known after apply)
+      + dns_name               = (known after apply)
+      + id                     = (known after apply)
+      + mac_address            = (known after apply)
+      + name                   = "c30-to-test-to-01-rt-002-port"
+      + network_id             = "8d28eca5-da32-485f-98c5-d26abaf86d54"
+      + port_security_enabled  = true
+      + qos_policy_id          = (known after apply)
+      + region                 = (known after apply)
+      + tenant_id              = (known after apply)
+
+      + binding (known after apply)
+
+      + fixed_ip {
+          + ip_address = "10.154.181.1"
+          + subnet_id  = "37ca2518-3288-4b25-b83c-bcbcbb39ed84"
+        }
+    }
+
+  # module.router.openstack_networking_port_v2.router_ports["3"] will be created
+  + resource "openstack_networking_port_v2" "router_ports" {
+      + admin_state_up         = true
+      + all_fixed_ips          = (known after apply)
+      + all_security_group_ids = (known after apply)
+      + all_tags               = (known after apply)
+      + device_id              = (known after apply)
+      + device_owner           = (known after apply)
+      + dns_assignment         = (known after apply)
+      + dns_name               = (known after apply)
+      + id                     = (known after apply)
+      + mac_address            = (known after apply)
+      + name                   = "c30-to-test-to-01-rt-003-port"
+      + network_id             = "8d28eca5-da32-485f-98c5-d26abaf86d54"
+      + port_security_enabled  = true
+      + qos_policy_id          = (known after apply)
+      + region                 = (known after apply)
+      + tenant_id              = (known after apply)
+
+      + binding (known after apply)
+
+      + fixed_ip {
+          + ip_address = "10.154.181.129"
+          + subnet_id  = "1f37ed8a-cac9-46e7-8591-7a7d93617373"
+        }
+    }
+
+  # module.router.openstack_networking_router_interface_v2.router_interfaces["0"] will be created
+  + resource "openstack_networking_router_interface_v2" "router_interfaces" {
+      + force_destroy = false
+      + id            = (known after apply)
+      + port_id       = (known after apply)
+      + region        = (known after apply)
+      + router_id     = (known after apply)
+      + subnet_id     = (known after apply)
+    }
+
+  # module.router.openstack_networking_router_interface_v2.router_interfaces["1"] will be created
+  + resource "openstack_networking_router_interface_v2" "router_interfaces" {
+      + force_destroy = false
+      + id            = (known after apply)
+      + port_id       = (known after apply)
+      + region        = (known after apply)
+      + router_id     = (known after apply)
+      + subnet_id     = (known after apply)
+    }
+
+  # module.router.openstack_networking_router_interface_v2.router_interfaces["2"] will be created
+  + resource "openstack_networking_router_interface_v2" "router_interfaces" {
+      + force_destroy = false
+      + id            = (known after apply)
+      + port_id       = (known after apply)
+      + region        = (known after apply)
+      + router_id     = (known after apply)
+      + subnet_id     = (known after apply)
+    }
+
+  # module.router.openstack_networking_router_interface_v2.router_interfaces["3"] will be created
+  + resource "openstack_networking_router_interface_v2" "router_interfaces" {
+      + force_destroy = false
+      + id            = (known after apply)
+      + port_id       = (known after apply)
+      + region        = (known after apply)
+      + router_id     = (known after apply)
+      + subnet_id     = (known after apply)
+    }
+
+  # module.router.openstack_networking_router_v2.routers["RtbInternal"] will be created
+  + resource "openstack_networking_router_v2" "routers" {
+      + admin_state_up          = true
+      + all_tags                = (known after apply)
+      + availability_zone_hints = (known after apply)
+      + description             = "Default Router"
+      + distributed             = (known after apply)
+      + enable_snat             = (known after apply)
+      + external_network_id     = (known after apply)
+      + id                      = (known after apply)
+      + name                    = "c30-to-test-to-01-RtbInternal-rt"
+      + region                  = "regionOne"
+      + tags                    = [
+          + "BU:IT",
+          + "Backup:none",
+          + "BusinessUnit:cloudeng",
+          + "Environment:Non-Production",
+          + "OrganizationName:IT",
+          + "Sub_BU:VCAD",
+          + "Terraform:false",
+          + "hyperscaler:rhops",
+          + "todestroy:false",
+          + "tosuspend:false",
+        ]
+      + tenant_id               = (known after apply)
+
+      + external_fixed_ip {
+          + ip_address = "10.107.168.1"
+          + subnet_id  = (known after apply)
+        }
+
+      + vendor_options {
+          + set_router_gateway_after_create = true
+        }
+    }
+
+Plan: 18 to add, 0 to change, 0 to destroy.
+
+─────────────────────────────────────────────────────────────────────────────
+
+
+# Auto-cleans port/server on failure.
+
+set -euo pipefail
+[[ "${DEBUG:-0}" == "1" ]] && set -x
+
+# ======== Config ========
+HYPERSCALER_TAG="rhops"
+ENVIRONMENT="test-2"
+NAME_PREFIX="to01"
+NODE_NAME="wrk01"
+SERVER_NAME="${NAME_PREFIX}-${NODE_NAME}-vm"
+
+WRK01_IMAGE_ID="4a31915b-213a-4173-97ad-a582c72ff9f2"
+WRK01_FLAVOR_NAME="baremetal"
+
+BAREMETAL_NET_ID="5c79a1a8-b294-4435-a2e6-ef1b992735d3"
+BAREMETAL_SUBNET_ID="c83e54b1-822e-4931-ac73-b731d1f6c966"
+
+OS_KEYPAIR="${OS_KEYPAIR:-cloud30-default-kp}"
+PUB_KEY_FILE="${PUB_KEY_FILE:-$HOME/.ssh/id_rsa.pub}"
+
+WAIT_SEC_SERVER="${WAIT_SEC_SERVER:-1800}"
+POLL_INTERVAL="${POLL_INTERVAL:-5}"
+
+BM_PORT_NAME="${SERVER_NAME}-bm-port"
+
+# ============ Logging ============
+RUN_ID="$(date +%Y%m%d-%H%M%S)"
+LOG_FILE="${LOG_FILE:-./deploy_${SERVER_NAME}_${RUN_ID}.log}"
+exec > >(tee -a "$LOG_FILE") 2>&1
+
+# ============ State ============
+PORT_ID=""
+SERVER_ID=""
+
+# ============ Helpers ============
+die(){ echo "ERROR: $*" >&2; exit 1; }
+require_cmd(){ command -v "$1" >/dev/null 2>&1 || die "Missing command: $1"; }
+
+wait_for_status(){
+  local cmd="$1" want="$2" timeout="$3" start status
+  start="$(date +%s)"
+  while true; do
+    status="$($cmd || true)"
+    [[ "$status" == "$want" ]] && return 0
+    (( $(date +%s) - start > timeout )) && { echo "Timeout waiting for $want (last: $status)"; return 1; }
+    sleep "$POLL_INTERVAL"
+  done
+}
+
+ensure_local_pubkey(){
+  if [[ ! -f "$PUB_KEY_FILE" ]]; then
+    echo "No $PUB_KEY_FILE — generating SSH keypair..."
+    mkdir -p "$HOME/.ssh"
+    ssh-keygen -t rsa -b 4096 -f "${PUB_KEY_FILE%.pub}" -N ""
+  fi
+}
+
+ensure_os_keypair(){
+  if ! openstack keypair list -f value -c Name | grep -qx "$OS_KEYPAIR"; then
+    echo "Creating OpenStack keypair '$OS_KEYPAIR' from $PUB_KEY_FILE ..."
+    openstack keypair create --public-key "$PUB_KEY_FILE" "$OS_KEYPAIR" >/dev/null
+  else
+    echo "Keypair '$OS_KEYPAIR' exists."
+  fi
+}
+
+cleanup(){
+  echo "--- cleanup starting ---"
+  if [[ -n "$SERVER_ID" ]] && openstack server show "$SERVER_ID" &>/dev/null; then
+    echo "Deleting server $SERVER_ID ..."
+    openstack server delete "$SERVER_ID" || true
+    until ! openstack server show "$SERVER_ID" &>/dev/null; do sleep 3; done
+  fi
+
+  if [[ -n "$PORT_ID" ]] && openstack port show "$PORT_ID" &>/dev/null; then
+    echo "Deleting port $PORT_ID ..."
+    openstack port delete "$PORT_ID" || true
+  fi
+  echo "--- cleanup done ---"
+}
+
+on_error(){
+  local rc=$?
+  echo "---- FAIL (rc=$rc). Last 80 log lines ----"
+  tail -n 80 "$LOG_FILE" || true
+  cleanup
+  exit $rc
+}
+trap on_error ERR
+
+# ============ Pre-flight ============
+require_cmd openstack
+require_cmd ssh-keygen
+
+openstack flavor show "$WRK01_FLAVOR_NAME" >/dev/null || die "Flavor '$WRK01_FLAVOR_NAME' not found"
+openstack image show  "$WRK01_IMAGE_ID"     >/dev/null || die "Image  '$WRK01_IMAGE_ID' not found"
+openstack network show "$BAREMETAL_NET_ID"  >/dev/null || die "Network '$BAREMETAL_NET_ID' not found"
+openstack subnet show  "$BAREMETAL_SUBNET_ID" >/dev/null || die "Subnet  '$BAREMETAL_SUBNET_ID' not found"
+
+ensure_local_pubkey
+ensure_os_keypair
+
+# ============ Cloud-init ============
+USER_DATA_FILE="$(pwd)/${SERVER_NAME}_user_data.yaml"
+cat > "$USER_DATA_FILE" <<'YAML'
+#cloud-config
+package_update: true
+package_upgrade: false
+runcmd:
+  - echo "cloud-init completed" | tee /var/log/cloud-init-orchestrator.log
+YAML
+
+# ============ Port ============
+echo "Creating baremetal port $BM_PORT_NAME ..."
+openstack port create "$BM_PORT_NAME" \
+  --network "$BAREMETAL_NET_ID" \
+  --fixed-ip "subnet=$BAREMETAL_SUBNET_ID" \
+  --disable-port-security >/dev/null
+PORT_ID="$(openstack port show "$BM_PORT_NAME" -f value -c id)"
+echo "PORT_ID=$PORT_ID"
+
+# ============ Server (direct from image) ============
+echo "Booting baremetal server $SERVER_NAME from image..."
+SERVER_ID="$(
+  openstack server create "$SERVER_NAME" \
+    --flavor "$WRK01_FLAVOR_NAME" \
+    --image "$WRK01_IMAGE_ID" \
+    --nic "port-id=$PORT_ID" \
+    --key-name "$OS_KEYPAIR" \
+    --user-data "$USER_DATA_FILE" \
+    --property env="$ENVIRONMENT" \
+    --property hyperscaler="$HYPERSCALER_TAG" \
+    --property capabilities:boot_option="local" \
+    -f value -c id
+)"
+echo "SERVER_ID=$SERVER_ID"
+
+echo "Waiting for server ACTIVE..."
+wait_for_status "openstack server show $SERVER_ID -f value -c status" "ACTIVE" "$WAIT_SEC_SERVER"
+
+echo "=== SUCCESS ==="
+openstack server show "$SERVER_ID"
+echo "Log: $LOG_FILE"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # ids
 NODE="16dec879-ba80-4cac-8486-59318d688037"
