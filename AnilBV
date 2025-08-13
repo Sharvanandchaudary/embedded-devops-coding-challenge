@@ -1,4 +1,70 @@
 vsaravan@sjcvl-ghrunner1:~$ openstack baremetal node list
+
+
+
+
+# 0) Set variables (adjust if needed)
+NODE="16dec879-ba80-4cac-8486-59318d688037"
+PROV_NET_ID="5c79a1a8-b294-4435-a2e6-ef1b992735d3"
+PROV_SUBNET_ID="c83e54b1-822e-4931-ac73-b731d1f6c966"
+IMG_ID="4a31915b-213a-4173-97ad-a582c72ff9f2"
+FLAVOR="baremetal"
+
+# 1) Node high-level status
+openstack baremetal node show "$NODE" -f yaml | egrep -i \
+'uuid:|name:|provision_state:|last_error:|maintenance:|power_state:|deploy_boot_mode:|instance_uuid:'
+
+# 2) Ironic hardware ports (MAC addresses)
+openstack baremetal port list --node "$NODE" -f yaml
+
+# 3) Existing VIF attachments (if API supported)
+openstack baremetal vif list "$NODE" -f yaml || echo "vif list not available"
+
+# 4) Neutron ports on provisioning network
+openstack port list --network "$PROV_NET_ID" -f yaml | egrep -i \
+'id:|name:|status:|binding_vnic_type:|port_security_enabled:|device_owner:|fixed_ips:'
+
+# 5) Correlate Neutron ports by MAC
+IR_MACS=$(openstack baremetal port list --node "$NODE" -f value -c Address)
+echo "$IR_MACS" | while read -r mac; do
+  echo "---- Neutron ports with MAC $mac ----"
+  openstack port list --mac-address "$mac" -f yaml | egrep -i \
+  'id:|name:|network_id:|status:|binding_vnic_type:|port_security_enabled:|fixed_ips:|device_owner:' || true
+done
+
+# 6) Provisioning network/subnet details
+openstack network show "$PROV_NET_ID" -f yaml | egrep -i \
+'name:|id:|provider:network_type:|provider:physical_network:|provider:segmentation_id:|shared:|port_security_enabled:'
+openstack subnet show "$PROV_SUBNET_ID" -f yaml | egrep -i \
+'name:|id:|cidr:|enable_dhcp:|gateway_ip:'
+
+# 7) Image & flavor sanity
+openstack image show "$IMG_ID" -f yaml | egrep -i 'name:|disk_format:|container_format:|min_disk:|hw_firmware_type:|status:'
+openstack flavor show "$FLAVOR" -f yaml | egrep -i 'name:|id:|properties:|resources:'
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 +--------------------------------------+------------------+---------------+-------------+--------------------+-------------+
 | UUID                                 | Name             | Instance UUID | Power State | Provisioning State | Maintenance |
 +--------------------------------------+------------------+---------------+-------------+--------------------+-------------+
