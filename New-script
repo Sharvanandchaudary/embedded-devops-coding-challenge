@@ -219,3 +219,13 @@ openstack server create: error: one of the arguments --image --image-property --
 Deleting port 3ff686af-3695-4a5c-8b47-4dad92857a6b ...
 --- cleanup done ---
 vsaravan@sjcvl-ghrunner2:~$
+
+
+
+
+
+
+
+vsaravan@sjcvl-ghrunner1:~$ openstack server list | grep -i baremetal
+| 64e54de3-011d-4cfc-b76f-525c9a685dc5 | to01-wrk01-vm                                    | BUILD   |                                                          | N/A (booted from volume) | baremetal          |
+vsaravan@sjcvl-ghrunner1:~$
