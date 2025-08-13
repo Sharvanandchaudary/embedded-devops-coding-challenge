@@ -1,4 +1,53 @@
 
+# ids
+NODE="16dec879-ba80-4cac-8486-59318d688037"
+PXE_MAC="c4:cb:e1:dd:19:6e"
+IR_PORT_UUID="31cdcec5-ab6b-4f81-bb2f-fbfdc6d5b7e4"
+PROV_NET_ID="5c79a1a8-b294-4435-a2e6-ef1b992735d3"
+PROV_SUBNET_ID="c83e54b1-822e-4931-ac73-b731d1f6c966"
+IMG_ID="4a31915b-213a-4173-97ad-a582c72ff9f2"
+
+# 7.1 Create a VIF (Neutron port) on the provisioning network for the PXE MAC
+VIF_NAME="to01-wrk01-prov-vif-pxe"
+NEUTRON_PORT_ID=$(openstack port create "$VIF_NAME" \
+  --network "$PROV_NET_ID" \
+  --fixed-ip "subnet=${PROV_SUBNET_ID}" \
+  --mac-address "$PXE_MAC" \
+  --vnic-type baremetal \
+  --disable-port-security \
+  -f value -c id)
+
+openstack port show "$NEUTRON_PORT_ID"
+
+# 7.2 Attach the VIF to the node’s PXE Ironic port
+openstack baremetal node vif attach \
+  --port-uuid "$IR_PORT_UUID" \
+  "$NODE" \
+  "$NEUTRON_PORT_ID"
+
+# (optional) confirm attachment
+openstack baremetal node vif list "$NODE"
+
+# 7.3 Set image to deploy
+openstack baremetal node set "$NODE" --instance-info "image_source=$IMG_ID"
+
+# 7.4 Deploy
+openstack baremetal node deploy "$NODE"
+
+# Follow progress
+watch -n 5 "openstack baremetal node show $NODE -f value -c provision_state -c last_error"
+
+
+
+
+
+
+
+
+
+
+
+
 set -euo pipefail
 [[ "${DEBUG:-0}" == "1" ]] && set -x
 
