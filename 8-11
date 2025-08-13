@@ -1,190 +1,142 @@
-Daily Status Report
-Date: August 13, 2025
-
-Goal:
-To debug the issue related to the Neuron port error where baremetal deployment was failing mid-way. The router network and subnet were also facing issues. Currently focusing on the scripting part required to bring up baremetal.
-
-Work Done:
-
-Debugged the issue where baremetal deployment was getting stuck mid-way and resulting in deletion of infrastructure components.
-
-Identified that network routers and subnets were being left in a reserved or inconsistent state.
-
-Cleaned up all problematic network resources (router, subnet) to enable Terraform to deploy successfully.
-
-Found that baremetal node was in a "deploy error" state, blocking further deployments via script.
-
-Identified repeated network creation and deletion as the root cause of the issue.
-
-Manually deleted conflicting network, subnet, and router to reset the environment.
-
-Verified that the node status has now changed to "Available".
-
-Developed a minimal deployment script using default values intended for testing purposes only.
-
-Script is ready for testing once the node remains in a stable available state.
-
-Followed up with Partha on DSVE setup and raised access request for AW60 chamber.
-
-Participated in a debug call with Wade and Abhishek.
-
-Participated in the Nexum call.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-e6b82a90-3df3-4b40-9dc7-26e7c6872e6e  (on NET_ID=3f0c25f8-...  VLAN 1168)
-SUBNET_ID=3b80e294-b7de-47c0-8343-7e4c93d8125b  (10.107.168.0/23)
-Use these commands:
-
-Get the router ID from that gateway port
-
-bash
-Copy
-Edit
-openstack port show e6b82a90-3df3-4b40-9dc7-26e7c6872e6e -c device_id -f value
-Show router details (name and attachments)
-
-bash
-Copy
-Edit
-ROUTER_ID=$(openstack port show e6b82a90-3df3-4b40-9dc7-26e7c6872e6e -c device_id -f value)
-openstack router show $ROUTER_ID -c name -c id -c external_gateway_info -c interfaces_info
-Quick notes:
-
-Your floating ip list shows the FIPs on this network are unassociated (None Port_ID) → nothing to detach there.
-
-If you need to free VLAN 1168 so Terraform can create a new network:
-
-Detach from the router, then delete subnet/network:
-
-bash
-Copy
-Edit
-# remove router’s external gateway (the gateway port you saw)
-openstack router unset --external-gateway $ROUTER_ID
-
-# if there are any internal interfaces shown in interfaces_info, remove them:
-# (only if present; your earlier list showed none)
-# openstack router remove subnet $ROUTER_ID 3b80e294-b7de-47c0-8343-7e4c93d8125b
-
-# now you can delete subnet and network (if that’s your goal)
-# openstack subnet delete 3b80e294-b7de-47c0-8343-7e4c93d8125b
-# openstack network delete 3f0c25f8-fda8-47bf-8550-b7f21208988d
-That’s it: port → router ID → router info.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1. Find the network using VLAN 1168
-
-bash
-Copy
-Edit
-openstack network list --long \
-  -c ID -c Name -c "Provider Physical Network" -c "Provider Segmentation ID" | grep 1168
-Copy the Network ID from here (likely 3f0c25f8-fda8-47bf-8550-b7f21208988d in your case).
-
-2. List subnets on this network
-
-bash
-Copy
-Edit
-openstack subnet list --network <NET_ID>
-3. Check routers connected to this network
-
-3a. As external gateway
-
-bash
-Copy
-Edit
-openstack port list --network <NET_ID> --device-owner network:router_gateway
-3b. As internal interface
-
-bash
-Copy
-Edit
-openstack port list --network <NET_ID> --device-owner network:router_interface
-4. If needed, find floating IPs using this network
-
-bash
-Copy
-Edit
-openstack floating ip list --long | grep <NET_ID>
-Once you run these four steps, you’ll see exactly:
-
-The subnets linked to VLAN 1168
-
-The routers using it (internal or external)
-
-Any floating IPs tied to it
-
-Do you want me to also give the exact detach commands for when you find the attached routers and floating IPs? That way, we can free VLAN 1168 so Terraform can create the network.
-
-vsaravan@sjcvl-ghrunner1:~$
-vsaravan@sjcvl-ghrunner1:~$ openstack network list --long \
->   -c ID -c Name -c "Provider Physical Network" -c "Provider Segmentation ID" | grep 1168
-| 3f0c25f8-fda8-47bf-8550-b7f21208988d | pro-net-vlan1168          |
-vsaravan@sjcvl-ghrunner1:~$ openstack subnet list --network 3f0c25f8-fda8-47bf-8550-b7f21208988d
-+--------------------------------------+-----------------+--------------------------------------+-----------------+
-| ID                                   | Name            | Network                              | Subnet          |
-+--------------------------------------+-----------------+--------------------------------------+-----------------+
-| 3b80e294-b7de-47c0-8343-7e4c93d8125b | pro-subnet-1168 | 3f0c25f8-fda8-47bf-8550-b7f21208988d | 10.107.168.0/23 |
-+--------------------------------------+-----------------+--------------------------------------+-----------------+
-vsaravan@sjcvl-ghrunner1:~$ openstack port list --network 3f0c25f8-fda8-47bf-8550-b7f21208988d --device-owner network:router_gateway
-+--------------------------------------+------+-------------------+-----------------------------------------+--------+
-| ID                                   | Name | MAC Address       | Fixed IP Addresses                      | Status |
-+--------------------------------------+------+-------------------+-----------------------------------------+--------+
-| e6b82a90-3df3-4b40-9dc7-26e7c6872e6e |      | fa:16:3e:d0:25:53 | ip_address='10.107.168.1', subnet_id='3 | ACTIVE |
-|                                      |      |                   | b80e294-b7de-47c0-8343-7e4c93d8125b'    |        |
-+--------------------------------------+------+-------------------+-----------------------------------------+--------+
-vsaravan@sjcvl-ghrunner1:~$ openstack port list --network 3f0c25f8-fda8-47bf-8550-b7f21208988d --device-owner network:router_interface
-
-vsaravan@sjcvl-ghrunner1:~$ openstack floating ip list --long | grep 3f0c25f8-fda8-47bf-8550-b7f21208988d
-| 77b67cca-3e2b-4266-b078-c9005bbfc657 | 10.107.168.52       | None             | None                                 | 3f0c25f8-fda8-47bf-8550-b7f21208988d | 59c2d928ef6046069a0175d74dc3dc23 | None                                 | DOWN   |                      | []   |          |            |
-| 99e17e17-14b5-4e69-b391-b5b814847a93 | 10.107.168.51       | None             | None                                 | 3f0c25f8-fda8-47bf-8550-b7f21208988d | 59c2d928ef6046069a0175d74dc3dc23 | None                                 | DOWN   |                      | []   |          |            |
-vsaravan@sjcvl-ghrunner1:~$
-
-
-
-
-
-
-
-
-
-Ask ChatGPT
+set -euo pipefail
+[[ "${DEBUG:-0}" == "1" ]] && set -x
+
+# ======== Config ========
+HYPERSCALER_TAG="rhops"
+ENVIRONMENT="test-2"
+NAME_PREFIX="to01"
+NODE_NAME="wrk01"
+SERVER_NAME="${NAME_PREFIX}-${NODE_NAME}-vm"
+
+WRK01_IMAGE_ID="4a31915b-213a-4173-97ad-a582c72ff9f2"
+WRK01_FLAVOR_NAME="baremetal"
+
+BAREMETAL_NET_ID="5c79a1a8-b294-4435-a2e6-ef1b992735d3"
+BAREMETAL_SUBNET_ID="c83e54b1-822e-4931-ac73-b731d1f6c966"
+
+OS_KEYPAIR="${OS_KEYPAIR:-cloud30-default-kp}"
+PUB_KEY_FILE="${PUB_KEY_FILE:-$HOME/.ssh/id_rsa.pub}"
+
+WAIT_SEC_SERVER="${WAIT_SEC_SERVER:-1800}"
+POLL_INTERVAL="${POLL_INTERVAL:-5}"
+
+BM_PORT_NAME="${SERVER_NAME}-bm-port"
+
+# ============ Logging ============
+RUN_ID="$(date +%Y%m%d-%H%M%S)"
+LOG_FILE="${LOG_FILE:-./deploy_${SERVER_NAME}_${RUN_ID}.log}"
+exec > >(tee -a "$LOG_FILE") 2>&1
+
+# ============ State ============
+PORT_ID=""
+SERVER_ID=""
+
+# ============ Helpers ============
+die(){ echo "ERROR: $*" >&2; exit 1; }
+require_cmd(){ command -v "$1" >/dev/null 2>&1 || die "Missing command: $1"; }
+
+wait_for_status(){
+  local cmd="$1" want="$2" timeout="$3" start status
+  start="$(date +%s)"
+  while true; do
+    status="$($cmd || true)"
+    [[ "$status" == "$want" ]] && return 0
+    (( $(date +%s) - start > timeout )) && { echo "Timeout waiting for $want (last: $status)"; return 1; }
+    sleep "$POLL_INTERVAL"
+  done
+}
+
+ensure_local_pubkey(){
+  if [[ ! -f "$PUB_KEY_FILE" ]]; then
+    echo "No $PUB_KEY_FILE — generating SSH keypair..."
+    mkdir -p "$HOME/.ssh"
+    ssh-keygen -t rsa -b 4096 -f "${PUB_KEY_FILE%.pub}" -N ""
+  fi
+}
+
+ensure_os_keypair(){
+  if ! openstack keypair list -f value -c Name | grep -qx "$OS_KEYPAIR"; then
+    echo "Creating OpenStack keypair '$OS_KEYPAIR' from $PUB_KEY_FILE ..."
+    openstack keypair create --public-key "$PUB_KEY_FILE" "$OS_KEYPAIR" >/dev/null
+  else
+    echo "Keypair '$OS_KEYPAIR' exists."
+  fi
+}
+
+cleanup(){
+  echo "--- cleanup starting ---"
+  if [[ -n "$SERVER_ID" ]] && openstack server show "$SERVER_ID" &>/dev/null; then
+    echo "Deleting server $SERVER_ID ..."
+    openstack server delete "$SERVER_ID" || true
+    until ! openstack server show "$SERVER_ID" &>/dev/null; do sleep 3; done
+  fi
+
+  if [[ -n "$PORT_ID" ]] && openstack port show "$PORT_ID" &>/dev/null; then
+    echo "Deleting port $PORT_ID ..."
+    openstack port delete "$PORT_ID" || true
+  fi
+  echo "--- cleanup done ---"
+}
+
+on_error(){
+  local rc=$?
+  echo "---- FAIL (rc=$rc). Last 80 log lines ----"
+  tail -n 80 "$LOG_FILE" || true
+  cleanup
+  exit $rc
+}
+trap on_error ERR
+
+# ============ Pre-flight ============
+require_cmd openstack
+require_cmd ssh-keygen
+
+openstack flavor show "$WRK01_FLAVOR_NAME" >/dev/null || die "Flavor '$WRK01_FLAVOR_NAME' not found"
+openstack image show  "$WRK01_IMAGE_ID"     >/dev/null || die "Image  '$WRK01_IMAGE_ID' not found"
+openstack network show "$BAREMETAL_NET_ID"  >/dev/null || die "Network '$BAREMETAL_NET_ID' not found"
+openstack subnet show  "$BAREMETAL_SUBNET_ID" >/dev/null || die "Subnet  '$BAREMETAL_SUBNET_ID' not found"
+
+ensure_local_pubkey
+ensure_os_keypair
+
+# ============ Cloud-init ============
+USER_DATA_FILE="$(pwd)/${SERVER_NAME}_user_data.yaml"
+cat > "$USER_DATA_FILE" <<'YAML'
+#cloud-config
+package_update: true
+package_upgrade: false
+runcmd:
+  - echo "cloud-init completed" | tee /var/log/cloud-init-orchestrator.log
+YAML
+
+# ============ Port ============
+echo "Creating baremetal port $BM_PORT_NAME ..."
+openstack port create "$BM_PORT_NAME" \
+  --network "$BAREMETAL_NET_ID" \
+  --fixed-ip "subnet=$BAREMETAL_SUBNET_ID" \
+  --disable-port-security >/dev/null
+PORT_ID="$(openstack port show "$BM_PORT_NAME" -f value -c id)"
+echo "PORT_ID=$PORT_ID"
+
+# ============ Server (direct from image) ============
+echo "Booting baremetal server $SERVER_NAME from image..."
+SERVER_ID="$(
+  openstack server create "$SERVER_NAME" \
+    --flavor "$WRK01_FLAVOR_NAME" \
+    --image "$WRK01_IMAGE_ID" \
+    --nic "port-id=$PORT_ID" \
+    --key-name "$OS_KEYPAIR" \
+    --user-data "$USER_DATA_FILE" \
+    --property env="$ENVIRONMENT" \
+    --property hyperscaler="$HYPERSCALER_TAG" \
+    --property capabilities:boot_option="local" \
+    -f value -c id
+)"
+echo "SERVER_ID=$SERVER_ID"
+
+echo "Waiting for server ACTIVE..."
+wait_for_status "openstack server show $SERVER_ID -f value -c status" "ACTIVE" "$WAIT_SEC_SERVER"
+
+echo "=== SUCCESS ==="
+openstack server show "$SERVER_ID"
+echo "Log: $LOG_FILE"
