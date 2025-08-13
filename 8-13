@@ -1,0 +1,61 @@
+vsaravan@sjcvl-ghrunner2:~$  openstack network list |grep oa-60
+| 0119d5ee-c178-4e95-8d47-c198798627bd | c30-oa-prod-oa-60-network | 3f33feeb-cbf3-4998-aef1-2c818218f00b, 800077af-cf7d-4f47-a64b-dfbf3774cc79, 95cd4ec8-63f3-417d-afc5-c6265115dccc, 96b771a4-221f-4869-baf7-ecd9ff7d6e84  
+
+@sjcvl-ghrunner2:~$ openstack subnet list --network 0119d5ee-c178-4e95-8d47-c198798627bd
++--------------------------------------+-----------------------------------+--------------------------------------+-------------------+
+| ID                                   | Name                              | Network                              | Subnet            |
++--------------------------------------+-----------------------------------+--------------------------------------+-------------------+
+| 3f33feeb-cbf3-4998-aef1-2c818218f00b | c30-oa-prod-oa-60-ComputeSubnet2c | 0119d5ee-c178-4e95-8d47-c198798627bd | 10.154.121.128/27 |
+| 800077af-cf7d-4f47-a64b-dfbf3774cc79 | c30-oa-prod-oa-60-ComputeSubnet2a | 0119d5ee-c178-4e95-8d47-c198798627bd | 10.154.120.0/24   |
+| 95cd4ec8-63f3-417d-afc5-c6265115dccc | c30-oa-prod-oa-60-StorageSubnet   | 0119d5ee-c178-4e95-8d47-c198798627bd | 10.154.121.160/27 |
+| 96b771a4-221f-4869-baf7-ecd9ff7d6e84 | c30-oa-prod-oa-60-ComputeSubnet2b | 0119d5ee-c178-4e95-8d47-c198798627bd | 10.154.121.0/25   |
++--------------------------------------+-----------------------------------+--------------------------------------+-------------------
+
+
+
+
+#!/bin/bash
+set -e
+
+IMAGE_ID="a17f5e81-ddc1-4890-93e7-b623a2f4d4ed"
+
+echo "===== Creating GPU VM $i ====="
+
+# Create port
+port_id=$(openstack port create \
+  --network 3eb39e89-ac62-4b5b-a313-8d52482cc1f2 \
+  --fixed-ip subnet=e5db0db9-bf93-43f4-928a-e46e099fef9e \
+  --enable test-gpu-port-$i -f json | jq -r '.id')
+echo "Created port: $port_id"
+
+# Set security groups
+openstack port set \
+  --security-group b3455868-8842-4b16-9f35-684e25f25f28 \
+  --security-group 1320ddfd-e090-4300-8d9c-c0d10dfaf84b \
+  --security-group c741134d-43d3-4419-bb55-ba6e60bead75 \
+  --security-group 58269c3b-bd2d-4287-aedc-2e2f2c744c19 \
+  $port_id
+
+# Create and assign floating IP
+openstack floating ip create -f json \
+  --subnet e33be8b2-02e2-41a5-87b5-830ba5d0db7a \
+  --port $port_id pro-net-vlan1162 > /dev/null
+echo "Floating IP created for GPU VM $i"
+
+# Create the VM from IMAGE
+openstack server create \
+  --flavor m1.large  \
+  --image $IMAGE_ID \
+  --security-group b3455868-8842-4b16-9f35-684e25f25f28 \
+  --security-group 1320ddfd-e090-4300-8d9c-c0d10dfaf84b \
+  --security-group c741134d-43d3-4419-bb55-ba6e60bead75 \
+  --security-group 58269c3b-bd2d-4287-aedc-2e2f2c744c19 \
+  --port $port_id \
+  --key-name c30-drm-keypair \
+  --wait GPU-Pass
+
+echo "✅ VM created from image $IMAGE_ID"
+
+
+
+i wnat to build this scriopt for oa60 please give sall rewuired comamdn to fill this deatils ads welela s comamdn to fing flaovor with 64vcpu adn 512 
