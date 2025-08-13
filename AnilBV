@@ -1,3 +1,88 @@
+
+
+General
+Node ID
+16dec879-ba80-4cac-8486-59318d688037
+Chassis ID
+-
+Resource Class
+BAREMETAL-LARGE
+Created At
+Mar 6, 2025 8:21:06 AM
+Ports
+	 	MAC Address	PXE Enabled	Portgroup	Actions
+		c4:cb:e1:dd:19:6e	true	-	
+		6c:92:cf:27:ce:50	false	-	
+Portgroups
+	 	UUID	MAC Address	Name	Ports	Actions
+No portgroups have been defined
+Driver Info
+ipmi_address
+10.107.131.54
+ipmi_username
+admin
+ipmi_password
+******
+deploy_kernel
+8d0994b4-3745-49bb-bd21-4bb08289515d
+deploy_ramdisk
+a54b1998-1937-4c84-af1b-7f5c8f52188e
+rescue_kernel
+8d0994b4-3745-49bb-bd21-4bb08289515d
+rescue_ramdisk
+a54b1998-1937-4c84-af1b-7f5c8f52188e
+Driver Validation
+Interface	Valid	Current Interface	Reason
+boot		ipxe	
+deploy		direct	Node 16dec879-ba80-4cac-8486-59318d688037 failed to validate deploy image info. Some parameters were missing. Missing are: ['instance_info.image_source']
+management		ipmitool	
+network		flat	
+power		ipmitool	
+bios			Driver ipmi does not support bios (disabled or not implemented).
+console		ipmitool-socat	Either missing 'ipmi_terminal_port' parameter in node's driver_info or [console]port_range is not configured
+inspect		inspector	
+raid		no-raid	Driver ipmi does not support raid (disabled or not implemented).
+rescue			Node 16dec879-ba80-4cac-8486-59318d688037 is missing 'instance_info/rescue_password'. It is required for rescuing node.
+storage		noop	
+Properties
+capabilities
+cpu_vt:true,cpu_aes:true,cpu_hugepages:true,cpu_hugepages_1g:true,cpu_txt:true
+cpus
+128
+vendor
+dell inc
+memory_mb
+1048576
+local_gb
+1787
+cpu_arch
+x86_64
+Instance Info
+Extra
+Boot Device
+Device
+-
+Persistent
+false
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # === IDs you already have ===
 NODE="16dec879-ba80-4cac-8486-59318d688037"
 
