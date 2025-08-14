@@ -1,3 +1,74 @@
+Keypair 'c30-to-test-to-01-wrk01-keypair' exists.
+Creating provisioning port on PXE MAC c4:cb:e1:dd:19:6e ...
+binding_host_id: ''
+data_plane_status: null
+device_id: ''
+  hostname: host-10-107-177-54
+dns_name: ''
+fixed_ips:
+  subnet_id: c83e54b1-822e-4931-ac73-b731d1f6c966
+id: df2a4489-defc-463b-9de9-b13af7465560
+mac_address: c4:cb:e1:dd:19:6e
+name: to01-wrk01-vm-prov
+network_id: 5c79a1a8-b294-4435-a2e6-ef1b992735d3
+project_id: 59c2d928ef6046069a0175d74dc3dc23
+propagate_uplink_status: null
+qos_network_policy_id: null
+qos_policy_id: null
+status: DOWN
+Creating chamber port on MAC 6c:92:cf:27:ce:50 with fixed IP 10.154.180.52 ...
+binding_host_id: ''
+data_plane_status: null
+device_id: ''
+  hostname: host-10-154-180-52
+dns_name: ''
+fixed_ips:
+  subnet_id: f09dc8d8-5b9e-4ed2-9ea6-10cbfb3130ec
+id: 8c8c72f4-0431-422a-8d87-b118f7507dbf
+mac_address: 6c:92:cf:27:ce:50
+name: to01-wrk01-vm-data
+network_id: 8d28eca5-da32-485f-98c5-d26abaf86d54
+project_id: 59c2d928ef6046069a0175d74dc3dc23
+propagate_uplink_status: null
+qos_network_policy_id: null
+qos_policy_id: null
+status: DOWN
+Booting baremetal server to01-wrk01-vm from image with provisioning + chamber NICs ...
+SERVER_ID=b4086ef9-f37f-4159-94fd-7a01eec1aabd
+Waiting for server ACTIVE...
+Server is ACTIVE.
+OS-EXT-SRV-ATTR:hostname: to01-wrk01-vm
+OS-EXT-SRV-ATTR:hypervisor_hostname: 16dec879-ba80-4cac-8486-59318d688037
+OS-EXT-SRV-ATTR:instance_name: instance-00001336
+OS-EXT-SRV-ATTR:kernel_id: ''
+OS-EXT-SRV-ATTR:ramdisk_id: ''
+OS-EXT-SRV-ATTR:reservation_id: r-1320z1np
+OS-EXT-SRV-ATTR:root_device_name: /dev/sda
+addresses:
+  id: baremetal
+  name: baremetal
+  original_name: baremetal
+hostId: 838d26b583f6d97a72823ef2e65b52d316d166e71eb708222468ff54
+host_status: UP
+id: b4086ef9-f37f-4159-94fd-7a01eec1aabd
+key_name: c30-to-test-to-01-wrk01-keypair
+name: to01-wrk01-vm
+project_id: 59c2d928ef6046069a0175d74dc3dc23
+status: ACTIVE
+user_id: 64a837e9a22b4edf90375c7182a9f297
+Disabling provisioning port df2a4489-defc-463b-9de9-b13af7465560 ...
+Done. Chamber IP should be 10.154.180.52.
+
+
+this is the log so can we create a script to delete this baremtal ns ports awhat ever reuwired 
+
+
+
+
+
+
+
+
 
 
 
