@@ -144,14 +144,17 @@ openstack port show "$PROV_PORT_ID" -f yaml | egrep -i 'id:|name:|mac_address:|f
 echo "Checking if IP $TENANT_FIXED_IP already exists in subnet $TENANT_SUBNET_ID ..."
 EXISTING_PORT_ID="$(openstack port list \
   --fixed-ip "subnet=${TENANT_SUBNET_ID},ip-address=${TENANT_FIXED_IP}" \
-  --mac-address "$DATA_MAC" \
   -f value -c ID | head -n 1)"
 
 if [[ -n "$EXISTING_PORT_ID" ]]; then
-  # Check if it's attached to a server
   ATTACHED_SERVER="$(openstack port show "$EXISTING_PORT_ID" -f value -c device_id)"
   if [[ -z "$ATTACHED_SERVER" || "$ATTACHED_SERVER" == "None" ]]; then
     echo "Port with IP $TENANT_FIXED_IP already exists and is free: $EXISTING_PORT_ID — reusing."
+    CURRENT_MAC="$(openstack port show "$EXISTING_PORT_ID" -f value -c mac_address)"
+    if [[ "$CURRENT_MAC" != "$DATA_MAC" ]]; then
+      echo "Updating port $EXISTING_PORT_ID MAC from $CURRENT_MAC to $DATA_MAC ..."
+      openstack port set "$EXISTING_PORT_ID" --mac-address "$DATA_MAC"
+    fi
     DATA_PORT_ID="$EXISTING_PORT_ID"
   else
     echo "Port with IP $TENANT_FIXED_IP is already attached to server $ATTACHED_SERVER — aborting."
@@ -199,6 +202,7 @@ openstack port set --disable "$PROV_PORT_ID"
 
 echo "Done. Chamber IP should be ${TENANT_FIXED_IP}."
 echo "Log: $LOG_FILE"
+
 
 
 
