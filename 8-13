@@ -1,3 +1,61 @@
+Create a bare-metal provisioning script to:
+
+Set up two networks: one for provisioning and one public.
+
+Successfully deploy an image onto bare-metal in the test environment.
+
+Validate the minimal working script with testing.
+
+Run Packer on an image and resolve arising issues.
+
+Create a script to provision servers in OA60 environment.
+
+Work Done (Elaborated):
+
+Developed a bare-metal provisioning script capable of:
+
+Automatically creating and attaching ports to the provisioning and public networks.
+
+Assigning MAC addresses and node IPs for bare-metal servers.
+
+Verifying that servers can be provisioned and are reachable via SSH.
+
+Encountered Neutron port errors after resource deletion; analyzed the issue and planned script improvements to handle port cleanup automatically.
+
+Validated minimal working script in the test environment, ensuring successful server provisioning and network connectivity.
+
+Investigated Packer deployment issues on Cadence standard image:
+
+Identified that default cloud-init disables password authentication, preventing both Packer builds and direct SSH deployment.
+
+Documented error logs, including DRACUR error occurrences, for further debugging.
+
+Prepared OA60 provisioning script:
+
+Defined required flavor, network, and port details.
+
+Integrated error handling for port creation and network assignment.
+
+Coordinated with Partha for script review to ensure alignment with production standards.
+
+Conducted preliminary testing of image deployment workflows on bare-metal to confirm compatibility with provisioning and network scripts.
+
+Analyzed server provisioning bottlenecks and optimized the script for quicker deployment cycles.
+
+Planned next steps for data synchronization setup once OA60 server provisioning is validated.
+
+
+
+
+
+
+
+
+
+
+
+
+
 vsaravan@sjcvl-ghrunner2:~$  openstack network list |grep oa-60
 | 0119d5ee-c178-4e95-8d47-c198798627bd | c30-oa-prod-oa-60-network | 3f33feeb-cbf3-4998-aef1-2c818218f00b, 800077af-cf7d-4f47-a64b-dfbf3774cc79, 95cd4ec8-63f3-417d-afc5-c6265115dccc, 96b771a4-221f-4869-baf7-ecd9ff7d6e84  
 
