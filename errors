@@ -1,3 +1,27 @@
+vsaravan@sjcvl-ghrunner1:~$ openstack port list --fixed-ip ip-address=10.154.180.52 -f yaml
+- Fixed IP Addresses:
+  - ip_address: 10.154.180.52
+    subnet_id: f09dc8d8-5b9e-4ed2-9ea6-10cbfb3130ec
+  ID: 999588d0-728d-4b46-ad4f-e0511392562a
+  MAC Address: fa:16:3e:0e:29:91
+  Name: to01-wrk01-vm-data
+  Status: DOWN
+vsaravan@sjcvl-ghrunner1:~$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 vsaravan@sjcvl-ghrunner1:~$ openstack subnet show f09dc8d8-5b9e-4ed2-9ea6-10cbfb3130ec -f yaml
 allocation_pools:
 - end: 10.154.180.253
