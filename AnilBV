@@ -1,3 +1,75 @@
+vsaravan@sjcvl-ghrunner1:~$ ./create_bm_network.sh
+Keypair 'c30-to-test-to-01-wrk01-keypair' exists.
+Creating provisioning port on PXE MAC c4:cb:e1:dd:19:6e ...
+binding_host_id: ''
+data_plane_status: null
+device_id: ''
+  hostname: host-10-107-177-60
+dns_name: ''
+fixed_ips:
+  subnet_id: c83e54b1-822e-4931-ac73-b731d1f6c966
+id: 553a0e55-299d-407b-9c37-400627fb6247
+mac_address: c4:cb:e1:dd:19:6e
+name: to01-wrk01-vm-prov
+network_id: 5c79a1a8-b294-4435-a2e6-ef1b992735d3
+project_id: 59c2d928ef6046069a0175d74dc3dc23
+propagate_uplink_status: null
+qos_network_policy_id: null
+qos_policy_id: null
+status: DOWN
+Creating chamber port on MAC 6c:92:cf:27:ce:50 with fixed IP 10.154.180.52 ...
+ConflictException: 409: Client Error for url: https://test.openstack.cadence.com:13696/v2.0/ports, IP address 10.154.180.52 already allocated in subnet f09dc8d8-5b9e-4ed2-9ea6-10cbfb3130ec
+---- FAIL (rc=1). Last 80 log lines ----
+Keypair 'c30-to-test-to-01-wrk01-keypair' exists.
+Creating provisioning port on PXE MAC c4:cb:e1:dd:19:6e ...
+binding_host_id: ''
+data_plane_status: null
+device_id: ''
+  hostname: host-10-107-177-60
+dns_name: ''
+fixed_ips:
+  subnet_id: c83e54b1-822e-4931-ac73-b731d1f6c966
+id: 553a0e55-299d-407b-9c37-400627fb6247
+mac_address: c4:cb:e1:dd:19:6e
+name: to01-wrk01-vm-prov
+network_id: 5c79a1a8-b294-4435-a2e6-ef1b992735d3
+project_id: 59c2d928ef6046069a0175d74dc3dc23
+propagate_uplink_status: null
+qos_network_policy_id: null
+qos_policy_id: null
+status: DOWN
+Creating chamber port on MAC 6c:92:cf:27:ce:50 with fixed IP 10.154.180.52 ...
+ConflictException: 409: Client Error for url: https://test.openstack.cadence.com:13696/v2.0/ports, IP address 10.154.180.52 already allocated in subnet f09dc8d8-5b9e-4ed2-9ea6-10cbfb3130ec
+---- FAIL (rc=1). Last 80 log lines ----
+--- cleanup starting ---
+Deleting port 553a0e55-299d-407b-9c37-400627fb6247 ...
+--- cleanup done ---
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 +------------------+-------------------------------------------------------------------------------------------------------+
 vsaravan@sjcvl-ghrunner1:~$ openstack image show f3f9d14d-f741-4a98-b8fb-c142d1334e97
 +------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
