@@ -1,3 +1,50 @@
+vsaravan@sjcvl-ghrunner1:~$ openstack image show  bda2d284-54f7-4aef-bc21-4c85a3e52083
++------------------+-------------------------------------------------------------------------------------------------------+
+| Field            | Value                                                                                                 |
++------------------+-------------------------------------------------------------------------------------------------------+
+| checksum         | d41d8cd98f00b204e9800998ecf8427e                                                                      |
+| container_format | bare                                                                                                  |
+| created_at       | 2025-08-14T08:48:17Z                                                                                  |
+| disk_format      | qcow2                                                                                                 |
+| file             | /v2/images/bda2d284-54f7-4aef-bc21-4c85a3e52083/file                                                  |
+| id               | bda2d284-54f7-4aef-bc21-4c85a3e52083                                                                  |
+| min_disk         | 100                                                                                                   |
+| min_ram          | 0                                                                                                     |
+| name             | rhel8.6cdns-snap-auth                                                                                 |
+| owner            | dcfb102e7fc940c39c0c21c48d77d3cf                                                                      |
+| properties       | base_image_ref='', bdm_v2='True', block_device_mapping='[{"image_id": null, "boot_index": 0,          |
+|                  | "device_name": "/dev/vda", "destination_type": "volume", "volume_type": null, "device_type": "disk",  |
+|                  | "snapshot_id": "5b337b1f-13f8-4dd3-abe2-2d539357557f", "disk_bus": "virtio", "guest_format": null,    |
+|                  | "delete_on_termination": false, "no_device": null, "tag": null, "source_type": "snapshot",            |
+|                  | "volume_id": null, "volume_size": 100}]', boot_roles='member,swiftoperator,reader',                   |
+|                  | hw_cdrom_bus='sata', hw_disk_bus='virtio', hw_input_bus='usb', hw_machine_type='pc-q35-rhel9.0.0',    |
+|                  | hw_pointer_model='usbtablet', hw_video_model='virtio', hw_vif_model='virtio', os_hash_algo='sha512',  |
+|                  | os_hash_value='cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318 |
+|                  | d2877eec2f63b931bd47417a81a538327af927da3e', os_hidden='False', owner_project_name='cc-dev-oa-        |
+|                  | chm01-prj', owner_user_name='vsaravan', root_device_name='/dev/vda', stores='default_backend'         |
+| protected        | False                                                                                                 |
+| schema           | /v2/schemas/image                                                                                     |
+| size             | 0                                                                                                     |
+| status           | active                                                                                                |
+| tags             |                                                                                                       |
+| updated_at       | 2025-08-14T08:48:17Z                                                                                  |
+| visibility       | private                                                                                               |
++------------------+-------------------------------------------------------------------------------------------------------+
+vsaravan@sjcvl-ghrunner1:~$ openstack image list | grep  rhel8.6cd
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 Keypair 'c30-to-test-to-01-wrk01-keypair' exists.
 Creating provisioning port on PXE MAC c4:cb:e1:dd:19:6e ...
 binding_host_id: ''
