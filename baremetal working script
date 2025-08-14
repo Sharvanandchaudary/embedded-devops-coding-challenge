@@ -1,0 +1,187 @@
+#!/usr/bin/env bash
+# Auto-cleans on failure. Boots baremetal from image with provisioning + chamber NICs, then disables provisioning NIC.
+set -euo pipefail
+[[ "${DEBUG:-0}" == "1" ]] && set -x
+
+# ======== Config (your values) ========
+HYPERSCALER_TAG="rhops"
+ENVIRONMENT="test-2"
+NAME_PREFIX="to01"
+NODE_NAME="wrk01"
+SERVER_NAME="${NAME_PREFIX}-${NODE_NAME}-vm"
+
+# IMAGE / FLAVOR
+WRK01_IMAGE_ID="5d5a5641-65e1-4d1e-b27e-420b6bd86a26"   # from TF plan (use your working image if preferred)
+WRK01_FLAVOR_NAME="baremetal"
+
+# Provisioning (VLAN 1168 path already baked into this net)
+PROV_NET_ID="5c79a1a8-b294-4435-a2e6-ef1b992735d3"      # provisioning
+PROV_SUBNET_ID="c83e54b1-822e-4931-ac73-b731d1f6c966"   # provisioning-subnet
+
+# Chamber (customer VPC) — fixed IP you asked for
+TENANT_NET_ID="8d28eca5-da32-485f-98c5-d26abaf86d54"
+TENANT_SUBNET_ID="f09dc8d8-5b9e-4ed2-9ea6-10cbfb3130ec" # 10.154.180.0/23
+TENANT_FIXED_IP="10.154.180.52"
+
+# NIC MACs (from your node)
+PXE_MAC="c4:cb:e1:dd:19:6e"          # PXE-enabled NIC (provisioning)
+DATA_MAC="6c:92:cf:27:ce:50"         # data NIC (chamber)
+
+# Keypair
+OS_KEYPAIR="${OS_KEYPAIR:-c30-to-test-to-01-wrk01-keypair}"  # matches TF plan
+PUB_KEY_FILE="${PUB_KEY_FILE:-$HOME/.ssh/id_rsa.pub}"
+
+# Timing
+WAIT_SEC_SERVER="${WAIT_SEC_SERVER:-1800}"
+POLL_INTERVAL="${POLL_INTERVAL:-5}"
+
+# Names
+PROV_PORT_NAME="${SERVER_NAME}-prov"
+DATA_PORT_NAME="${SERVER_NAME}-data"
+
+# ============ Logging ============
+RUN_ID="$(date +%Y%m%d-%H%M%S)"
+LOG_FILE="${LOG_FILE:-./deploy_${SERVER_NAME}_${RUN_ID}.log}"
+exec > >(tee -a "$LOG_FILE") 2>&1
+
+# ============ State ============
+PROV_PORT_ID=""
+DATA_PORT_ID=""
+SERVER_ID=""
+
+die(){ echo "ERROR: $*" >&2; exit 1; }
+need(){ command -v "$1" >/dev/null 2>&1 || die "Missing command: $1"; }
+
+wait_for_status(){
+  local cmd="$1" want="$2" timeout="$3" start status
+  start="$(date +%s)"
+  while true; do
+    status="$($cmd || true)"
+    [[ "$status" == "$want" ]] && return 0
+    (( $(date +%s) - start > timeout )) && { echo "Timeout waiting for $want (last: $status)"; return 1; }
+    sleep "$POLL_INTERVAL"
+  done
+}
+
+ensure_local_pubkey(){
+  if [[ ! -f "$PUB_KEY_FILE" ]]; then
+    echo "No $PUB_KEY_FILE — generating SSH keypair..."
+    mkdir -p "$HOME/.ssh"
+    ssh-keygen -t rsa -b 4096 -f "${PUB_KEY_FILE%.pub}" -N ""
+  fi
+}
+
+ensure_os_keypair(){
+  if ! openstack keypair list -f value -c Name | grep -qx "$OS_KEYPAIR"; then
+    echo "Creating OpenStack keypair '$OS_KEYPAIR' from $PUB_KEY_FILE ..."
+    openstack keypair create --public-key "$PUB_KEY_FILE" "$OS_KEYPAIR" >/dev/null
+  else
+    echo "Keypair '$OS_KEYPAIR' exists."
+  fi
+}
+
+cleanup(){
+  echo "--- cleanup starting ---"
+  if [[ -n "$SERVER_ID" ]] && openstack server show "$SERVER_ID" &>/dev/null; then
+    echo "Deleting server $SERVER_ID ..."
+    openstack server delete "$SERVER_ID" || true
+    until ! openstack server show "$SERVER_ID" &>/dev/null; do sleep 3; done
+  fi
+  for pid in "$PROV_PORT_ID" "$DATA_PORT_ID"; do
+    if [[ -n "$pid" ]] && openstack port show "$pid" &>/dev/null; then
+      echo "Deleting port $pid ..."
+      openstack port delete "$pid" || true
+    fi
+  done
+  echo "--- cleanup done ---"
+}
+
+on_error(){
+  local rc=$?
+  echo "---- FAIL (rc=$rc). Last 80 log lines ----"
+  tail -n 80 "$LOG_FILE" || true
+  cleanup
+  exit $rc
+}
+trap on_error ERR
+
+# ============ Pre-flight ============
+need openstack
+need ssh-keygen
+
+openstack flavor show "$WRK01_FLAVOR_NAME"          >/dev/null
+openstack image  show "$WRK01_IMAGE_ID"             >/dev/null
+openstack network show "$PROV_NET_ID"               >/dev/null
+openstack subnet  show "$PROV_SUBNET_ID"            >/dev/null
+openstack network show "$TENANT_NET_ID"             >/dev/null
+openstack subnet  show "$TENANT_SUBNET_ID"          >/dev/null
+
+ensure_local_pubkey
+ensure_os_keypair
+
+# ============ Minimal cloud-init ============
+USER_DATA_FILE="$(pwd)/${SERVER_NAME}_user_data.yaml"
+cat > "$USER_DATA_FILE" <<'YAML'
+#cloud-config
+package_update: true
+package_upgrade: false
+runcmd:
+  - echo "cloud-init completed" | tee /var/log/cloud-init-orchestrator.log
+YAML
+
+# ============ Create provisioning VIF (PXE MAC) ============
+echo "Creating provisioning port on PXE MAC $PXE_MAC ..."
+PROV_PORT_ID="$(openstack port create "$PROV_PORT_NAME" \
+  --network "$PROV_NET_ID" \
+  --fixed-ip "subnet=$PROV_SUBNET_ID" \
+  --mac-address "$PXE_MAC" \
+  --vnic-type baremetal \
+  --disable-port-security \
+  -f value -c id)"
+openstack port show "$PROV_PORT_ID" -f yaml | egrep -i 'id:|name:|mac_address:|fixed_ips:|status:'
+
+# ============ Create chamber/data VIF (fixed 10.154.180.52 on DATA MAC) ============
+echo "Creating chamber port on MAC $DATA_MAC with fixed IP $TENANT_FIXED_IP ..."
+DATA_PORT_ID="$(openstack port create "$DATA_PORT_NAME" \
+  --network "$TENANT_NET_ID" \
+  --fixed-ip "subnet=${TENANT_SUBNET_ID},ip-address=${TENANT_FIXED_IP}" \
+  --mac-address "$DATA_MAC" \
+  --vnic-type baremetal \
+  --disable-port-security \
+  -f value -c id)"
+openstack port show "$DATA_PORT_ID" -f yaml | egrep -i 'id:|name:|mac_address:|fixed_ips:|status:'
+
+# ============ Boot from IMAGE with both NICs ============
+echo "Booting baremetal server $SERVER_NAME from image with provisioning + chamber NICs ..."
+SERVER_ID="$(
+  openstack server create "$SERVER_NAME" \
+    --flavor "$WRK01_FLAVOR_NAME" \
+    --image "$WRK01_IMAGE_ID" \
+    --nic "port-id=$PROV_PORT_ID" \
+    --nic "port-id=$DATA_PORT_ID" \
+    --key-name "$OS_KEYPAIR" \
+    --user-data "$USER_DATA_FILE" \
+    --property env="$ENVIRONMENT" \
+    --property hyperscaler="$HYPERSCALER_TAG" \
+    --property capabilities:boot_option="local" \
+    -f value -c id
+)"
+echo "SERVER_ID=$SERVER_ID"
+
+echo "Waiting for server ACTIVE..."
+wait_for_status "openstack server show $SERVER_ID -f value -c status" "ACTIVE" "$WAIT_SEC_SERVER"
+
+echo "Server is ACTIVE."
+openstack server show "$SERVER_ID" -f yaml | egrep -i 'status:|addresses:|id:|name:'
+
+# ============ Post: disable provisioning VIF (keep chamber only) ============
+echo "Disabling provisioning port $PROV_PORT_ID ..."
+openstack port set --disable "$PROV_PORT_ID"
+
+# If you prefer to detach+delete instead of disable, use:
+# openstack server remove port "$SERVER_ID" "$PROV_PORT_ID"
+# openstack port delete "$PROV_PORT_ID"
+# PROV_PORT_ID=""
+
+echo "Done. Chamber IP should be ${TENANT_FIXED_IP}."
+echo "Log: $LOG_FILE"
