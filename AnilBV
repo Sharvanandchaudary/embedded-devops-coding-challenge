@@ -1,4 +1,24 @@
 
+
+
+want_fixed_ip="10.154.180.52"
+
+if openstack subnet show "$TENANT_SUBNET_ID" -f json | \
+   jq -e --arg ip "$want_fixed_ip" '
+     .allocation_pools[] 
+     | (.start | split(".") | map(tonumber)) as $start
+     | (.end | split(".") | map(tonumber)) as $end
+     | ($ip | split(".") | map(tonumber)) as $target
+     | ($target >= $start and $target <= $end)
+   ' >/dev/null; then
+  echo "✅ $want_fixed_ip is within the subnet's allocation pool."
+else
+  echo "❌ $want_fixed_ip is outside the allocation pool — pick another."
+fi
+
+
+
+
 # 1) Is that IP already taken?
 
 openstack port list --fixed-ip ip-address=10.154.180.52 -f yaml
