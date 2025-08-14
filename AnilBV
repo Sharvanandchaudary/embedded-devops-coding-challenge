@@ -1,3 +1,159 @@
+
+# 1) Is that IP already taken?
+
+openstack port list --fixed-ip ip-address=10.154.180.52 -f yaml
+
+# 2) If you get an ID, inspect it:
+PORT="<<the ID from above>>"
+openstack port show "$PORT" -f yaml | egrep -i 'id:|name:|device_owner:|device_id:|project_id:|mac_address:|network_id:|fixed_ips:'
+
+# 3) Is it a router or DHCP port?
+# (these should NOT be deleted)
+openstack port show "$PORT" -f value -c device_owner
+# expected router types:
+#   network:router_interface
+#   network:router_gateway
+# expected DHCP:
+#   network:dhcp
+What to do based on the result:
+
+If device_owner is network:router_* or network:dhcp: pick another IP (don’t delete).
+
+If it’s a normal port that you own and don’t need:
+openstack port delete "$PORT"
+
+If it belongs to another project (different project_id): choose another IP, or coordinate with that project.
+
+2) One‑liner to find the next free IP in the subnet
+Let Neutron pick one for you (safest and fast):
+
+bash
+Copy
+Edit
+# Just omit ip-address to let Neutron assign a free one:
+openstack port create my-data-port \
+  --network "$TENANT_NET_ID" \
+  --fixed-ip "subnet=$TENANT_SUBNET_ID" \
+  --mac-address "$DATA_MAC" \
+  --vnic-type baremetal \
+  --disable-port-security
+Then fetch the assigned IP:
+
+bash
+Copy
+Edit
+openstack port show my-data-port -f value -c fixed_ips
+3) Make your script robust (won’t fail on taken IP)
+Here’s a drop‑in patch that you can put before creating the chamber/data port.
+It does this:
+
+If TENANT_IP is set:
+
+If the IP is free ⇒ proceed.
+
+If it exists:
+
+If it’s your port (same MAC & network) ⇒ reuse it.
+
+If it’s a router/DHCP port ⇒ fail with a clear message (choose another IP).
+
+If it’s another normal port you own but wrong MAC ⇒ fail clearly to avoid stealing.
+
+If TENANT_IP is not set ⇒ Neutron auto‑assigns a free one.
+
+bash
+Copy
+Edit
+# ---------- SAFE ALLOCATION FOR CHAMBER PORT ----------
+want_fixed_ip="${TENANT_IP:-}"
+
+if [[ -n "$want_fixed_ip" ]]; then
+  # Check if the IP is already allocated
+  EXISTING_PORT_ID="$(openstack port list --fixed-ip ip-address=$want_fixed_ip -f value -c ID | head -1 || true)"
+
+  if [[ -n "$EXISTING_PORT_ID" ]]; then
+    # Inspect the existing port
+    EXIST_OWNER="$(openstack port show "$EXISTING_PORT_ID" -f value -c device_owner)"
+    EXIST_MAC="$(openstack port show "$EXISTING_PORT_ID" -f value -c mac_address)"
+    EXIST_NET="$(openstack port show "$EXISTING_PORT_ID" -f value -c network_id)"
+
+    case "$EXIST_OWNER" in
+      network:router_*|network:dhcp)
+        die "Requested IP $want_fixed_ip is reserved by $EXIST_OWNER (port $EXISTING_PORT_ID). Pick a different IP."
+        ;;
+      *)
+        if [[ "$EXIST_NET" == "$TENANT_NET_ID" && "$EXIST_MAC" == "$DATA_MAC" ]]; then
+          info "Reusing existing data port $EXISTING_PORT_ID at $want_fixed_ip (MAC matches)."
+          DATA_PORT_ID="$EXISTING_PORT_ID"
+        else
+          die "IP $want_fixed_ip already in use by port $EXISTING_PORT_ID (owner=$EXIST_OWNER, mac=$EXIST_MAC, net=$EXIST_NET). Use a different IP or delete the port."
+        fi
+        ;;
+    esac
+  else
+    # Create a new data port with the requested fixed IP
+    DATA_PORT_ID="$(openstack port create "${SERVER_NAME}-data" \
+      --network "$TENANT_NET_ID" \
+      --fixed-ip "subnet=${TENANT_SUBNET_ID},ip-address=${want_fixed_ip}" \
+      --mac-address "$DATA_MAC" \
+      --vnic-type baremetal \
+      --disable-port-security \
+      -f value -c id)"
+    CLEAN_DATA="$DATA_PORT_ID"
+  fi
+else
+  # No IP requested, let Neutron assign
+  DATA_PORT_ID="$(openstack port create "${SERVER_NAME}-data" \
+    --network "$TENANT_NET_ID" \
+    --fixed-ip "subnet=${TENANT_SUBNET_ID}" \
+    --mac-address "$DATA_MAC" \
+    --vnic-type baremetal \
+    --disable-port-security \
+    -f value -c id)"
+  CLEAN_DATA="$DATA_PORT_ID"
+  info "Neutron auto-assigned chamber IP:"
+  openstack port show "$DATA_PORT_ID" -f value -c fixed_ips
+fi
+# ---------- END SAFE ALLOCATION ----------
+Bonus: if you’d like an auto‑find next free IP inside your allowed range, I can add a tiny helper that lists allocation_pools and walks them until it finds an unused address.
+
+4) TL;DR: How to avoid this forever
+Use --plan first in your script to validate the target IP is free.
+
+Or let Neutron auto‑assign by omitting TENANT_IP (least friction).
+
+If you must pin a specific IP, add the exist/reuse logic above so a previous port won’t crash the run.
+
+Never delete router/DHCP ports; just choose a different IP.
+
+If you paste the patch in, I can also send back your full script with the changes in-place. Want me to do that?
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 A) Quick debug + fix (run these now)
 # --- set your chamber values ---
 TENANT_NET_ID="8d28eca5-da32-485f-98c5-d26abaf86d54"
