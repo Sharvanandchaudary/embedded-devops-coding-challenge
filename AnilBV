@@ -1,3 +1,58 @@
+A) Quick debug + fix (run these now)
+# --- set your chamber values ---
+TENANT_NET_ID="8d28eca5-da32-485f-98c5-d26abaf86d54"
+TENANT_SUBNET_ID="f09dc8d8-5b9e-4ed2-9ea6-10cbfb3130ec"
+TENANT_IP="10.154.180.52"
+DATA_MAC="6c:92:cf:27:ce:50"
+
+# 1) Who owns the IP?
+EXISTING_PORT_ID=$(openstack port list --fixed-ip ip-address=$TENANT_IP -f value -c ID | head -1)
+
+if [[ -z "$EXISTING_PORT_ID" ]]; then
+  echo "IP $TENANT_IP is free."
+else
+  echo "IP $TENANT_IP is on port: $EXISTING_PORT_ID"
+  openstack port show "$EXISTING_PORT_ID" -f yaml | egrep -i \
+    'id:|name:|device_owner:|device_id:|project_id:|network_id:|mac_address:|status:|binding_vnic_type:'
+fi
+
+
+Interpretation & what to do:
+
+device_owner is network:router_* or network:dhcp → Do not touch. Pick another IP.
+
+Else (normal port):
+
+If network_id == $TENANT_NET_ID and mac_address == $DATA_MAC → REUSE this port (good).
+
+If device_id empty (not attached) but MAC different:
+
+safest: delete it (if it’s yours) → openstack port delete $EXISTING_PORT_ID then create a fresh one.
+
+or (if policy allows) update the MAC → openstack port set $EXISTING_PORT_ID --mac-address $DATA_MAC
+
+If it belongs to another project or attached to a live server → choose another IP.
+
+If you’re reusing the port, just record it:
+
+DATA_PORT_ID="$EXISTING_PORT_ID"
+openstack port show "$DATA_PORT_ID" -f value -c fixed_ips
+
+
+Then continue with your normal flow (create provisioning port, boot server using --nic port-id=$DATA_PORT_ID and your provisioning port).
+
+
+
+
+
+
+
+
+
+
+
+
+
 vsaravan@sjcvl-ghrunner1:~$ ./create_bm_network.sh
 Keypair 'c30-to-test-to-01-wrk01-keypair' exists.
 Creating provisioning port on PXE MAC c4:cb:e1:dd:19:6e ...
