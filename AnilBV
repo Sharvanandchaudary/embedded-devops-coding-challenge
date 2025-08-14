@@ -1,3 +1,17 @@
+
+ 1db5e212-a003-4557-9898-d649b475269a | c30-dn-dev-dn-01-Platform-SG-sg          | CC Platfom Security Group                              | dcfb102e7fc940c39c0c21c48d77d3cf | ['Backup:none', 'BU:IT', 'BusinessUnit:cloudeng', 'Environment:Non-Production', 'OrganizationName:IT', 'Sub_BU:VCAD', 'Terraform:false', 'todestroy:false', 'tosuspend:false']                      |
+| 32d5b9f5-a613-4853-b326-588b47c37fe2 | c30-dn-dev-dn-01-PrivateSG-sg            | Private security group                                 | dcfb102e7fc940c39c0c21c48d77d3cf | ['Backup:none', 'BU:IT', 'BusinessUnit:cloudeng', 'Environment:Non-Production', 'OrganizationName:IT', 'Sub_BU:VCAD', 'Terraform:false', 'todestroy:false', 'tosuspend:false']                      |
+| 80a223b3-273f-44c3-b22c-7c90e9259b3b | c30-dn-dev-dn-01-CLA-SG-sg               | Cadence License Agent Security Group                   | dcfb102e7fc940c39c0c21c48d77d3cf | ['Backup:none', 'BU:IT', 'BusinessUnit:cloudeng', 'Environment:Non-Production', 'OrganizationName:IT', 'Sub_BU:VCAD', 'Terraform:false', 'todestroy:false', 'tosuspend:false']                      |
+| 866eaf2b-fc80-496a-a440-f0e6cfc310f0 | c30-dn-dev-dn-01-Chm-AccessFromUtlSvr-sg | Utility Server Access from Chamber                     | dcfb102e7fc940c39c0c21c48d77d3cf | ['Backup:none', 'BU:IT', 'BusinessUnit:cloudeng', 'Environment:Non-Production', 'OrganizationName:IT', 'Sub_BU:VCAD', 'Terraform:false', 'todestroy:false', 'tosuspend:false']         
+
+flavor  m1.2xlarge
+
+image 
+b1d72102-a72b-4b9a-bca0-de3a36866a1a
+
+
+
+
 aravan@sjcvl-ghrunner1:~$ source /home/srinip/test_os.sh
 Please enter your OpenStack Password for project cc-test-oa-chm01-prj as user svc-account-dev-01:
 vsaravan@sjcvl-ghrunner1:~$ cat deploy_to01-wrk01-vm_20250813-123330.log
