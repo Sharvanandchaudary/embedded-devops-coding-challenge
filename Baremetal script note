@@ -1,0 +1,277 @@
+Baremetal Dual‑NIC Deploy Script — Operator Guide
+
+This guide explains what the bm_deploy.sh script does, how to run it safely, the OpenStack commands it uses, and how to scale the approach for many nodes/chambers.
+
+1) What the script does (high level)
+
+Goal: Deploy a baremetal node from a Glance image using two NICs:
+
+Provisioning NIC on the shared provisioning network (PXE/UEFI boot via Ironic DHCP/TFTP)
+
+Chamber/Tenant NIC on your application network with a fixed IP
+
+Flow:
+
+Validate inputs (image, flavor, nets/subnets, free IP). Ensure keypair exists.
+
+Create Neutron port #1 on the provisioning network bound to the node’s PXE MAC.
+
+Create Neutron port #2 on the chamber network bound to the node’s data MAC with a fixed IP.
+
+openstack server create → boot from the Glance image with both ports attached.
+
+Wait for ACTIVE.
+
+Disable the provisioning port (optional: detach+delete) so the node runs only on the chamber NIC.
+
+Result: The OS deploys via provisioning, then the server is reachable at the chamber IP.
+
+2) Your current run — concrete values (example)
+
+Replace with your own when using a different chamber/node.
+
+Server name: to01-wrk01-vm
+
+Image: 4a31915b-213a-4173-97ad-a582c72ff9f2 (RHEL8 UEFI)
+
+Flavor: baremetal
+
+Provisioning network: 5c79a1a8-b294-4435-a2e6-ef1b992735d3
+
+Provisioning subnet: c83e54b1-822e-4931-ac73-b731d1f6c966 (VLAN 1168, 10.107.168.0/23)
+
+PXE MAC: c4:cb:e1:dd:19:6e
+
+Chamber network: 8d28eca5-da32-485f-98c5-d26abaf86d54
+
+Chamber subnet: f09dc8d8-5b9e-4ed2-9ea6-10cbfb3130ec (10.154.180.0/23)
+
+Chamber fixed IP: 10.154.180.52
+
+Data MAC: 6c:92:cf:27:ce:50
+
+Keypair: c30-to-test-to-01-wrk01-keypair
+
+3) Step‑by‑step (what happens internally)
+
+Preflight checks
+
+Verify the image, flavor, networks, and subnets exist.
+
+Ensure the chamber IP is free.
+
+Ensure keypair exists (create from your local public key if needed).
+
+Create provisioning port
+
+Create a Neutron port on the provisioning network.
+
+Assign the PXE MAC.
+
+Disable port security.
+
+Create chamber port
+
+Create a Neutron port on the chamber network/subnet.
+
+Assign the data MAC and the fixed IP.
+
+Disable port security (your environment may choose to leave it on with SGs).
+
+Boot the server
+
+openstack server create with both ports.
+
+Boot from Glance image; flavor = baremetal.
+
+Ironic uses the provisioning NIC to deploy to local disk, then the OS comes up on chamber NIC.
+
+Post‑deploy port policy
+
+Disable the provisioning port (keeps it for rebuilds, avoids DHCP/PXE surprises).
+
+Alternative: detach and delete the provisioning port.
+
+Outputs
+
+The server shows ACTIVE.
+
+Chamber IP (e.g., 10.154.180.52) is reachable via SSH.
+
+4) Required inputs (per node & per chamber)
+
+Per node:
+
+PXE_MAC — the NIC that can PXE/UEFI boot.
+
+DATA_MAC — the production/data NIC.
+
+SERVER_NAME — how to name the instance and its ports.
+
+KEYPAIR — for SSH access.
+
+Per chamber:
+
+TENANT_NET_ID — chamber network ID.
+
+TENANT_SUBNET_ID — chamber subnet ID.
+
+TENANT_IP — fixed IP to assign (ensure it’s free).
+
+Shared (usually fixed):
+
+PROV_NET_ID and PROV_SUBNET_ID — provisioning network & subnet.
+
+IMAGE_ID — Glance image to deploy.
+
+FLAVOR — baremetal (matches your Ironic nodes’ resource class).
+
+5) How to run the script
+
+The script supports a dry run with --plan.
+
+Dry run:
+
+./bm_deploy.sh --plan
+
+Execute with your defaults:
+
+./bm_deploy.sh
+
+Override for a different chamber/node at runtime:
+
+./bm_deploy.sh \
+  --server-name to02-wrk02-vm \
+  --tenant-net-id <NET_ID> \
+  --tenant-subnet-id <SUBNET_ID> \
+  --tenant-ip 10.154.181.77 \
+  --pxe-mac aa:bb:cc:dd:ee:ff \
+  --data-mac aa:bb:cc:dd:ee:01 \
+  --image-id <GLANCE_IMAGE_ID>
+
+Post‑deploy:
+
+Default behavior is to disable the provisioning port.
+
+To delete it instead:
+
+Use --delete-prov 1 when running the script, or
+
+Run manually:
+
+openstack server remove port <SERVER_ID> <PROV_PORT_ID>
+openstack port delete <PROV_PORT_ID>
+
+6) Command cheat‑sheet (what the script uses)
+
+Validation:
+
+openstack image show <IMAGE_ID>
+openstack flavor show <FLAVOR>
+openstack network show <NET_ID>
+openstack subnet show <SUBNET_ID>
+openstack port list --fixed-ip ip-address=<IP>
+openstack keypair list
+
+Port creation:
+
+# Provisioning (PXE)
+openstack port create <NAME> \
+  --network <PROV_NET_ID> \
+  --fixed-ip subnet=<PROV_SUBNET_ID> \
+  --mac-address <PXE_MAC> \
+  --vnic-type baremetal \
+  --disable-port-security
+
+# Chamber (Data)
+openstack port create <NAME> \
+  --network <TENANT_NET_ID> \
+  --fixed-ip subnet=<TENANT_SUBNET_ID>,ip-address=<TENANT_IP> \
+  --mac-address <DATA_MAC> \
+  --vnic-type baremetal \
+  --disable-port-security
+
+Boot server:
+
+openstack server create <SERVER_NAME> \
+  --flavor baremetal \
+  --image <IMAGE_ID> \
+  --nic port-id=<PROV_PORT_ID> \
+  --nic port-id=<DATA_PORT_ID> \
+  --key-name <KEYPAIR> \
+  --user-data user_data.yaml \
+  --property capabilities:boot_option=local
+
+Inspect & post‑deploy:
+
+openstack server show <SERVER_ID>
+openstack port show <PORT_ID>
+openstack port set --disable <PROV_PORT_ID>
+# or fully detach+delete
+openstack server remove port <SERVER_ID> <PROV_PORT_ID>
+openstack port delete <PROV_PORT_ID>
+
+Router presence (optional):
+
+openstack port list --device-owner network:router_interface --fixed-ip subnet=<TENANT_SUBNET_ID>
+
+7) Scaling to many nodes
+
+There are two common options:
+
+A) Run the script repeatedly with different flags
+
+Change --server-name, --pxe-mac, --data-mac, --tenant-ip, and (if needed) chamber net/subnet IDs.
+
+B) CSV‑driven batch (recommended for 10+ nodes)
+
+Create nodes.csv:
+
+node_name,pxe_mac,data_mac,tenant_ip,tenant_net_id,tenant_subnet_id
+wrk01,c4:cb:e1:dd:19:6e,6c:92:cf:27:ce:50,10.154.180.52,8d28eca5-da32-...,f09dc8d8-...
+wrk02,aa:bb:cc:dd:ee:01,aa:bb:cc:dd:ee:02,10.154.180.53,8d28eca5-da32-...,f09dc8d8-...
+...
+
+Example loop:
+
+while IFS=, read -r NODE PXE DATA IP NET SUBNET; do
+  [[ "$NODE" == node_name ]] && continue  # skip header
+  ./bm_deploy.sh \
+    --server-name "to01-${NODE}-vm" \
+    --pxe-mac "$PXE" \
+    --data-mac "$DATA" \
+    --tenant-ip "$IP" \
+    --tenant-net-id "$NET" \
+    --tenant-subnet-id "$SUBNET"
+done < nodes.csv
+
+Add & to background them and then monitor with watch openstack baremetal node list if you want parallelism.
+
+8) Troubleshooting quick hits
+
+No valid host / No VIFs found → The provisioning port wasn’t on the correct PXE MAC or wasn’t present at boot. Recreate the provisioning port with the PXE MAC and retry.
+
+Deploy failed: missing instance_info.image_source → If using Ironic directly, you must set it before node deploy. With Nova (this script) we pass --image, so you shouldn’t see this.
+
+Server ACTIVE but no chamber IP → Check openstack port show <DATA_PORT_ID> and OS logs (journalctl -u cloud-init). Ensure routes/DNS are present.
+
+DHCP conflicts → Keep provisioning port disabled post‑deploy, or delete it.
+
+9) Safety & rollback
+
+The script fails fast and logs to deploy_<server>_<timestamp>.log.
+
+On failure it will cleanup any created server/ports to leave your project tidy.
+
+You can re‑run after fixing inputs.
+
+10) Variables you typically change
+
+SERVER_NAME, IMAGE_ID, FLAVOR,
+PROV_NET_ID, PROV_SUBNET_ID, PXE_MAC,
+TENANT_NET_ID, TENANT_SUBNET_ID, TENANT_IP, DATA_MAC,
+KEYPAIR
+
+For most chambers, only the tenant variables and the two MAC addresses change. The provisioning network usually stays the same cluster‑wide.
+
+End of guide.
