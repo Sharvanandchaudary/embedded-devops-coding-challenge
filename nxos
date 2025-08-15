@@ -1,0 +1,103 @@
+This is Rest Library to communicate with Cisco Nexus Switches
+
+It is able to execute the switchport access vlan API. It takes in user credentials, interface, disableVlanID, and enableVlanID.
+
+It also requires the following environment variables to be set: PASSWORD.
+
+Run go build on this repository to build the nexus executable.
+
+If it is on linux, the binary will be nexus; otherwise, on windows it will be nexus.exe.
+
+To execute it, run nexus -nexusIP <nexusIP> -username <username> -interfaceName <interfaceName> -enableVlanID <enableVlanID> -disableVlanID <disableVlanID>. At least one of the enableVlanID or disableVlanID parameters must be entered.
+
+Enable Switchport Example Command: nexus.exe -nexusIP="10.107.128.100:443" -username="ccloud" -interfaceName="eth1/6" -enableVlanID="vlan-3002".
+
+Screenshot 2025-04-17 111942
+
+Screenshot 2025-04-17 112021
+
+Disable Switchport Example Command: nexus.exe -nexusIP="10.107.128.100:443" -username="ccloud" -interfaceName="eth1/6" -disableVlanID="vlan-1".
+
+Screenshot 2025-04-17 112103
+
+Screenshot 2025-04-17 112159
+
+All the parameters and the environment variables must be set to execute the switchport access vlan API.
+
+The logs will be kept in the file nexus_api.log. View that file to check the states of the process.
+
+Verifying the authenticate API call passed: {"level":"debug","time":1744826776,"message":"Authenticate API Call Passed"}.
+
+Verifying the get interface API call passed: {"level":"debug","time":1744826776,"message":"GET Interface API Call Passed"}.
+
+Verifying the post switchport API call passed: {"level":"debug","time":1744826776,"message":"POST Switchport API Call Passed"}.
+
+Verifying the post disable switchport API call passed: {"level":"debug","time":1744829021,"message":"POST Disable Switchport API Call Passed"}.
+
+Authenticate API
+
+   curl 'https://10.107.128.100/api/aaaLogin.json' \
+  -H 'authorization: Basic Y2Nsb3VkOkNsb3VkQDEyMw==' \
+  -H 'content-type: application/x-www-form-urlencoded; charset=UTF-8' \
+  -H 'x-requested-with: XMLHttpRequest' \
+  --data-raw $'{\n"aaaUser": {\n"attributes": {\n"name": "<user>",\n"pwd": "<pwd>"\n}\n}\n}' \
+  --insecure
+GET Interface API
+
+curl -X GET 'https://10.107.128.100/api/mo/sys/intf/phys-[eth1/6]' \   -H 'content-type: application/json-rpc' \   -H 'x-requested-with: XMLHttpRequest' \   -b 'APIC-cookie=KWYUOOmh0JBC/+GHXWrG9b5UkFAp4BYWDqV0ubZJrSFQdeo+bHPyCvk7JCKoTQjvip5CeQOK/En+7DqUFMfH8bi17X8VlCYvUO7awKEVoF1ftHbi2AiXTe6B5g24todT4ZqHNvlAi5MAFRJMo6pcW3x5X/Ytcbr4xg04V9GMorp4x7MBLRn9WnzAG0Y04k4W' \   --insecure
+POST Switchport API
+
+curl --location 'https://10.107.128.100:443/api/mo/sys.json' \
+--header 'x-requested-with: XMLHttpRequest' \
+--header 'APIC-cookie: 7MqiNlOw5/I+5vyXcQ8lqTPxP+k8FZtIJmasdyhy5srMHdR3kJxSwNPVF6rTu7ltUBSFwrHzLZWDK+QnXqFXi6XQPTpU2fL6efK6UKI6A+d6BvlKS45ew9buiFaDVF6YEdChUralw+qnCr32ECJMSvkpv2QSQ4wFQrYrUbgb4JFi+SmPTrEspgHNIs08Dsvh' \
+--header 'content-type: application/json-rpc' \
+--data '{
+    "topSystem": {
+        "children": [
+            {
+                "interfaceEntity": {
+                    "children": [
+                        {
+                            "l1PhysIf": {
+                                "attributes": {
+                                    "accessVlan": "vlan-3002",
+                                    "id": "eth1/6",
+                                    "layer": "Layer2",
+                                    "userCfgdFlags": "admin_layer"
+                                }
+                            }
+                        }
+                    ]
+                }
+            }
+        ]
+    }
+}'
+POST Disable Switchport API
+
+curl --location 'https://10.107.128.100:443/api/mo/sys.json' \
+--header 'x-requested-with: XMLHttpRequest' \
+--header 'APIC-cookie: 7MqiNlOw5/I+5vyXcQ8lqTPxP+k8FZtIJmasdyhy5srMHdR3kJxSwNPVF6rTu7ltUBSFwrHzLZWDK+QnXqFXi6XQPTpU2fL6efK6UKI6A+d6BvlKS45ew9buiFaDVF6YEdChUralw+qnCr32ECJMSvkpv2QSQ4wFQrYrUbgb4JFi+SmPTrEspgHNIs08Dsvh' \
+--header 'content-type: application/json-rpc' \
+--data '{
+    "topSystem": {
+        "children": [
+            {
+                "interfaceEntity": {
+                    "children": [
+                        {
+                            "l1PhysIf": {
+                                "attributes": {
+                                    "accessVlan": "vlan-1",
+                                    "id": "eth1/6",
+                                    "layer": "Layer2",
+                                    "userCfgdFlags": "admin_layer"
+                                }
+                            }
+                        }
+                    ]
+                }
+            }
+        ]
+    }
+}'
