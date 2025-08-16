@@ -1,0 +1,65 @@
+Goals
+
+Ensure bare metal image boots correctly with proper SSH access.
+
+Create image from volume and update SSH/Config files for accessibility.
+
+Standardize image creation and conversion process for cadence use.
+
+Work Done
+
+Debugged dracut boot errors on bare metal and resolved default SSH configuration issues.
+
+Created a new image by copying from volume and uploaded it successfully to the test environment.
+
+Modified sshd_config and related system configuration files to enable SSH access and streamline login setup.
+
+Fixed neutron port errors during provisioning and enhanced scripts to automatically handle such issues.
+
+Converted and tested the default ISO image from BIOS to UEFI partition, then shared the cadence standard image with cadence_release file to the image team.
+
+Validated SSH login functionality on the new image and streamlined the image conversion workflow for repeatable use.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Goals
+
+Test the image received from the image team with cadence_release.
+
+Work on OAS60 server provisioning.
+
+Resolve ticket IT-1791280.
+
+Test and improve the baremetal provisioning script across scenarios.
+
+Work Done
+
+Received the image from the image team and initiated testing. Encountered dracut errors during boot, compared kernel versions between the ISO default and cadence release image, changed the kernel, and re-tested — but the error persisted.
+
+Recreated images from volume multiple times, updated kernel packages, adjusted GRUB configuration, and performed GRUB installation to analyze boot behavior. Despite the updates, the image still failed at dracut stage.
+
+Added a custom grub.cfg file and ensured required boot parameters were present. Reboot attempts validated the changes but still resulted in the same dracut failure.
+
+Verified and modified SSH and cloud-init configurations to remove default issues and align with cadence standards for accessibility and consistency.
+
+OAS60 server creation was completed successfully. Initially, provisioning was blocked due to a missing userdata.sh file. Created and validated this file, enabling correct provisioning of servers as requested. Logs were reviewed to confirm smooth execution.
+
+Resolved ticket IT-1791280 by identifying and deleting the servers mentioned in the request. Confirmed cleanup through OpenStack console and logs.
+
+Conducted iterative testing cycles after kernel/GRUB changes, documenting results to track progress and highlight persistent dracut issues.
+
+Tested the baremetal provisioning script across different scenarios, including server creation, port handling, volume cleanup, and error recovery. Identified gaps and improved script logic for better reliability and automation during failures.
+
+Verified that the improved script can now handle neutron port issues and server retries gracefully, reducing manual intervention.
