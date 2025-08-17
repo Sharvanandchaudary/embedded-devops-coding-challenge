@@ -1,0 +1,62 @@
+✅ STEP 1: Run These Commands on the Working rhel8.6-vsaravan-sshbaremetaliso
+
+Please run the following commands inside the working VM:
+
+uname -r
+rpm -qa | grep kernel
+cat /etc/fstab
+blkid
+[ -d /sys/firmware/efi ] && echo "UEFI" || echo "BIOS"
+lsblk
+df -h
+lsinitrd /boot/initramfs-$(uname -r).img | wc -l
+lsinitrd /boot/initramfs-$(uname -r).img > /tmp/initramfs-working.txt
+cat /etc/dracut.conf
+ls /etc/dracut.conf.d/
+cat /etc/dracut.conf.d/* 2>/dev/null
+
+
+This will show:
+
+Boot mode
+
+Kernel version
+
+What drivers are in initramfs
+
+If dracut.conf or standard scripts changed anything
+
+If anything was stripped from initramfs
+
+✅ STEP 2: Do the Same on the Cadence Standard (Failing) Image
+
+Also run on the failing image (built with Cadence standardization script):
+
+uname -r
+rpm -qa | grep kernel
+cat /etc/fstab
+blkid
+[ -d /sys/firmware/efi ] && echo "UEFI" || echo "BIOS"
+lsblk
+df -h
+lsinitrd /boot/initramfs-$(uname -r).img | wc -l
+lsinitrd /boot/initramfs-$(uname -r).img > /tmp/initramfs-failing.txt
+cat /etc/dracut.conf
+ls /etc/dracut.conf.d/
+cat /etc/dracut.conf.d/* 2>/dev/null
+
+✅ STEP 3: Compare the Two
+
+You can now either:
+
+diff both initramfs-*.txt and dracut.conf files
+
+Share the outputs here for me to compare
+
+You’re specifically checking for:
+
+Differences in included drivers
+
+hostonly=yes in dracut.conf (which limits initramfs to current VM hardware)
+
+Anything omitted in the Cadence Standard image
