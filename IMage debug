@@ -169,3 +169,46 @@ getenforce
 Any relevant logs: journalctl -xb or rd.debug output if available
 
 I'll wait for your first set of outputs.
+
+
+
+
+
+
+✅ Step-by-Step: Check for Required Drivers in initramfs
+
+Run the following command inside the failing VM:
+
+lsinitrd /boot/initramfs-$(uname -r).img | grep -E 'xfs|ext4|nvme|ahci|ata_piix|sd_mod|dracut-initqueue|udev|multipath|lvm'
+
+
+This will search for:
+
+Driver/Module	Why it's important
+xfs, ext4	File system support (for / or /boot)
+nvme, ahci	NVMe/SATA disk controllers
+ata_piix, sd_mod	Legacy disk/IDE/SCSI support
+dracut-initqueue	Handles boot waiting for devices
+udev	Handles device creation
+multipath	For multipath boot configs (if used)
+lvm	For Logical Volume Manager boot root
+🧪 Optional: Save full list to compare later
+
+If you want to keep the full list:
+
+lsinitrd /boot/initramfs-$(uname -r).img > /tmp/initramfs-cadence.txt
+
+
+Then do the same on the working VM:
+
+lsinitrd /boot/initramfs-$(uname -r).img > /tmp/initramfs-working.txt
+
+
+And then diff:
+
+diff /tmp/initramfs-working.txt /tmp/initramfs-cadence.txt | less
+
+
+Let me know once you run that first grep command. I’ll analyze the output for missing modules.
+
+ChatGPT can make mistakes. Check important info.
