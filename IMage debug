@@ -212,3 +212,465 @@ diff /tmp/initramfs-working.txt /tmp/initramfs-cadence.txt | less
 Let me know once you run that first grep command. I’ll analyze the output for missing modules.
 
 ChatGPT can make mistakes. Check important info.
+
+
+
+
+==========================================
+working image
+
+
+
+
+================================================================================
+Last login: Fri Aug 15 21:46:49 2025 from 10.202.42.38
+[orchestrator@dn00st01 ~]$ ssh root@10.107.132.137
+The authenticity of host '10.107.132.137 (10.107.132.137)' can't be established.
+ECDSA key fingerprint is SHA256:QpxGOlbHwqpJb68oT8uoC2AuxnrsiZY1i5ISrtqd52Y.
+Are you sure you want to continue connecting (yes/no/[fingerprint])? yes
+Warning: Permanently added '10.107.132.137' (ECDSA) to the list of known hosts.
+root@10.107.132.137: Permission denied (publickey,gssapi-keyex,gssapi-with-mic).
+[orchestrator@dn00st01 ~]$ ssh -i veera-dev2.pem orchestrator@10.107.132.137
+Activate the web console with: systemctl enable --now cockpit.socket
+
+Register this system with Red Hat Insights: insights-client --register
+Create an account or view all your systems at https://red.ht/insights-dashboard
+\[orchestrator@8 ~]$ uname -r
+4.18.0-372.9.1.el8.x86_64
+[orchestrator@8 ~]$ [ -d /sys/firmware/efi ] && echo "Boot Mode: UEFI" || "Boot Mode: BIOS"
+Boot Mode: UEFI
+[orchestrator@8 ~]$ lsblk -o NAME,TYPESIZE,TRAN,FSTYPE,MOUNTPOINT
+lsblk: unknown column: TYPESIZE,TRAN,FSTYPE,MOUNTPOINT
+[orchestrator@8 ~]$ blkid
+/dev/vda2: SEC_TYPE="msdos" UUID="7B77-95E7" BLOCK_SIZE="512" TYPE="vfat" PARTUUID="68b2905b-df3e-4fb3-80fa-49d1e773aa33"
+/dev/vda3: LABEL="root" UUID="bb235b3c-0bf6-4374-bf6a-60d9f360d90b" BLOCK_SIZE="512" TYPE="xfs" PARTUUID="6264d520-3fb9-423f-8ab8-7a0a8e3d3562"
+[orchestrator@8 ~]$ cat /prod/cmdline
+cat: /prod/cmdline: No such file or directory
+[orchestrator@8 ~]$ lsinitrd /boot/initramfs-$(uname-r).img | egre[ -i 'viritio|nvme|ahci|scsi|sd_mod|xfs|ext4' | sort -u
+> ^C
+[orchestrator@8 ~]$ lsinitrd /boot/initramfs-$(uname-r).img | egre[ -i 'viritio|nvme|ahci|scsi|sd_mod|xfs|ext4' | sort -u
+> lsinitrd /boot/initramfs-$(uname -r).img | egre[ -i 'viritio|nvme|ahci|scsi|sd_mod|xfs
+|ext4' | sort -u
+> lsinitrd /boot/initramfs-$(uname-r).img | egrep -i 'viritio|nvme|ahci|scsi|sd_mod|xfs|
+ext4' | sort -u
+> ^C
+[orchestrator@8 ~]$ cat /etc/fstab
+UUID=bb235b3c-0bf6-4374-bf6a-60d9f360d90b       /       xfs     defaults        0      0
+UUID=7B77-95E7  /boot/efi       vfat    defaults,uid=0,gid=0,umask=077,shortname=winnt 02
+[orchestrator@8 ~]$ client_loop: send disconnect: Connection reset by peer
+vsaravan@PC-4XCLFK3:~$ ssh root@10.107.132.137
+The authenticity of host '10.107.132.137 (10.107.132.137)' can't be established.
+ED25519 key fingerprint is SHA256:w+Nc6/iUtHeXXXpromEeokLWc2wYBUqV0hTfbpohC7g.
+This key is not known by any other names.
+Are you sure you want to continue connecting (yes/no/[fingerprint])? yes
+Warning: Permanently added '10.107.132.137' (ED25519) to the list of known hosts.
+root@10.107.132.137: Permission denied (publickey,gssapi-keyex,gssapi-with-mic).
+vsaravan@PC-4XCLFK3:~$ ssh -i ~/.ssh/orchestrator_private_key orchestrator@10.107.152.23
+--------------------------------------------------------------------------------
+ This Cadence-owned computer system and Cadence's computer network are made
+ available to you for the purpose of conducting authorized company business.
+ You have no reasonable expectation of privacy with regard to content created,
+ stored and/or transmitted on this system, except as provided by applicable law.
+ Cadence may - at any time, for any reason and with or without notice - search,
+ monitor and inspect this computer and network to the full extent permitted by
+ applicable law.
+================================================================================
+Last login: Sun Aug 17 06:29:29 2025 from 10.156.0.21
+[orchestrator@dn00st01 ~]$ ssh root@10.107.132.137
+root@10.107.132.137: Permission denied (publickey,gssapi-keyex,gssapi-with-mic).
+[orchestrator@dn00st01 ~]$ ssh root@10.107.132.137
+root@10.107.132.137: Permission denied (publickey,gssapi-keyex,gssapi-with-mic).
+[orchestrator@dn00st01 ~]$ ssh -i veera-dev2.pem cloud-user@10.107.132.137
+cloud-user@10.107.132.137: Permission denied (publickey,gssapi-keyex,gssapi-with-mic).
+[orchestrator@dn00st01 ~]$ ssh -i veera-dev2.pem cloud-user@10.107.132.137
+cloud-user@10.107.132.137: Permission denied (publickey,gssapi-keyex,gssapi-with-mic).
+[orchestrator@dn00st01 ~]$ ssh -i veera-dev2.pem orchestRATOR@10.107.132.137
+orchestRATOR@10.107.132.137: Permission denied (publickey,gssapi-keyex,gssapi-with-mic).
+[orchestrator@dn00st01 ~]$ ssh -i veera-dev2.pem orchestrator@10.107.132.137
+Activate the web console with: systemctl enable --now cockpit.socket
+
+Register this system with Red Hat Insights: insights-client --register
+Create an account or view all your systems at https://red.ht/insights-dashboard
+Last login: Sat Aug 16 00:21:32 2025 from 10.107.152.23
+[orchestrator@8 ~]$ sudo -i
+[root@8 ~]# uname -r
+4.18.0-372.9.1.el8.x86_64
+[root@8 ~]# rpm -qa | grep kernel
+kernel-core-4.18.0-372.9.1.el8.x86_64
+kernel-tools-libs-4.18.0-372.9.1.el8.x86_64
+kernel-modules-4.18.0-372.9.1.el8.x86_64
+kernel-tools-4.18.0-372.9.1.el8.x86_64
+kernel-4.18.0-372.9.1.el8.x86_64
+[root@8 ~]# lsinitrd /boot/initramfs-$(uname -r).img | less
+
+[root@8 ~]#
+[root@8 ~]# lsinitrd /boot/initramfs-$(uname -r).img | grep -E 'xfs|ext4|nvme|ahci|ata_piix|sd_mod|dracut-initqueue|udev|multipath|lvm'
+udev-rules
+lrwxrwxrwx   1 root     root           48 Jan 31  2022 etc/systemd/system/initrd.target.wants/dracut-initqueue.service -> /usr/lib/systemd/system/dracut-initqueue.service
+lrwxrwxrwx   1 root     root           47 Jan 31  2022 etc/systemd/system/initrd.target.wants/dracut-pre-udev.service -> /usr/lib/systemd/system/dracut-pre-udev.service
+drwxr-xr-x   3 root     root            0 Jan 31  2022 etc/udev
+drwxr-xr-x   2 root     root            0 Jan 31  2022 etc/udev/rules.d
+-rw-r--r--   1 root     root          142 Oct  8  2018 etc/udev/rules.d/11-dm.rules
+-rw-r--r--   1 root     root          680 Jan 31  2022 etc/udev/rules.d/59-persistent-storage-dm.rules
+-rw-r--r--   1 root     root          297 Jan 31  2022 etc/udev/rules.d/59-persistent-storage.rules
+-rw-r--r--   1 root     root         1030 Jan 31  2022 etc/udev/rules.d/61-persistent-storage.rules
+-rw-r--r--   1 root     root          215 Jun 22  2018 etc/udev/udev.conf
+-rwxr-xr-x   1 root     root         2147 Oct  8  2018 usr/bin/dracut-initqueue
+-rwxr-xr-x   1 root     root         1413 Oct  8  2018 usr/bin/dracut-pre-udev
+-rwxr-xr-x   1 root     root       434744 Jan 31  2022 usr/bin/udevadm
+drwxr-xr-x   2 root     root            0 Jan 31  2022 usr/lib/dracut/hooks/pre-udev
+-rwxr-xr-x   1 root     root          102 Oct  8  2018 usr/lib/dracut/hooks/pre-udev/30-dm-pre-udev.sh
+-rwxr-xr-x   1 root     root         1119 Oct  8  2018 usr/lib/dracut/hooks/pre-udev/50-ifname-genrules.sh
+-rwxr-xr-x   1 root     root          870 Oct  8  2018 usr/lib/dracut/hooks/pre-udev/99-nfs-start-rpc.sh
+-rw-r--r--   1 root     root        11464 Jan 31  2022 usr/lib/modules/4.18.0-372.9.1.el8.x86_64/kernel/drivers/ata/ahci.ko.xz
+-rw-r--r--   1 root     root         2856 Jan 31  2022 usr/lib/modules/4.18.0-372.9.1.el8.x86_64/kernel/drivers/ata/ahci_platform.ko.xz
+-rw-r--r--   1 root     root         9680 Jan 31  2022 usr/lib/modules/4.18.0-372.9.1.el8.x86_64/kernel/drivers/ata/ata_piix.ko.xz
+-rw-r--r--   1 root     root        16760 Jan 31  2022 usr/lib/modules/4.18.0-372.9.1.el8.x86_64/kernel/drivers/ata/libahci.ko.xz
+-rw-r--r--   1 root     root         5628 Jan 31  2022 usr/lib/modules/4.18.0-372.9.1.el8.x86_64/kernel/drivers/ata/libahci_platform.ko.xz
+-rw-r--r--   1 root     root        16016 Jan 31  2022 usr/lib/modules/4.18.0-372.9.1.el8.x86_64/kernel/drivers/md/dm-multipath.ko.xz
+drwxr-xr-x   4 root     root            0 Jan 31  2022 usr/lib/modules/4.18.0-372.9.1.el8.x86_64/kernel/drivers/nvme
+drwxr-xr-x   2 root     root            0 Jan 31  2022 usr/lib/modules/4.18.0-372.9.1.el8.x86_64/kernel/drivers/nvme/host
+-rw-r--r--   1 root     root        47716 Jan 31  2022 usr/lib/modules/4.18.0-372.9.1.el8.x86_64/kernel/drivers/nvme/host/nvme-core.ko.xz
+-rw-r--r--   1 root     root         9664 Jan 31  2022 usr/lib/modules/4.18.0-372.9.1.el8.x86_64/kernel/drivers/nvme/host/nvme-fabrics.ko.xz
+-rw-r--r--   1 root     root        23892 Jan 31  2022 usr/lib/modules/4.18.0-372.9.1.el8.x86_64/kernel/drivers/nvme/host/nvme-fc.ko.xz
+-rw-r--r--   1 root     root        18696 Jan 31  2022 usr/lib/modules/4.18.0-372.9.1.el8.x86_64/kernel/drivers/nvme/host/nvme-rdma.ko.xz
+-rw-r--r--   1 root     root        18032 Jan 31  2022 usr/lib/modules/4.18.0-372.9.1.el8.x86_64/kernel/drivers/nvme/host/nvme-tcp.ko.xz
+-rw-r--r--   1 root     root        21048 Jan 31  2022 usr/lib/modules/4.18.0-372.9.1.el8.x86_64/kernel/drivers/nvme/host/nvme.ko.xz
+drwxr-xr-x   2 root     root            0 Jan 31  2022 usr/lib/modules/4.18.0-372.9.1.el8.x86_64/kernel/drivers/nvme/target
+-rw-r--r--   1 root     root         7672 Jan 31  2022 usr/lib/modules/4.18.0-372.9.1.el8.x86_64/kernel/drivers/nvme/target/nvme-loop.ko.xz
+-rw-r--r--   1 root     root        17340 Jan 31  2022 usr/lib/modules/4.18.0-372.9.1.el8.x86_64/kernel/drivers/nvme/target/nvmet-fc.ko.xz
+-rw-r--r--   1 root     root        40616 Jan 31  2022 usr/lib/modules/4.18.0-372.9.1.el8.x86_64/kernel/drivers/nvme/target/nvmet.ko.xz
+-rw-r--r--   1 root     root        23688 Jan 31  2022 usr/lib/modules/4.18.0-372.9.1.el8.x86_64/kernel/drivers/scsi/sd_mod.ko.xz
+drwxr-xr-x   2 root     root            0 Jan 31  2022 usr/lib/modules/4.18.0-372.9.1.el8.x86_64/kernel/fs/ext4
+-rw-r--r--   1 root     root       266568 Jan 31  2022 usr/lib/modules/4.18.0-372.9.1.el8.x86_64/kernel/fs/ext4/ext4.ko.xz
+drwxr-xr-x   2 root     root            0 Jan 31  2022 usr/lib/modules/4.18.0-372.9.1.el8.x86_64/kernel/fs/xfs
+-rw-r--r--   1 root     root       456420 Jan 31  2022 usr/lib/modules/4.18.0-372.9.1.el8.x86_64/kernel/fs/xfs/xfs.ko.xz
+-rw-r--r--   1 root     root          821 Oct  8  2018 usr/lib/systemd/system/dracut-initqueue.service
+-rw-r--r--   1 root     root          993 Oct  8  2018 usr/lib/systemd/system/dracut-pre-udev.service
+-rw-r--r--   1 root     root          708 Jan 31  2022 usr/lib/systemd/system/initrd-udevadm-cleanup-db.service
+lrwxrwxrwx   1 root     root           31 Jan 31  2022 usr/lib/systemd/system/sockets.target.wants/systemd-udevd-control.socket -> ../systemd-udevd-control.socket
+lrwxrwxrwx   1 root     root           30 Jan 31  2022 usr/lib/systemd/system/sockets.target.wants/systemd-udevd-kernel.socket -> ../systemd-udevd-kernel.socket
+lrwxrwxrwx   1 root     root           31 Jan 31  2022 usr/lib/systemd/system/sysinit.target.wants/systemd-udev-trigger.service -> ../systemd-udev-trigger.service
+lrwxrwxrwx   1 root     root           24 Jan 31  2022 usr/lib/systemd/system/sysinit.target.wants/systemd-udevd.service -> ../systemd-udevd.service
+-rw-r--r--   1 root     root          867 Jan 31  2022 usr/lib/systemd/system/systemd-udev-settle.service
+-rw-r--r--   1 root     root          771 Jan 31  2022 usr/lib/systemd/system/systemd-udev-trigger.service
+-rw-r--r--   1 root     root          635 Jun 22  2018 usr/lib/systemd/system/systemd-udevd-control.socket
+-rw-r--r--   1 root     root          610 Jun 22  2018 usr/lib/systemd/system/systemd-udevd-kernel.socket
+-rw-r--r--   1 root     root         1070 Jan 31  2022 usr/lib/systemd/system/systemd-udevd.service
+-rwxr-xr-x   1 root     root       418304 Jan 31  2022 usr/lib/systemd/systemd-udevd
+drwxr-xr-x   3 root     root            0 Jan 31  2022 usr/lib/udev
+-rwxr-xr-x   1 root     root        41696 Jan 31  2022 usr/lib/udev/ata_id
+-rwxr-xr-x   1 root     root        33280 Jan 31  2022 usr/lib/udev/cdrom_id
+-rwxr-xr-x   1 root     root          562 Oct  8  2018 usr/lib/udev/fc_transport_scan_lun.sh
+drwxr-xr-x   2 root     root            0 Jan 31  2022 usr/lib/udev/rules.d
+-r--r--r--   1 root     root         7266 Jan  4  2022 usr/lib/udev/rules.d/10-dm.rules
+-r--r--r--   1 root     root         1794 Jan  4  2022 usr/lib/udev/rules.d/13-dm-disk.rules
+-rw-r--r--   1 root     root         1834 Jan 31  2022 usr/lib/udev/rules.d/40-redhat.rules
+-rw-r--r--   1 root     root         3750 Jan 31  2022 usr/lib/udev/rules.d/50-udev-default.rules
+-rw-r--r--   1 root     root          626 Jan 31  2022 usr/lib/udev/rules.d/60-block.rules
+-rw-r--r--   1 root     root         6528 Jun 22  2018 usr/lib/udev/rules.d/60-persistent-storage.rules
+-rw-r--r--   1 root     root         2671 Jun 22  2018 usr/lib/udev/rules.d/70-uaccess.rules
+-rw-r--r--   1 root     root         2758 Jan 31  2022 usr/lib/udev/rules.d/71-seat.rules
+-rw-r--r--   1 root     root          636 Jan 31  2022 usr/lib/udev/rules.d/73-seat-late.rules
+-rw-r--r--   1 root     root          452 Jun 22  2018 usr/lib/udev/rules.d/75-net-description.rules
+-rw-r--r--   1 root     root          615 Jun 22  2018 usr/lib/udev/rules.d/80-drivers.rules
+-rw-r--r--   1 root     root          292 Jun 22  2018 usr/lib/udev/rules.d/80-net-setup-link.rules
+-rw-r--r--   1 root     root         1687 Jan 31  2022 usr/lib/udev/rules.d/85-nm-unmanaged.rules
+-rw-r--r--   1 root     root          510 Jan 31  2022 usr/lib/udev/rules.d/90-vconsole.rules
+-r--r--r--   1 root     root          483 Jan  4  2022 usr/lib/udev/rules.d/95-dm-notify.rules
+-rw-r--r--   1 root     root         4367 Jan 31  2022 usr/lib/udev/rules.d/99-systemd.rules
+-rwxr-xr-x   1 root     root          568 Oct  8  2018 usr/lib/udev/sas_transport_scan_lun.sh
+-rwxr-xr-x   1 root     root        54968 Jan 31  2022 usr/lib/udev/scsi_id
+lrwxrwxrwx   1 root     root           17 Jan 31  2022 usr/lib64/libudev.so.1 -> libudev.so.1.6.11
+-rwxr-xr-x   1 root     root       636728 Jan 31  2022 usr/lib64/libudev.so.1.6.11
+-rwxr-xr-x   4 root     root       336432 Jan 31  2022 usr/sbin/fsck.ext4
+-rwxr-xr-x   1 root     root         1968 Dec  9  2021 usr/sbin/fsck.xfs
+lrwxrwxrwx   1 root     root           14 Jan 31  2022 usr/sbin/udevadm -> ../bin/udevadm
+-rwxr-xr-x   1 root     root       778688 Dec  9  2021 usr/sbin/xfs_db
+-rwxr-xr-x   1 root     root          782 Dec  9  2021 usr/sbin/xfs_metadump
+-rwxr-xr-x   1 root     root       732296 Dec  9  2021 usr/sbin/xfs_repair
+[root@8 ~]# lsinitrd /boot/initramfs-$(uname -r).img | grep -E 'xfs|ext4|nvme|ahci|ata_piix|sd_mod|dracut-initqueue|udev|multipath|lvm'^C
+[root@8 ~]# lsinitrd /boot/initramfs-$(uname -r).img > /tmp/initramfs-working.txt
+[root@8 ~]# mkdir -p /tmp/compare=initramfs^C
+[root@8 ~]# cat /etc/fstab
+UUID=bb235b3c-0bf6-4374-bf6a-60d9f360d90b       /       xfs     defaults        0       0
+UUID=7B77-95E7  /boot/efi       vfat    defaults,uid=0,gid=0,umask=077,shortname=winnt  0       2
+[root@8 ~]# blkid
+/dev/vda2: SEC_TYPE="msdos" UUID="7B77-95E7" BLOCK_SIZE="512" TYPE="vfat" PARTUUID="68b2905b-df3e-4fb3-80fa-49d1e773aa33"
+/dev/vda3: LABEL="root" UUID="bb235b3c-0bf6-4374-bf6a-60d9f360d90b" BLOCK_SIZE="512" TYPE="xfs" PARTUUID="6264d520-3fb9-423f-8ab8-7a0a8e3d3562"
+/dev/vda1: PARTUUID="fac7f1fb-3e8d-4137-a512-961de09a5549"
+[root@8 ~]# cat /boot/grub2/grub.cfg | grep -A10 menuentry
+[root@8 ~]# [-d /sys/firmware/efi ] && echo "UEFI" || echo"BIOS"
+-bash: [-d: command not found
+-bash: echoBIOS: command not found
+[root@8 ~]# [ -d /sys/firmware/efi ] && echo "UEFI" || echo"BIOS"
+UEFI
+[root@8 ~]# mount | grep efi
+efivarfs on /sys/firmware/efi/efivars type efivarfs (rw,nosuid,nodev,noexec,relatime)
+/dev/vda2 on /boot/efi type vfat (rw,relatime,fmask=0077,dmask=0077,codepage=437,iocharset=ascii,shortname=winnt,errors=remount-ro)
+[root@8 ~]# cat sys/firmware
+cat: sys/firmware: No such file or directory
+[root@8 ~]# cat /sys/firmware/efi/efivars
+cat: /sys/firmware/efi/efivars: Is a directory
+[root@8 ~]# cd /sys/firmware/efi/efivars
+[root@8 efivars]# ls
+Boot0000-8be4df61-93ca-11d2-aa0d-00e098032b8c
+Boot0001-8be4df61-93ca-11d2-aa0d-00e098032b8c
+Boot0002-8be4df61-93ca-11d2-aa0d-00e098032b8c
+Boot0003-8be4df61-93ca-11d2-aa0d-00e098032b8c
+BootCurrent-8be4df61-93ca-11d2-aa0d-00e098032b8c
+BootOptionSupport-8be4df61-93ca-11d2-aa0d-00e098032b8c
+BootOrder-8be4df61-93ca-11d2-aa0d-00e098032b8c
+ConIn-8be4df61-93ca-11d2-aa0d-00e098032b8c
+ConInDev-8be4df61-93ca-11d2-aa0d-00e098032b8c
+ConOut-8be4df61-93ca-11d2-aa0d-00e098032b8c
+ConOutDev-8be4df61-93ca-11d2-aa0d-00e098032b8c
+ErrOut-8be4df61-93ca-11d2-aa0d-00e098032b8c
+ErrOutDev-8be4df61-93ca-11d2-aa0d-00e098032b8c
+Key0000-8be4df61-93ca-11d2-aa0d-00e098032b8c
+Key0001-8be4df61-93ca-11d2-aa0d-00e098032b8c
+Lang-8be4df61-93ca-11d2-aa0d-00e098032b8c
+LangCodes-8be4df61-93ca-11d2-aa0d-00e098032b8c
+MTC-eb704011-1402-11d3-8e77-00a0c969723b
+MokListRT-605dab50-e046-4300-abb6-3dd810dd8b23
+MokListXRT-605dab50-e046-4300-abb6-3dd810dd8b23
+OsIndicationsSupported-8be4df61-93ca-11d2-aa0d-00e098032b8c
+PlatformLang-8be4df61-93ca-11d2-aa0d-00e098032b8c
+PlatformLangCodes-8be4df61-93ca-11d2-aa0d-00e098032b8c
+PlatformRecovery0000-8be4df61-93ca-11d2-aa0d-00e098032b8c
+SbatLevelRT-605dab50-e046-4300-abb6-3dd810dd8b23
+Timeout-8be4df61-93ca-11d2-aa0d-00e098032b8c
+VMMBootOrder0000-668f4529-63d0-4bb5-b65d-6fbb9d36a44a
+VarErrorFlag-04b37fe8-f6ae-480b-bdd5-37d98c5e89aa
+[root@8 efivars]# cat /etc/dracut.conf
+# PUT YOUR CONFIG IN separate files
+# in /etc/dracut.conf.d named "<name>.conf"
+# SEE man dracut.conf(5) for options
+[root@8 efivars]# cat /etc/dracut.conf.d/*
+cat: '/etc/dracut.conf.d/*': No such file or directory
+[root@8 efivars]# getenforce
+Enforcing
+[root@8 efivars]# grub2-install --version
+grub2-install (GRUB) 2.03
+[root@8 efivars]# lsblk
+NAME   MAJ:MIN RM  SIZE RO TYPE MOUNTPOINT
+vda    252:0    0  100G  0 disk
+├─vda1 252:1    0    1M  0 part
+├─vda2 252:2    0  100M  0 part /boot/efi
+└─vda3 252:3    0 99.9G  0 part /
+[root@8 efivars]# df -h
+Filesystem      Size  Used Avail Use% Mounted on
+devtmpfs        3.8G     0  3.8G   0% /dev
+tmpfs           3.8G     0  3.8G   0% /dev/shm
+tmpfs           3.8G  8.7M  3.8G   1% /run
+tmpfs           3.8G     0  3.8G   0% /sys/fs/cgroup
+/dev/vda3       100G  4.1G   96G   5% /
+/dev/vda2       100M  5.8M   95M   6% /boot/efi
+tmpfs           776M     0  776M   0% /run/user/5002
+[root@8 efivars]# rpm -qa | sort > /tmp/pkglist.txt\
+> ^C
+[root@8 efivars]#
+[root@8 efivars]# rpm -qa | sort > /tmp/pkglist.txt
+[root@8 efivars]# rpm -qa | sort > /tmp/pkglist.txt^C
+[root@8 efivars]# lsinitrd | grep lvm
+[root@8 efivars]# lsinitrd | grep net
+network-manager
+network
+kernel-network-modules
+qemu-net
+-rw-r--r--   1 root     root          767 Dec  2  2021 etc/netconfig
+drwxr-xr-x   2 root     root            0 Jan 31  2022 usr/lib/dracut/hooks/netroot
+drwxr-xr-x   3 root     root            0 Jan 31  2022
+
+
+
+
+==============================not working ================
+
+
+
+Last login: Sun Aug 17 18:16:18 2025 from 10.107.183.23
+[root@grub ~]# uname -r
+4.18.0-372.9.1.el8.x86_64
+[root@grub ~]#  rpm -qa | grep kernel
+abrt-addon-kerneloops-2.10.9-21.el8.x86_64
+kernel-devel-4.18.0-372.26.1.el8_6.x86_64
+kernel-modules-4.18.0-372.9.1.el8.x86_64
+kernel-core-4.18.0-372.9.1.el8.x86_64
+kernel-headers-4.18.0-372.26.1.el8_6.x86_64
+kernel-4.18.0-372.9.1.el8.x86_64
+kernel-core-4.18.0-372.26.1.el8_6.x86_64
+kernel-modules-4.18.0-372.26.1.el8_6.x86_64
+kernel-tools-4.18.0-372.26.1.el8_6.x86_64
+kernel-devel-4.18.0-372.9.1.el8.x86_64
+kernel-tools-libs-4.18.0-372.26.1.el8_6.x86_64
+kernel-4.18.0-372.26.1.el8_6.x86_64
+[root@grub ~]# lsinitrd /boot/initramfs-$(uname -r).img | grep -E 'xfs|ext4|nvme|ahci|ata_piix|sd_mod|dracut-initqueue|udev|multipath|lvm'
+udev-rules
+lrwxrwxrwx   1 root     root           48 May 23  2022 etc/systemd/system/initrd.target.wants/dracut-initqueue.service -> /usr/lib/systemd/system/dracut-initqueue.service
+lrwxrwxrwx   1 root     root           47 May 23  2022 etc/systemd/system/initrd.target.wants/dracut-preudev.service -> /usr/lib/systemd/system/dracut-pre-udev.service
+drwxr-xr-x   3 root     root            0 May 23  2022 etc/udev
+drwxr-xr-x   2 root     root            0 May 23  2022 etc/udev/rules.d
+-rw-r--r--   1 root     root          297 May 23  2022 etc/udev/rules.d/59-persistent-storage.rules
+-rw-r--r--   1 root     root         1030 May 23  2022 etc/udev/rules.d/61-persistent-storage.rules
+-rw-r--r--   1 root     root          215 Jun 22  2018 etc/udev/udev.conf
+-rwxr-xr-x   1 root     root         2147 Oct  8  2018 usr/bin/dracut-initqueue
+-rwxr-xr-x   1 root     root         1413 Oct  8  2018 usr/bin/dracut-pre-udev
+-rwxr-xr-x   1 root     root       434744 Feb  8  2022 usr/bin/udevadm
+drwxr-xr-x   2 root     root            0 May 23  2022 usr/lib/dracut/hooks/pre-udev
+-rwxr-xr-x   1 root     root         1119 Oct  8  2018 usr/lib/dracut/hooks/pre-udev/50-ifname-genrules.sh
+-rw-r--r--   1 root     root        11464 Apr 15  2022 usr/lib/modules/4.18.0-372.9.1.el8.x86_64/kernel/drivers/ata/ahci.ko.xz
+-rw-r--r--   1 root     root         9680 Apr 15  2022 usr/lib/modules/4.18.0-372.9.1.el8.x86_64/kernel/drivers/ata/ata_piix.ko.xz
+-rw-r--r--   1 root     root        16760 Apr 15  2022 usr/lib/modules/4.18.0-372.9.1.el8.x86_64/kernel/drivers/ata/libahci.ko.xz
+-rw-r--r--   1 root     root        23688 Apr 15  2022 usr/lib/modules/4.18.0-372.9.1.el8.x86_64/kernel/drivers/scsi/sd_mod.ko.xz
+drwxr-xr-x   2 root     root            0 May 23  2022 usr/lib/modules/4.18.0-372.9.1.el8.x86_64/kernel/fs/xfs
+-rw-r--r--   1 root     root       456420 Apr 15  2022 usr/lib/modules/4.18.0-372.9.1.el8.x86_64/kernel/fs/xfs/xfs.ko.xz
+-rw-r--r--   1 root     root          821 Oct  8  2018 usr/lib/systemd/system/dracut-initqueue.service
+-rw-r--r--   1 root     root          993 Oct  8  2018 usr/lib/systemd/system/dracut-pre-udev.service
+-rw-r--r--   1 root     root          708 Feb  8  2022 usr/lib/systemd/system/initrd-udevadm-cleanup-db.service
+lrwxrwxrwx   1 root     root           31 May 23  2022 usr/lib/systemd/system/sockets.target.wants/systemd-udevd-control.socket -> ../systemd-udevd-control.socket
+lrwxrwxrwx   1 root     root           30 May 23  2022 usr/lib/systemd/system/sockets.target.wants/systemd-udevd-kernel.socket -> ../systemd-udevd-kernel.socket
+lrwxrwxrwx   1 root     root           31 May 23  2022 usr/lib/systemd/system/sysinit.target.wants/systemd-udev-trigger.service -> ../systemd-udev-trigger.service
+lrwxrwxrwx   1 root     root           24 May 23  2022 usr/lib/systemd/system/sysinit.target.wants/systemd-udevd.service -> ../systemd-udevd.service
+-rw-r--r--   1 root     root          867 Feb  8  2022 usr/lib/systemd/system/systemd-udev-settle.service
+-rw-r--r--   1 root     root          771 Feb  8  2022 usr/lib/systemd/system/systemd-udev-trigger.service
+-rw-r--r--   1 root     root          635 Jun 22  2018 usr/lib/systemd/system/systemd-udevd-control.socket
+-rw-r--r--   1 root     root          610 Jun 22  2018 usr/lib/systemd/system/systemd-udevd-kernel.socket
+-rw-r--r--   1 root     root         1070 Feb  8  2022 usr/lib/systemd/system/systemd-udevd.service
+-rwxr-xr-x   1 root     root       418304 Feb  8  2022 usr/lib/systemd/systemd-udevd
+drwxr-xr-x   3 root     root            0 May 23  2022 usr/lib/udev
+-rwxr-xr-x   1 root     root        41696 Feb  8  2022 usr/lib/udev/ata_id
+-rwxr-xr-x   1 root     root        33280 Feb  8  2022 usr/lib/udev/cdrom_id
+drwxr-xr-x   2 root     root            0 May 23  2022 usr/lib/udev/rules.d
+-rw-r--r--   1 root     root         1834 Feb  8  2022 usr/lib/udev/rules.d/40-redhat.rules
+-rw-r--r--   1 root     root         3750 Feb  8  2022 usr/lib/udev/rules.d/50-udev-default.rules
+-rw-r--r--   1 root     root          626 Feb  8  2022 usr/lib/udev/rules.d/60-block.rules
+-rw-r--r--   1 root     root         6528 Jun 22  2018 usr/lib/udev/rules.d/60-persistent-storage.rules
+-rw-r--r--   1 root     root         2671 Jun 22  2018 usr/lib/udev/rules.d/70-uaccess.rules
+-rw-r--r--   1 root     root          995 Dec 18  2018 usr/lib/udev/rules.d/71-biosdevname.rules
+-rw-r--r--   1 root     root         2758 Feb  8  2022 usr/lib/udev/rules.d/71-seat.rules
+-rw-r--r--   1 root     root          636 Feb  8  2022 usr/lib/udev/rules.d/73-seat-late.rules
+-rw-r--r--   1 root     root          452 Jun 22  2018 usr/lib/udev/rules.d/75-net-description.rules
+-rw-r--r--   1 root     root          615 Jun 22  2018 usr/lib/udev/rules.d/80-drivers.rules
+-rw-r--r--   1 root     root          292 Jun 22  2018 usr/lib/udev/rules.d/80-net-setup-link.rules
+-rw-r--r--   1 root     root         1687 Feb 24  2022 usr/lib/udev/rules.d/85-nm-unmanaged.rules
+-rw-r--r--   1 root     root          510 Feb  8  2022 usr/lib/udev/rules.d/90-vconsole.rules
+-rw-r--r--   1 root     root         4367 Feb  8  2022 usr/lib/udev/rules.d/99-systemd.rules
+-rwxr-xr-x   1 root     root        54968 Feb  8  2022 usr/lib/udev/scsi_id
+lrwxrwxrwx   1 root     root           17 May 23  2022 usr/lib64/libudev.so -> libudev.so.1.6.11
+lrwxrwxrwx   1 root     root           17 May 23  2022 usr/lib64/libudev.so.1 -> libudev.so.1.6.11
+-rwxr-xr-x   1 root     root       636728 Feb  8  2022 usr/lib64/libudev.so.1.6.11
+-rwxr-xr-x   1 root     root         1968 Dec  9  2021 usr/sbin/fsck.xfs
+lrwxrwxrwx   1 root     root           14 May 23  2022 usr/sbin/udevadm -> ../bin/udevadm
+-rwxr-xr-x   1 root     root       778688 Dec  9  2021 usr/sbin/xfs_db
+-rwxr-xr-x   1 root     root          782 Dec  9  2021 usr/sbin/xfs_metadump
+-rwxr-xr-x   1 root     root       732296 Dec  9  2021 usr/sbin/xfs_repair
+[root@grub ~]# lsinitrd /boot/initramfs-$(uname -r).img > /tmp/initramfs-cadence.txt
+[root@grub ~]# cat /etc/fstab
+UUID=bb235b3c-0bf6-4374-bf6a-60d9f360d90b       /       xfs     defaults        0       0
+UUID=7B77-95E7  /boot/efi       vfat    defaults,uid=0,gid=0,umask=077,shortname=winnt  0       2
+[root@grub ~]# blkid
+/dev/vda2: SEC_TYPE="msdos" UUID="7B77-95E7" BLOCK_SIZE="512" TYPE="vfat" PARTUUID="68b2905b-df3e-4fb3-80fa-49d1e773aa33"
+/dev/vda3: LABEL="root" UUID="bb235b3c-0bf6-4374-bf6a-60d9f360d90b" BLOCK_SIZE="512" TYPE="xfs" PARTUUID="6264d520-3fb9-423f-8ab8-7a0a8e3d3562"
+/dev/vda1: PARTUUID="fac7f1fb-3e8d-4137-a512-961de09a5549"
+[root@grub ~]# [ -d /sys/firmware/efi ] && echo "UEFI" || echo"BIOS"
+bash: echoBIOS: command not found...
+^C
+[root@grub ~]# [ -d /sys/firmware/efi ] && echo "UEFI" || echo "BIOS"
+BIOS
+[root@grub ~]# mount | grep efi
+/dev/vda2 on /boot/efi type vfat (rw,relatime,fmask=0077,dmask=0077,codepage=437,iocharset=ascii,shortname=winnt,errors=remount-ro)
+[root@grub ~]#  cd /sys/firmware/efi/efivars
+-bash: cd: /sys/firmware/efi/efivars: No such file or directory
+[root@grub ~]#  getenforce
+Enforcing
+[root@grub ~]#  grub2-install --version
+grub2-install (GRUB) 2.03
+[root@grub ~]#  lsblk
+NAME   MAJ:MIN RM  SIZE RO TYPE MOUNTPOINT
+vda    253:0    0  100G  0 disk
+├─vda1 253:1    0    1M  0 part
+├─vda2 253:2    0  100M  0 part /boot/efi
+└─vda3 253:3    0 99.9G  0 part /
+[root@grub ~]# df -h
+Filesystem      Size  Used Avail Use% Mounted on
+devtmpfs        3.8G     0  3.8G   0% /dev
+tmpfs           3.8G     0  3.8G   0% /dev/shm
+tmpfs           3.8G   20M  3.8G   1% /run
+tmpfs           3.8G     0  3.8G   0% /sys/fs/cgroup
+/dev/vda3       100G  9.1G   91G  10% /
+/dev/vda2       100M   17M   84M  17% /boot/efi
+tmpfs           777M     0  777M   0% /run/user/0
+[root@grub ~]#  rpm -qa | sort > /tmp/pkglist.txt
+[root@grub ~]#  lsinitrd | grep net
+network-manager
+network
+kernel-network-modules
+qemu-net
+drwxr-xr-x   2 root     root            0 May 23  2022 usr/lib/dracut/hooks/netroot
+-rw-r--r--   1 root     root         1360 Jun 17  2020 usr/lib/kbd/keymaps/legacy/i386/qwerty/il-phonetic.map.gz
+drwxr-xr-x   3 root     root            0 May 23  2022 usr/lib/modules/4.18.0-372.9.1.el8.x86_64/kernel/drivers/net
+drwxr-xr-x   4 root     root            0 May 23  2022 usr/lib/modules/4.18.0-372.9.1.el8.x86_64/kernel/drivers/net/ethernet
+drwxr-xr-x   3 root     root            0 May 23  2022 usr/lib/modules/4.18.0-372.9.1.el8.x86_64/kernel/drivers/net/ethernet/intel
+drwxr-xr-x   2 root     root            0 May 23  2022 usr/lib/modules/4.18.0-372.9.1.el8.x86_64/kernel/drivers/net/ethernet/intel/e1000
+-rw-r--r--   1 root     root        59192 Apr 15  2022 usr/lib/modules/4.18.0-372.9.1.el8.x86_64/kernel/drivers/net/ethernet/intel/e1000/e1000.ko.xz
+drwxr-xr-x   2 root     root            0 May 23  2022 usr/lib/modules/4.18.0-372.9.1.el8.x86_64/kernel/drivers/net/ethernet/realtek
+-rw-r--r--   1 root     root        15572 Apr 15  2022 usr/lib/modules/4.18.0-372.9.1.el8.x86_64/kernel/drivers/net/ethernet/realtek/8139cp.ko.xz
+-rw-r--r--   1 root     root         5124 Apr 15  2022 usr/lib/modules/4.18.0-372.9.1.el8.x86_64/kernel/drivers/net/mii.ko.xz
+-rw-r--r--   1 root     root         6872 Apr 15  2022 usr/lib/modules/4.18.0-372.9.1.el8.x86_64/kernel/drivers/net/net_failover.ko.xz
+-rw-r--r--   1 root     root        26172 Apr 15  2022 usr/lib/modules/4.18.0-372.9.1.el8.x86_64/kernel/drivers/net/virtio_net.ko.xz
+-rw-r--r--   1 root     root         4164 Apr 15  2022 usr/lib/modules/4.18.0-372.9.1.el8.x86_64/kernel/drivers/usb/storage/ums-onetouch.ko.xz
+drwxr-xr-x   3 root     root            0 May 23  2022 usr/lib/modules/4.18.0-372.9.1.el8.x86_64/kernel/net
+drwxr-xr-x   2 root     root            0 May 23  2022 usr/lib/modules/4.18.0-372.9.1.el8.x86_64/kernel/net/core
+-rw-r--r--   1 root     root         4088 Apr 15  2022 usr/lib/modules/4.18.0-372.9.1.el8.x86_64/kernel/net/core/failover.ko.xz
+-rwxr-xr-x   1 root     root        25693 May 23  2022 usr/lib/net-lib.sh
+drwxr-xr-x   2 root     root            0 May 23  2022 usr/lib/systemd/network
+-rw-r--r--   1 root     root          462 Feb  8  2022 usr/lib/systemd/network/99-default.link
+-rw-r--r--   1 root     root          505 Jun 22  2018 usr/lib/systemd/system/network-online.target
+-rw-r--r--   1 root     root          502 Jun 22  2018 usr/lib/systemd/system/network-pre.target
+-rw-r--r--   1 root     root          521 Jun 22  2018 usr/lib/systemd/system/network.target
+-rw-r--r--   1 root     root          452 Jun 22  2018 usr/lib/udev/rules.d/75-net-description.rules
+-rw-r--r--   1 root     root          292 Jun 22  2018 usr/lib/udev/rules.d/80-net-setup-link.rules
+lrwxrwxrwx   1 root     root           16 May 23  2022 usr/lib64/libnettle.so -> libnettle.so.6.5
+lrwxrwxrwx   1 root     root           16 May 23  2022 usr/lib64/libnettle.so.6 -> libnettle.so.6.5
+-rwxr-xr-x   1 root     root       239360 Jul 14  2021 usr/lib64/libnettle.so.6.5
+-rwxr-xr-x   1 root     root         2677 May 23  2022 usr/sbin/netroot
+[root@grub ~]#  lsinitrd | grep multipath
+[root@grub ~]#
+
+cat cadence.txt
+[root@grub tmp]# cat cadence.txt
+Image: /boot/initramfs-4.18.0-372.9.1.el8.x86_64.img: 29M
+========================================================================
+Early CPIO image
+========================================================================
+drwxr-xr-x   3 root     root            0 May 23  2022 .
+-rw-r--r--   1 root     root            2 May 23  2022 early_cpio
+drwxr-xr-x   3 root     root            0 May 23  2022 kernel
+drwxr-xr-x   3 root     root            0 May 23  2022 kernel/x86
+drwxr-xr-x   2 root     root            0 May 23  2022 kernel/x86/microcode
+-rw-r--r--   1 root     root        38912 May 23  2022 kernel/x86/microcode/GenuineIntel.bin
+========================================================================
+Version: dracut-049-202.git20220511.el8_6
+
+
+cat working.txt
+
+pkglist.txt
+systemd-private-c491c6249f01428c91b0fca47a42534a-chronyd.service-RVw0sf
+[root@8 tmp]# cat initramfs-working.txt
+Image: /boot/initramfs-4.18.0-372.9.1.el8.x86_64.img: 61M
+========================================================================
+Early CPIO image
+========================================================================
+drwxr-xr-x   3 root     root            0 Jan 31  2022 .
+-rw-r--r--   1 root     root            2 Jan 31  2022 early_cpio
+drwxr-xr-x   3 root     root            0 Jan 31  2022 kernel
+drwxr-xr-x   3 root     root            0 Jan 31  2022 kernel/x86
+drwxr-xr-x   2 root     root            0 Jan 31  2022 kernel/x86/microcode
+-rw-r--r--   1 root     root        47350 Jan 31  2022 kernel/x86/microcode/AuthenticAMD.bin
+-rw-r--r--   1 root     root      5805056 Jan 31  2022 kernel/x86/microcode/GenuineIntel.bin
+========================================================================
+Version: dracut-049-201.git20220131.el8
+
+Arguments: -f
