@@ -1,0 +1,171 @@
+Perfect — since both images are already running in separate VMs (working image VM and Cadence image VM), you can run comparison commands live inside each VM instead of mounting .img files.
+
+Here’s a complete command-by-command checklist to run inside each VM and compare outputs across the two.
+
+✅ Target: Find why Cadence VM fails with dracut error while standard RHEL 8.6 works
+
+Let’s call:
+
+VM1 = WORKING (Red Hat base image)
+
+VM2 = FAILING (Cadence release image)
+
+🔍 Step-by-Step Debugging & Comparison Commands
+1. 🧠 Kernel Version
+uname -r
+rpm -qa | grep kernel
+
+
+✅ Confirm both are using compatible and similar kernel versions.
+
+2. 📦 Check initramfs file for missing modules
+lsinitrd /boot/initramfs-$(uname -r).img | less
+
+
+Check that the failing VM has essential modules like:
+
+xfs, ext4, ahci, nvme, dracut-initqueue, udev, sd_mod, ata_piix, etc.
+
+If missing, rebuild using:
+
+dracut -f -v --add-drivers "xfs ext4 ahci sd_mod"
+
+3. 🗃️ fstab vs blkid
+cat /etc/fstab
+blkid
+
+
+Ensure UUID in fstab exists in blkid
+
+Common dracut error: boot fails when wrong or missing UUID used in fstab
+
+4. 🔧 Check GRUB Configuration
+cat /boot/grub2/grub.cfg | grep -A10 menuentry
+
+
+Compare:
+
+linuxefi line: kernel path
+
+initrdefi: initramfs path
+
+root= should match UUID= from blkid
+
+5. 🧰 Installed dracut config
+cat /etc/dracut.conf
+cat /etc/dracut.conf.d/*
+
+
+Cadence image may have stripped modules via omit_drivers+=... or hostonly=yes
+
+6. 🔒 SELinux status
+getenforce
+
+
+If SELinux is Enforcing, but labels are incorrect (due to rsync or packer), it can break boot. Run:
+
+fixfiles -F relabel
+
+7. 🧪 Bootloader device target
+grub2-install --version
+lsblk
+df -h
+
+
+Check if GRUB was installed on the right boot device and EFI partition is properly mounted (/boot/efi).
+
+8. 🧱 Compare installed packages (optional)
+
+Export and diff package lists:
+
+On each VM:
+rpm -qa | sort > /tmp/pkglist.txt
+
+
+Then copy both files to one VM:
+
+scp user@vm2:/tmp/pkglist.txt /tmp/pkglist_vm2.txt
+diff /tmp/pkglist_vm1.txt /tmp/pkglist_vm2.txt | less
+
+9. 🔁 Check if both have network, lvm, multipath modules (if used)
+lsinitrd | grep lvm
+lsinitrd | grep net
+lsinitrd | grep multipath
+
+
+If any of those were used in provisioning (like provisioning over PXE or using volume groups), missing support in initramfs will cause boot to fail.
+
+10. 🧹 Rebuild initramfs (on failing Cadence image)
+
+If you see differences or missing modules:
+
+dracut -f -v --add-drivers "xfs ext4 ahci nvme sd_mod ata_piix" --kver $(uname -r)
+
+
+You can also disable hostonly:
+
+dracut -f -v --no-hostonly
+
+
+Then reboot and verify.
+
+🧠 Bonus: Capture Boot Logs (If Available)
+
+If the Cadence VM boots partially:
+
+journalctl -xb
+
+
+Or reboot with debug kernel params in GRUB:
+
+linuxefi ... rd.debug console=tty0 console=ttyS0,115200
+
+
+It will give detailed dracut logs at boot.
+
+🔚 Final Advice
+
+Once you compare:
+
+Feature	Working VM	Cadence VM (Failing)	Notes
+Kernel version	✅	?	Should match or be compatible
+Initramfs mods	✅ Includes all	❌ Missing drivers?	Check lsinitrd
+fstab/UUID	✅ Correct	❌ Wrong/missing	Common boot issue
+GRUB cfg	✅ Valid entries	❌ Broken/missing	root=UUID must exist
+dracut conf	✅ Basic config	❌ hostonly=true?	Avoid stripping too much
+SELinux	✅ Permissive	❌ Enforcing?	Re-label with fixfiles
+Boot logs	Available	Dracut fail logs	Use rd.debug
+
+Let me know if you want a script to automate this comparison between two VMs over SSH or diff result collation.
+
+You said:
+ ok will give you all outputs check
+ChatGPT said:
+
+Perfect — once you share the outputs from both the working and failing (Cadence) VMs, I’ll:
+
+Compare them side by side
+
+Highlight what’s different (e.g., kernel, initramfs modules, GRUB, fstab)
+
+Suggest precise fixes (e.g., rebuild initramfs with specific drivers, adjust grub, fix UUIDs)
+
+You can share outputs in chunks, such as:
+
+uname -r
+
+lsinitrd /boot/initramfs-$(uname -r).img
+
+cat /etc/fstab
+
+blkid
+
+cat /boot/grub2/grub.cfg | grep -A10 menuentry
+
+cat /etc/dracut.conf and ls /etc/dracut.conf.d/
+
+getenforce
+
+Any relevant logs: journalctl -xb or rd.debug output if available
+
+I'll wait for your first set of outputs.
