@@ -60,3 +60,27 @@ Differences in included drivers
 hostonly=yes in dracut.conf (which limits initramfs to current VM hardware)
 
 Anything omitted in the Cadence Standard image
+
+
+
+
+✅ Check for Each Driver Module:
+DRIVERS="xfs ext4 ahci ata_piix sd_mod virtio_blk virtio_scsi"
+for mod in $DRIVERS; do
+    echo -n "$mod: "; find /lib/modules/$(uname -r)/kernel/drivers/ -name "$mod.ko*" | head -n 1
+done
+
+🔍 Sample Output:
+xfs: /lib/modules/4.18.0-425.19.2.el8_7.x86_64/kernel/fs/xfs/xfs.ko.xz
+ext4: /lib/modules/4.18.0-425.19.2.el8_7.x86_64/kernel/fs/ext4/ext4.ko.xz
+ahci: /lib/modules/.../ata/ahci.ko.xz
+ata_piix: /lib/modules/.../ata/ata_piix.ko.xz
+sd_mod: /lib/modules/.../scsi/sd_mod.ko.xz
+virtio_blk: /lib/modules/.../virtio/virtio_blk.ko.xz
+virtio_scsi: /lib/modules/.../virtio/virtio_scsi.ko.xz
+
+📌 What You’re Looking For:
+
+If any of these lines are blank, that module is missing from the kernel modules directory — and needs to be added explicitly using --add-drivers when running dracut.
+
+Let me know the outputs from both VMs — and I’ll tell you which modules are missing from the failing one and confirm the dracut fix.
