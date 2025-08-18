@@ -1,3 +1,15 @@
+[root@grub ~]# grep root= /boot/grub2/grub.cfg
+  set kernelopts="root=UUID=bb235b3c-0bf6-4374-bf6a-60d9f360d90b ro console=tty0 console=ttyS0,115200n8 no_timer_check net.ifnames=0 crashkernel=auto "
+[root@grub ~]#
+not working 
+
+
+
+workinh
+
+drwxr-xr-x   2 root     root            0 Jan 31  2022 var/tmp
+[root@rhel86-vsaravan firmware]# grep root= /boot/grub2/grub.cfg
+[root@rhel86-vsaravan firmware]#
 ✅ STEP 1: Run These Commands on the Working rhel8.6-vsaravan-sshbaremetaliso
 
 Please run the following commands inside the working VM:
