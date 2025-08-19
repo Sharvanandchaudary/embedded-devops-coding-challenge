@@ -1,0 +1,26 @@
+#!/bin/bash
+
+port_id=""
+volume_id=""
+
+host_no=$1
+
+port_id=$(openstack port create --network 0119d5ee-c178-4e95-8d47-c198798627bd --fixed-ip subnet=800077af-cf7d-4f47-a64b-dfbf3774cc79  --enable "oa60-port${host_no}" -f json | jq -r '.id')
+
+
+openstack port set --security-group c90b6f64-c264-4ab7-8db4-4db9761be918 --security-group c9bde1bb-4b0c-4ae0-87ba-3fca7b37cb98 $port_id
+
+openstack floating ip create -f json --subnet d473460d-17ad-4646-8de9-10cb64703a96 --port $port_id pro-net-vlan3120
+
+volume_id=$(openstack volume create -f json --type netapp_iscsi --image 1da9abe2-2664-4c4b-a785-375ef54a7cd8 --size 70 --bootable "oa60-volume-${host_no}" | jq -r '.id')
+echo $volume_id
+export volume_id=$volume_id
+
+#echo "Volume creation in progress.."
+#sleep 180
+echo "SG modification done?"
+read chk
+
+echo "Started VM creation..."
+openstack server create --flavor r7i.16xlarge  --volume $volume_id --security-group c90b6f64-c264-4ab7-8db4-4db9761be918 --security-group c9bde1bb-4b0c-4ae0-87ba-3fca7b37cb98 --user-data oa60-userdata.sh --po>
+
