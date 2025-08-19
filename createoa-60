@@ -1,3 +1,89 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# ---------- inputs ----------
+host_no="${1:?Usage: $0 <host_no>}"           # e.g., 01
+
+# Names
+PORT_NAME="oa60-port${host_no}"
+VOLUME_NAME="oa60-volume-${host_no}"
+SERVER_NAME="oa60-server-${host_no}"
+USERDATA="oa60-userdata.sh"
+
+# Network / Subnet / Floating network
+NET_ID="0119d5ee-c178-4e95-8d47-c198799627bd"        # fixed (had a typo earlier)
+SUBNET_ID="800077af-cf7d-4f47-a64b-dfbf3774cc79"
+FLOAT_NET="pro-net-vlan3120"
+
+# Security groups (use your existing IDs)
+SG1="c90b6f64-c264-4ab7-8db4-4db9761be918"
+SG2="c9bde1bb-4b0c-4ae0-87ba-3fca7b37cb98"
+
+# Volume / Image / Flavor
+VOL_TYPE="netapp_iscsi"
+IMAGE_ID="1da9abe2-2664-4c4b-a785-375ef54a7cd8"
+VOL_SIZE_GB=70
+FLAVOR="r7i.16xlarge"
+
+# ---------- create port and set SGs ----------
+port_id="$(openstack port create "${PORT_NAME}" \
+  --network "${NET_ID}" \
+  --fixed-ip subnet="${SUBNET_ID}" \
+  --enable \
+  -f value -c id)"
+
+if [[ -z "${port_id}" ]]; then
+  echo "ERROR: port_id is empty; port creation failed." >&2
+  exit 1
+fi
+echo "port_id=${port_id}"
+
+# Apply BOTH SGs to the port (port arg must be last)
+openstack port set \
+  --security-group "${SG1}" \
+  --security-group "${SG2}" \
+  "${port_id}"
+
+# ---------- allocate & attach floating IP to the port ----------
+fip_id="$(openstack floating ip create "${FLOAT_NET}" \
+  --subnet "${SUBNET_ID}" \
+  --port "${port_id}" \
+  -f value -c id)"
+echo "floating_ip_id=${fip_id}"
+
+# ---------- create bootable volume from image ----------
+volume_id="$(openstack volume create "${VOLUME_NAME}" \
+  --type "${VOL_TYPE}" \
+  --image "${IMAGE_ID}" \
+  --size "${VOL_SIZE_GB}" \
+  --bootable \
+  -f value -c id)"
+echo "volume_id=${volume_id}"
+
+echo "Waiting for volume to be available..."
+openstack volume wait --availability available "${volume_id}"
+
+# Optional pause removed (you had a manual read/wait)
+# echo "SG modification done?"; read -r _
+
+# ---------- create server using the port & volume ----------
+echo "Started VM creation..."
+openstack server create "${SERVER_NAME}" \
+  --flavor "${FLAVOR}" \
+  --volume "${volume_id}" \
+  --nic port-id="${port_id}" \
+  --security-group "${SG1}" \
+  --security-group "${SG2}" \
+  --user-data "${USERDATA}" \
+  --wait
+
+# ---------- show summary ----------
+openstack server show "${SERVER_NAME}" -f yaml -c id -c name -c status -c addresses -c security_groups
+
+
+
+
+
 #!/bin/bash
 
 port_id=""
