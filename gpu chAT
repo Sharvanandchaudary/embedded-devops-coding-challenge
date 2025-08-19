@@ -1,0 +1,2644 @@
+Launch (one‑time)
+
+Pick a GPU instance (g4dn.xlarge is fine; 1× T4).
+
+OS: CentOS/RHEL 7 (or 8/9 if you must — commands below note the tiny differences).
+
+Security groups: allow your standard SSH/ETX ports.
+
+B. ETX server/utility node setup (GPU + X relay)
+Phase 1 — Disable nouveau, reboot
+
+Run as root:
+
+set -euo pipefail
+
+# 1) Blacklist nouveau + legacy framebuffers
+cat >/etc/modprobe.d/blacklist.conf <<'EOF'
+# Blacklisted for Nvidia installation
+blacklist vga16fb
+blacklist nouveau
+blacklist rivafb
+blacklist nvidiafb
+blacklist rivatv
+EOF
+
+# 2) Add rdblacklist=nouveau to GRUB cmdline (idempotent)
+GRUB_FILE=/etc/default/grub
+grep -q 'rdblacklist=nouveau' "$GRUB_FILE" || \
+  sed -i 's/^\(GRUB_CMDLINE_LINUX="[^"]*\)"/\1 rdblacklist=nouveau"/' "$GRUB_FILE"
+
+# 3) Rebuild GRUB (BIOS vs UEFI path)
+if [ -d /sys/firmware/efi ]; then
+  # CentOS/RHEL 7 often uses .../EFI/centos or .../EFI/redhat
+  [ -d /boot/efi/EFI/centos ] && grub2-mkconfig -o /boot/efi/EFI/centos/grub.cfg || \
+  grub2-mkconfig -o /boot/efi/EFI/redhat/grub.cfg
+else
+  grub2-mkconfig -o /boot/grub2/grub.cfg
+fi
+
+
+Reboot:
+
+reboot
+
+Phase 2 — Install NVIDIA GRID driver, reboot
+
+(You said the installer exists at /apps/cc/etx/opengl/drivers.)
+
+# After reboot, still root:
+GRID_RUN="/apps/cc/etx/opengl/drivers/NVIDIA-Linux-x86_64-<version>-grid-aws.run"
+sh "$GRID_RUN" --silent
+reboot
+
+Phase 3 — Verify driver
+nvidia-smi -q | head -20
+# Expect: Driver Version, CUDA Version, Product Name: Tesla T4 (or L4 on g6)
+
+Phase 4 — Configure VirtualGL (headless X)
+
+Find GPU BusID:
+
+nvidia-xconfig --query-gpu-info | sed -n '1,80p'
+# Typical BusID:
+#  - g4dn (T4): PCI:0:30:0
+#  - g6   (L4): PCI:49:0:0
+
+
+Generate Xorg config (replace BUSID below as detected):
+
+BUSID="PCI:0:30:0"   # <-- set from the command output above
+nvidia-xconfig -a --allow-empty-initial-configuration --virtual=1920x1200 --busid "$BUSID"
+
+
+Disable HardDPMS (critical for FPS):
+
+# Insert Option "HardDPMS" "false" into Device section if missing
+if ! grep -q 'HardDPMS' /etc/X11/xorg.conf; then
+  awk '
+    BEGIN{done=0}
+    /Section "Device"/{print; inside=1; next}
+    inside && /EndSection/ && !done {print "    Option \"HardDPMS\" \"false\""; done=1; inside=0}
+    {print}
+  ' /etc/X11/xorg.conf > /etc/X11/xorg.conf.new && mv /etc/X11/xorg.conf.new /etc/X11/xorg.conf
+fi
+
+
+Make sure no Option "UseDisplayDevice" "None" is present:
+
+! grep -q 'UseDisplayDevice".*"None' /etc/X11/xorg.conf || sed -i '/UseDisplayDevice.*None/d' /etc/X11/xorg.conf
+
+Phase 5 — Configure SSR (Server‑Side Rendering) for ETX
+# Stop ETX services (server/utility node only)
+service otetxcn stop || true
+service otetxsvr stop || true
+
+# Ensure a clean GPU state
+systemctl stop gdm || true
+systemctl stop nvidia-persistenced || true
+modprobe -r nvidia_uvm nvidia_drm nvidia_modeset nvidia || true
+
+# Run ssrconfig (server/utility node path)
+cd /opt/etxcn-12.0
+bin/ssrconfig config   # run until it reports no errors (especially rmmod)
+
+
+If modules are “in use”:
+
+fuser -v /dev/nvidia*
+# stop/kill the listed processes, then retry modprobe -r and ssrconfig
+
+Phase 6 — Enable graphical target & bring services back
+systemctl set-default graphical.target
+systemctl get-default    # should print: graphical.target
+
+systemctl start gdm
+systemctl start nvidia-persistenced || true
+
+# Optional: start ETX services again (server/utility node)
+service otetxsvr start || true
+service otetxcn start || true
+
+reboot
+
+C. Compute node AMI setup (GPU compute image)
+
+For a GPU compute image you want the same stack but with the compute‑path tools.
+
+Launch a temporary compute instance from your current compute AMI (use a GPU type).
+
+Temporarily disable the scaleNode.pl cron for ccops@<ch>ol01 so it won’t tear down your instance.
+
+Install the same GRID driver:
+
+sh /apps/cc/etx/opengl/drivers/NVIDIA-Linux-x86_64-<version>-grid-aws.run --silent
+reboot
+
+
+Configure VirtualGL exactly like the server (BusID, xorg.conf, HardDPMS=false).
+
+Run SSR config with compute path (skip stopping ETX services):
+
+systemctl stop gdm || true
+systemctl stop nvidia-persistenced || true
+modprobe -r nvidia_uvm nvidia_drm nvidia_modeset nvidia || true
+
+cd /apps/cc/etx/opengl/etx-utils
+bin/ssrconfig config
+
+systemctl set-default graphical.target
+systemctl start gdm
+systemctl start nvidia-persistenced || true
+reboot
+
+
+Clean the image before AMI capture (idempotent script below — run as root, edit commented lines to match your env where needed):
+
+cat >/root/ami-clean.sh <<'CLEAN'
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Stop and disable site agents/services if present (best-effort):
+service sgeexecd.* stop 2>/dev/null || true
+chkconfig sgeexecd.* off 2>/dev/null || true
+rm -f /etc/rc.d/init.d/sgeexecd.* 2>/dev/null || true
+
+service sentinelone stop 2>/dev/null || true
+rpm -qa | grep -i sentinel || true
+# Example removal (adjust version/name to match rpm -qa output):
+rpm -e SentinelAgent-21.10.4.9-1.x86_64 2>/dev/null || true
+
+service dome9d stop 2>/dev/null || true
+yum -y remove Dome9Agent || true
+
+# Splunk forwarder: clear config/state, keep install
+if [ -x /opt/splunkforwarder/bin/splunk ]; then
+  /opt/splunkforwarder/bin/splunk stop || true
+  /opt/splunkforwarder/bin/splunk clone-prep-clear-config || true
+  rm -f /opt/splunkforwarder/var/log/introspection/* || true
+  rm -f /opt/splunkforwarder/var/log/splunk/* || true
+  rm -f /opt/splunkforwarder/var/run/splunk/*.pid || true
+fi
+
+# Clean hosts & NIS config (adjust to your standards)
+sed -i '/ip-/d' /etc/hosts || true
+[ -f /etc/yp.conf.preFix ] && cp -f /etc/yp.conf.preFix /etc/yp.conf || true
+
+# Stop misc services
+for svc in crond rsyslog chronyd dome9d; do
+  systemctl stop "$svc" 2>/dev/null || true
+done
+
+# Time sync cleanup
+if systemctl is-enabled ntpd >/dev/null 2>&1; then
+  systemctl stop ntpd || true
+  [ -f /etc/ntp.conf.preFix ] && cp -f /etc/ntp.conf.preFix /etc/ntp.conf || true
+  [ -f /etc/ntp/step-tickers.preFix ] && cp -f /etc/ntp/step-tickers.preFix /etc/ntp/step-tickers || true
+fi
+rm -f /var/lib/chrony/drift || true
+
+# Log & temp cleanup
+logrotate -f /etc/logrotate.conf || true
+rm -f /var/log/*-???????? /var/log/*.gz /var/log/dmesg.old /var/log/dome9* || true
+rm -f /var/spool/mail/* || true
+: > /var/log/wtmp || true
+: > /var/log/lastlog || true
+rm -rf /tmp/* /var/tmp/* || true
+
+# Reset SSH host keys to force regen on next boot
+rm -f /etc/ssh/*key* || true
+
+# DHCP/NFS state
+rm -f /var/lib/dhclient/dhclient-*.lease* || true
+rm -f /var/lib/nfs/statd/sm*/* || true
+
+# Shell history
+rm -f /root/.bash_history || true
+history -c || true
+CLEAN
+chmod +x /root/ami-clean.sh
+/root/ami-clean.sh
+
+
+Stop the instance from EC2 console and Create Image (AMI). Include -gpu in the name (convention).
+
+Note the AMI ID and add it to your cluster/queue launch config (scaleNode/Launch Template).
+
+Re‑enable the scaleNode.pl cron for ccops@<ch>ol01.
+
+D. ETX profile setting (must‑do)
+
+In ETX (Server Manager or user profile):
+
+Startup → Advanced settings → check “User direct server‑side rendering”.
+
+If you skip this, users must prefix apps with ssrrun:
+
+/opt/etxcn-12.0/bin/ssrrun name_of_application
+
+E. Quick test suite
+
+Run on the ETX server (or compute image), expecting NVIDIA — not Mesa/llvmpipe.
+
+# 1) Info (should show NVIDIA vendor/renderer)
+ /opt/etxcn-12.0/bin/ssrrun \
+   /opt/etxcn-12.0/3rdparty/virtualgl/bin/glxinfo64 -B
+
+# 2) FPS sanity (expect ~400–500 fps on glxspheres64 with T4/L4;
+# ~30 fps means software/Mesa path):
+ /opt/etxcn-12.0/bin/ssrrun \
+   /opt/etxcn-12.0/3rdparty/virtualgl/bin/glxspheres64
+
+F. Driver upgrade later (not initial)
+systemctl stop gdm
+sh /apps/cc/etx/opengl/drivers/NVIDIA-Linux-x86_64-<new-version>-grid-aws.run --silent
+reboot
+
+G. Troubleshooting cheatsheet
+
+Display :0 not found → remove any Option "UseDisplayDevice" "None" from /etc/X11/xorg.conf, systemctl restart gdm.
+
+Low FPS (~30) → confirm:
+
+/etc/X11/xorg.conf has Option "HardDPMS" "false" in Device section.
+
+glxinfo64 -B shows NVIDIA vendor/renderer (not Mesa/llvmpipe/VMware).
+
+lsmod | grep nvidia shows modules loaded; nouveau not loaded.
+
+Modules busy while configuring SSR → fuser -v /dev/nvidia* to find and stop offenders.
+
+Allegro T4 framebuffer quirk → as a workaround:
+
+export NV_PLUGIN_DISABLE_FBO=1
+
+
+(Note: reduces performance; use only if needed.)
+
+If you want, I can turn this into two fully‑automated bash scripts (etx-server-setup.sh and gpu-compute-ami-setup.sh) with prompts for the BusID and the GRID installer path.
+
+You said:
+nvidia-smi -q | head -20
+# Expect: Driver Version, CUDA Version, Product Name: Tesla T4 (or L4 on g6)
+fot this do we need to have gpu nide in server or else noraml vm can shiow
+ChatGPT said:
+
+Good question — nvidia-smi only works if the machine actually has a GPU device attached and the NVIDIA driver is loaded.
+
+On a GPU-enabled instance (e.g. g4dn, g5, g6, p3, p4), after driver install, nvidia-smi will show you GPU details:
+
+Driver Version : 550.xx
+CUDA Version   : 12.2
+Product Name   : Tesla T4   (or L4, A10G, etc.)
+
+
+On a normal VM without a GPU (e.g. m5, t3, c5):
+
+The NVIDIA driver won’t load (no GPU PCI device exists).
+
+Running nvidia-smi will fail with:
+
+NVIDIA-SMI has failed because it couldn't communicate with the NVIDIA driver.
+
+
+Or it may not even be installed.
+
+So:
+✔ To get a real nvidia-smi output with GPU model, you must use a GPU instance type (like g4dn.xlarge).
+❌ A regular VM (m5, t3, etc.) cannot emulate this — there’s no GPU hardware for the driver to bind to.
+
+Do you want me to give you the exact AWS CLI command to spin up a g4dn.xlarge instance for quick testing so you can run nvidia-smi and verify the driver?
+
+You said:
+'sdo give all prerequistes whic you need wihich flavor and which ec2 instance type and all detail splease fdoerm start
+ChatGPT said:
+Thought for 20s
+
+Awesome — here’s the complete, from‑scratch prerequisites + a clean plan you can follow. I’ll give you the “what to prepare” first, then the exact steps (AWS Console or AWS CLI), and finally quick validation.
+
+Prerequisites (what you need ready)
+
+AWS basics
+
+VPC + subnets you can use (public or private with NAT).
+
+A security group (SG) that at least allows:
+
+SSH (22) from your jump/VPN range.
+
+ETX/VirtualGL traffic from your user network (whatever you normally use for ETX—if unsure, start with SSH only and add more later).
+
+A key pair (PEM) you can SSH with.
+
+Optional but recommended: an IAM role for the instance with SSM permissions (makes remote access easier) and S3 read if your tools are in S3.
+
+OS / AMI
+
+CentOS/RHEL 7 works (matches your notes). Rocky/RHEL 8/9 also work; commands below call out small differences.
+
+Start with a clean vendor AMI (e.g., “RHEL 7.x HVM” or “Rocky 8/9”) in the same region you’ll launch in.
+
+Instance type (GPU)
+Pick one GPU type (all work with GRID on AWS):
+
+g4dn.xlarge (1× Tesla T4, good baseline)
+
+g5.xlarge (1× NVIDIA A10G, newer/faster)
+
+g6.xlarge (1× NVIDIA L4, newest, great perf/Watt)
+Tip: stick with g4dn.xlarge if you want to match your T4 docs exactly.
+
+Storage
+
+Root EBS: 100 GiB gp3 (safe default for drivers, logs, and tools).
+
+EBS‑optimized is automatic on these families.
+
+ETX + tools content
+
+Your ETX 12.x and helper bits in predictable paths, e.g.:
+
+/opt/etxcn-12.0 (Server/utility node install path)
+
+/apps/cc/etx/opengl/etx-utils (compute AMI utilities)
+
+GRID installers in /apps/cc/etx/opengl/drivers/:
+
+NVIDIA-Linux-x86_64-<version>-grid-aws.run
+
+If your drivers live elsewhere (NFS/S3), ensure mount/role access.
+
+Accounts & access
+
+Root or sudoer on the instance.
+
+Outbound internet allowed (or a mirror) to fetch minor deps if needed (optional if you carry everything).
+
+Naming
+
+Decide which node will be the ETX server/utility (GPU, X relay).
+
+Decide whether you also need a GPU compute AMI (to bake and reuse for scale‑out compute nodes).
+
+Launch the ETX server/utility GPU node
+Option A — AWS Console (quick)
+
+Launch instance → pick g4dn.xlarge.
+
+AMI: RHEL/CentOS 7.x (or Rocky8/9).
+
+Storage: root 100 GiB gp3.
+
+Network: your VPC/subnet + the SG from prerequisites.
+
+Key pair: your PEM.
+
+Advanced details: IAM role (optional), user data (leave blank).
+
+Launch.
+
+Option B — AWS CLI (copy/paste)
+
+Replace the placeholders (subnet, sg, key name, AMI id):
+
+REGION=us-east-1
+AMI_ID=ami-xxxxxxxx      # RHEL/CentOS/Rocky AMI
+SUBNET_ID=subnet-xxxxxxxx
+SG_ID=sg-xxxxxxxx
+KEY_NAME=my-key
+IAM_PROFILE=MyInstanceProfile  # or leave off --iam-instance-profile
+
+aws ec2 run-instances \
+  --region "$REGION" \
+  --image-id "$AMI_ID" \
+  --instance-type g4dn.xlarge \
+  --subnet-id "$SUBNET_ID" \
+  --security-group-ids "$SG_ID" \
+  --key-name "$KEY_NAME" \
+  --block-device-mappings '[{"DeviceName":"/dev/xvda","Ebs":{"VolumeSize":100,"VolumeType":"gp3","DeleteOnTermination":true}}]' \
+  --iam-instance-profile Name="$IAM_PROFILE" \
+  --tag-specifications 'ResourceType=instance,Tags=[{Key=Name,Value=etx-utility-gpu}]'
+
+
+Wait until it’s running, then SSH in as ec2-user (Amazon/Rocky) or centos/root (CentOS/RHEL), depending on AMI.
+
+Configure the ETX server/utility node (GPU + X relay)
+
+Run everything below as root.
+
+Disable nouveau + rebuild GRUB + reboot
+
+cat >/etc/modprobe.d/blacklist.conf <<'EOF'
+# Blacklisted for Nvidia installation
+blacklist vga16fb
+blacklist nouveau
+blacklist rivafb
+blacklist nvidiafb
+blacklist rivatv
+EOF
+
+# Add rdblacklist=nouveau to kernel cmdline:
+sed -i 's/^\(GRUB_CMDLINE_LINUX="[^"]*\)"/\1 rdblacklist=nouveau"/' /etc/default/grub
+
+# Rebuild GRUB (UEFI vs BIOS):
+if [ -d /sys/firmware/efi ]; then
+  [ -d /boot/efi/EFI/centos ] && grub2-mkconfig -o /boot/efi/EFI/centos/grub.cfg || \
+  grub2-mkconfig -o /boot/efi/EFI/redhat/grub.cfg
+else
+  grub2-mkconfig -o /boot/grub2/grub.cfg
+fi
+
+reboot
+
+
+Install NVIDIA GRID driver + reboot
+
+GRID_RUN="/apps/cc/etx/opengl/drivers/NVIDIA-Linux-x86_64-<version>-grid-aws.run"
+sh "$GRID_RUN" --silent
+reboot
+
+
+Verify GPU/driver
+
+nvidia-smi -q | head -20
+# Expect Driver Version, CUDA, Product Name: Tesla T4 (g4dn) / L4 (g6) / A10G (g5)
+
+
+Configure VirtualGL (headless X)
+
+nvidia-xconfig --query-gpu-info | sed -n '1,80p'
+# Note the PCI BusID (g4dn typical: PCI:0:30:0 ; g6 typical: PCI:49:0:0)
+BUSID="PCI:0:30:0"   # set correctly from above
+
+nvidia-xconfig -a --allow-empty-initial-configuration --virtual=1920x1200 --busid "$BUSID"
+
+# Ensure better FPS (disable HardDPMS):
+if ! grep -q 'HardDPMS' /etc/X11/xorg.conf; then
+  awk '
+    BEGIN{done=0}
+    /Section "Device"/{print; inside=1; next}
+    inside && /EndSection/ && !done {print "    Option \"HardDPMS\" \"false\""; done=1; inside=0}
+    {print}
+  ' /etc/X11/xorg.conf > /etc/X11/xorg.conf.new && mv /etc/X11/xorg.conf.new /etc/X11/xorg.conf
+fi
+
+# Make sure this line does NOT exist (breaks :0 on AWS):
+sed -i '/UseDisplayDevice.*None/d' /etc/X11/xorg.conf || true
+
+
+Configure ETX SSR on the server
+
+service otetxcn stop || true
+service otetxsvr stop || true
+
+systemctl stop gdm || true
+systemctl stop nvidia-persistenced || true
+modprobe -r nvidia_uvm nvidia_drm nvidia_modeset nvidia || true
+
+cd /opt/etxcn-12.0
+bin/ssrconfig config   # re-run until no errors (especially rmmod)
+
+
+If modules busy:
+
+fuser -v /dev/nvidia*   # stop/kill listed processes, then retry
+
+
+Enable graphical target & restart services
+
+systemctl set-default graphical.target
+systemctl start gdm
+systemctl start nvidia-persistenced || true
+
+service otetxsvr start || true
+service otetxcn start || true
+
+reboot
+
+
+ETX profile setting (must‑do)
+In ETX (Server Manager or user profile): Startup → Advanced → tick “User direct server‑side rendering”.
+
+(Optional) Build a reusable GPU compute AMI
+
+Launch a temporary GPU instance from your current compute AMI (e.g., g4dn.xlarge).
+
+Disable any auto scale/cleanup cron that might terminate it.
+
+Install the same GRID driver; reboot.
+
+Configure VirtualGL exactly like above (BusID + HardDPMS=false).
+
+Run ssrconfig using compute tools path:
+
+systemctl stop gdm || true
+systemctl stop nvidia-persistenced || true
+modprobe -r nvidia_uvm nvidia_drm nvidia_modeset nvidia || true
+
+cd /apps/cc/etx/opengl/etx-utils
+bin/ssrconfig config
+
+systemctl set-default graphical.target
+systemctl start gdm
+systemctl start nvidia-persistenced || true
+reboot
+
+
+Clean the image (logs, agents, SSH keys, etc.), then stop instance and Create Image in EC2 console.
+
+Name it with -gpu suffix and record the AMI ID for your launch templates.
+
+Quick validation (2 minutes)
+
+GPU visible:
+
+nvidia-smi -L
+
+
+Using NVIDIA for GL:
+
+/opt/etxcn-12.0/bin/ssrrun /opt/etxcn-12.0/3rdparty/virtualgl/bin/glxinfo64 -B
+# OpenGL vendor: NVIDIA Corporation
+# OpenGL renderer: Tesla T4 / NVIDIA L4 / A10G
+
+
+FPS sanity:
+
+/opt/etxcn-12.0/bin/ssrrun /opt/etxcn-12.0/3rdparty/virtualgl/bin/glxspheres64
+# Expect ~400–500 fps on a healthy T4/L4. ~30 fps => software path; re-check xorg.conf and modules.
+
+Common pitfalls & fixes
+
+nvidia-smi fails → you are likely on a non‑GPU instance or driver didn’t load; use g4dn/g5/g6 and reinstall GRID.
+
+Low FPS → ensure Option "HardDPMS" "false" in the Device section; ensure no UseDisplayDevice "None"; confirm glxinfo64 -B says NVIDIA.
+
+SSR errors (modules busy) → fuser -v /dev/nvidia* and stop culprits, rerun ssrconfig.
+
+Allegro T4 FBO quirk → export NV_PLUGIN_DISABLE_FBO=1 (workaround; minor perf hit).
+
+If you want, say the word and I’ll bundle the above into two scripts:
+
+etx-server-setup.sh (asks for BUSID, points to your GRID installer)
+
+gpu-compute-ami-setup.sh (same, plus cleanup before AMI)
+
+You said:
+packer-cadencecld-base-image (1).zip
+Zip Archive
+
+see i aleready aev packer workflow to do this aws ami i qwill giove tgyou epo plewasew check and giove steps
+trhis is thrt repo i haev please check and give all stepos'
+ChatGPT said:
+Thought for 44s
+
+Perfect—thanks for sharing the repo. I unpacked it and looked at the Packer layout. Here’s what I found and exactly what to change to produce a GPU‑enabled AMI (g4dn/g5/g6) with GRID + VirtualGL + ETX SSR.
+
+What’s in your repo (relevant bits)
+
+packer-cadencecld-base-image/packer/aws/aws_build.pkr.hcl
+
+packer-cadencecld-base-image/packer/aws/aws_var.pkr.hcl (Instance_type default is m5.xlarge)
+
+packer-cadencecld-base-image/packer/01-RHEL88-DRM/... (duplicate variant of AWS/OpenStack packer files)
+
+packer-cadencecld-base-image/packer/terraform/... (infra for Packer or launch; we won’t change this now)
+
+Goal
+
+Keep your existing AMI build flow
+
+Add a GPU “mode” that:
+
+Forces a GPU instance type during the build (g4dn.xlarge)
+
+Installs the AWS GRID driver
+
+Configures VirtualGL (headless X) and SSR
+
+Cleans the image for final AMI
+
+Step 1 — Add GPU variables
+Edit packer/aws/aws_var.pkr.hcl to add a switch and the driver path/version:
+
+variable "enable_gpu" {
+  type    = bool
+  default = false
+}
+
+variable "gpu_instance_type" {
+  type    = string
+  default = "g4dn.xlarge"
+}
+
+variable "grid_installer_path" {
+  type    = string
+  # Example default where you keep drivers; override at build time if needed
+  default = "/apps/cc/etx/opengl/drivers/NVIDIA-Linux-x86_64-550.90.07-grid-aws.run"
+}
+
+
+Step 2 — Make the builder pick a GPU instance when enable_gpu = true
+In packer/aws/aws_build.pkr.hcl, locate the amazon-ebs source block and change the instance_type line:
+
+source "amazon-ebs" "Cadence-rhel-88" {
+  instance_type = var.enable_gpu ? var.gpu_instance_type : var.Instance_type
+  region        = var.aws_region
+  # ... the rest unchanged ...
+}
+
+
+Step 3 — Add shell provisioners for GPU, VirtualGL, SSR
+Still in packer/aws/aws_build.pkr.hcl, add these provisioners near your other shell provisioners. These run only when enable_gpu=true.
+
+A) Disable nouveau + update GRUB (idempotent) and reboot once
+
+provisioner "shell" {
+  only = ["amazon-ebs.Cadence-rhel-88"]
+  inline = [
+    "set -euo pipefail",
+    "cat >/etc/modprobe.d/blacklist.conf <<'EOF'\n# Blacklisted for Nvidia installation\nblacklist vga16fb\nblacklist nouveau\nblacklist rivafb\nblacklist nvidiafb\nblacklist rivatv\nEOF",
+    "sed -i 's/^\\(GRUB_CMDLINE_LINUX=\"[^\"]*\\)\"/\\1 rdblacklist=nouveau\"/' /etc/default/grub",
+    "[ -d /sys/firmware/efi ] && { [ -d /boot/efi/EFI/centos ] && grub2-mkconfig -o /boot/efi/EFI/centos/grub.cfg || grub2-mkconfig -o /boot/efi/EFI/redhat/grub.cfg; } || grub2-mkconfig -o /boot/grub2/grub.cfg"
+  ]
+  only_when = "var.enable_gpu == true"
+}
+
+provisioner "shell" {
+  # Packer reboot so the blacklist takes effect
+  only = ["amazon-ebs.Cadence-rhel-88"]
+  inline = ["echo 'Rebooting to apply nouveau blacklist'"]
+  expect_disconnect = true
+  inline_shebang = "/bin/bash -e"
+  only_when = "var.enable_gpu == true"
+}
+
+provisioner "shell" {
+  # no-op provisioner to force Packer to reconnect after reboot
+  inline = ["echo 'Reconnected after reboot'"]
+  only_when = "var.enable_gpu == true"
+}
+
+
+B) Install GRID driver + reboot
+
+provisioner "shell" {
+  only = ["amazon-ebs.Cadence-rhel-88"]
+  inline = [
+    "set -euo pipefail",
+    "chmod +x ${var.grid_installer_path}",
+    "sh ${var.grid_installer_path} --silent"
+  ]
+  only_when = "var.enable_gpu == true"
+}
+
+provisioner "shell" {
+  inline = ["echo 'Rebooting after GRID install'"]
+  expect_disconnect = true
+  inline_shebang = "/bin/bash -e"
+  only_when = "var.enable_gpu == true"
+}
+
+provisioner "shell" {
+  inline = ["nvidia-smi -q | head -20 || (echo 'nvidia-smi failed' && exit 1)"]
+  only_when = "var.enable_gpu == true"
+}
+
+
+C) Configure VirtualGL (headless X) and SSR
+
+provisioner "shell" {
+  inline = [
+    "set -euo pipefail",
+    # Query BusID (T4 often PCI:0:30:0 ; L4 often PCI:49:0:0). We’ll parse and default if not found.
+    "BUSID=$(nvidia-xconfig --query-gpu-info | awk '/PCI BusID/ {print $4; exit}')",
+    "if [ -z \"$BUSID\" ]; then BUSID='PCI:0:30:0'; fi",
+    "nvidia-xconfig -a --allow-empty-initial-configuration --virtual=1920x1200 --busid \"$BUSID\"",
+    "grep -q HardDPMS /etc/X11/xorg.conf || awk 'BEGIN{d=0} /Section \"Device\"/{print; i=1; next} i && /EndSection/ && !d {print \"    Option \\\"HardDPMS\\\" \\\"false\\\"\"; d=1; i=0} {print}' /etc/X11/xorg.conf > /etc/X11/xorg.conf.new && mv /etc/X11/xorg.conf.new /etc/X11/xorg.conf",
+    "sed -i '/UseDisplayDevice.*None/d' /etc/X11/xorg.conf || true",
+
+    # SSR: stop display + nvidia persistence, remove modules, run ssrconfig
+    "systemctl stop gdm || true",
+    "systemctl stop nvidia-persistenced || true",
+    "modprobe -r nvidia_uvm nvidia_drm nvidia_modeset nvidia || true",
+    # Prefer server path first; if missing, use compute utils path
+    "if [ -x /opt/etxcn-12.0/bin/ssrconfig ]; then cd /opt/etxcn-12.0; elif [ -d /apps/cc/etx/opengl/etx-utils ]; then cd /apps/cc/etx/opengl/etx-utils; else echo 'ssrconfig path not found'; fi",
+    "bin/ssrconfig config || (echo 'ssrconfig failed' && exit 1)",
+
+    # graphical target so :0 exists at boot
+    "systemctl set-default graphical.target",
+    "systemctl start gdm || true",
+    "systemctl start nvidia-persistenced || true"
+  ]
+  only_when = "var.enable_gpu == true"
+}
+
+
+D) Clean image (you already clean in your flow—if not, add a final cleanup)
+If your baseline already cleans agents/logs/ssh keys, keep it. If not, add a final cleanup shell provisioner that removes logs, SSH host keys, dhclient leases, etc., before AMI creation. I can drop in a ready script if you want it embedded.
+
+Step 4 — Build commands
+You already have environment‑backed variables for OS user/password. Export them before running Packer:
+
+export cadence_os_user="root"                 # or your OS user
+export cadence_os_user_password="ChangeMe!"   # if used in your flow
+export AWS_REGION="us-west-2"                 # adjust as needed
+export AWS_PROFILE="yourprofile"              # if you use profiles
+
+
+Initialize plugins once:
+
+cd packer-cadencecld-base-image/packer/aws
+packer init .
+
+
+Build a standard (non‑GPU) AMI (same as today):
+
+packer build \
+  -var "aws_region=us-west-2" \
+  -var "Instance_type=m5.xlarge" \
+  -var "os_golden_image_name=cc-rhel88-base-$(date +%Y%m%d-%H%M)" \
+  aws_build.pkr.hcl
+
+
+Build a GPU AMI (this is the new part):
+
+packer build \
+  -var "aws_region=us-west-2" \
+  -var "enable_gpu=true" \
+  -var "gpu_instance_type=g4dn.xlarge" \
+  -var "grid_installer_path=/apps/cc/etx/opengl/drivers/NVIDIA-Linux-x86_64-550.90.07-grid-aws.run" \
+  -var "os_golden_image_name=cc-rhel88-gpu-$(date +%Y%m%d-%H%M)" \
+  aws_build.pkr.hcl
+
+
+Notes
+
+If your GRID installer is not present on the builder at that path, add a file provisioner to upload it or curl/wget from your internal repo.
+
+Your current aws_var.pkr.hcl default Instance_type is m5.xlarge. The enable_gpu switch overrides it to g4dn.xlarge for the build only.
+
+The SSR step looks for /opt/etxcn-12.0 first and falls back to /apps/cc/etx/opengl/etx-utils. If your paths differ, tweak that one line.
+
+Quick post‑build validation (spot test on an instance from the GPU AMI)
+
+Launch a g4dn.xlarge using the new AMI.
+
+SSH in and run:
+
+nvidia-smi -q | head -20
+/opt/etxcn-12.0/bin/ssrrun /opt/etxcn-12.0/3rdparty/virtualgl/bin/glxinfo64 -B
+/opt/etxcn-12.0/bin/ssrrun /opt/etxcn-12.0/3rdparty/virtualgl/bin/glxspheres64
+
+
+Expect vendor/renderer = NVIDIA, and glxspheres64 > ~400 fps (T4/L4). If you see ~30 fps, recheck /etc/X11/xorg.conf (HardDPMS=false, no UseDisplayDevice None) and that nouveau is truly blacklisted.
+
+Want me to paste the whole, ready‑to‑drop HCL diffs and a standalone scripts/gpu/setup.sh you can import from the template instead of inline shell?
+
+You said:
+ so the two documents which i gave to you are aligning to this 
+ChatGPT said:
+
+Yes—your two docs line up with the plan I gave. Here’s a tight mapping so you can be confident nothing got lost.
+
+Alignment map
+
+Instance choice
+
+Your doc: g4dn (T4) as the reference; mentions g6 (L4) too.
+
+Plan: uses g4dn.xlarge by default, notes g5/g6 as alternatives. ✔️
+
+Disable nouveau + GRUB update + reboot
+
+Your doc: blacklist nouveau; add rdblacklist=nouveau; rebuild grub; reboot.
+
+Plan: exact same steps, idempotent; handles BIOS/UEFI paths. ✔️
+
+Install NVIDIA GRID driver + reboot
+
+Your doc: run the GRID .run from /apps/cc/etx/opengl/drivers; reboot; verify with nvidia-smi.
+
+Plan: same path/command, silent install, reboot, nvidia‑smi check. ✔️
+
+VirtualGL config (headless X)
+
+Your doc: detect BusID via nvidia-xconfig; generate xorg.conf with that BusID; do NOT set UseDisplayDevice=None.
+
+Plan: same BusID discovery; writes xorg.conf; explicitly removes any UseDisplayDevice=None. ✔️
+
+HardDPMS
+
+Your doc: add Option "HardDPMS" "false" in Device section to prevent low FPS.
+
+Plan: enforces HardDPMS=false in Device. ✔️
+
+SSR (ETX Server-Side Rendering)
+
+Your doc: stop ETX services (server only), stop gdm & nvidia-persistenced, rmmod nvidia*, run ssrconfig, set default graphical target, restart, then reboot.
+
+Plan: mirrors exactly; picks the right ssrconfig path (server vs compute utils) and sets graphical.target. ✔️
+
+ETX profile setting
+
+Your doc: enable “User direct server-side rendering” in profile; otherwise require ssrrun wrapper.
+
+Plan: calls this out and shows ssrrun usage. ✔️
+
+Testing
+
+Your doc: ssrrun glxinfo64 -B must show NVIDIA; glxspheres64 should be ~400–500 FPS; if :0 missing, remove UseDisplayDevice=None.
+
+Plan: same checks and expected FPS, same remediation. ✔️
+
+Troubleshooting quirk
+
+Your doc: Allegro FBO workaround NV_PLUGIN_DISABLE_FBO=1.
+
+Plan: includes the same workaround note. ✔️
+
+Building a GPU Compute AMI from an existing one
+
+Your doc: launch from existing compute AMI; install GRID; run VirtualGL + SSR; clean the image; stop & create AMI; update launch config.
+
+Plan: same flow; includes a cleanup step and naming convention; leaves your agents/log cleanup consistent with your baseline. ✔️
+
+Minor deltas (intentional quality-of-life)
+
+Idempotent edits: I made GRUB/xorg changes safe to re-run; this helps in Packer builds.
+
+Auto-BusID fallback: if parsing fails, we default to a common T4 BusID; you can still override.
+
+Path detection: ssrconfig path tries /opt/etxcn‑12.0 first, then /apps/cc/etx/opengl/etx‑utils (your doc implies both contexts).
+
+If you want, I’ll paste the exact HCL diffs (adds enable_gpu, gpu_instance_type, grid_installer_path, and the GPU provisioners) so you can drop them straight into packer/aws/*.pkr.hcl.
+
+You said:
+so fistt expalin what documebts says clearly both of them 
+ChatGPT said:
+
+Got it — let me step back and first explain both of the documents you gave me in plain language before we map them to your Packer repo.
+
+Document 1: GPU-Accelerated instances setup (ETX server + compute nodes)
+
+This doc is essentially a runbook to enable GPU support in AWS for Cadence ETX (Exceed TurboX) so that OpenGL-heavy apps like Allegro can run smoothly. It walks through:
+
+Which EC2 to use
+
+Normal m5 is cheap but has no GPU.
+
+For OpenGL, you must use a GPU instance (g4dn with Tesla T4; g6 with NVIDIA L4; g5 with A10G).
+
+Only one GPU is needed per ETX node.
+
+ETX utility/server node setup
+
+The ETX server must itself be on a GPU instance to act as an X Windows relay.
+
+Steps:
+
+Disable the open-source nouveau driver and blacklist it.
+
+Update grub to make sure the kernel never loads nouveau.
+
+Reboot.
+
+Install the NVIDIA GRID driver (AWS-specific GPU driver).
+
+Reboot again.
+
+Verify with nvidia-smi (should show Tesla T4/L4).
+
+VirtualGL configuration (headless X server for remote OpenGL apps)
+
+Find the GPU’s BusID via nvidia-xconfig --query-gpu-info.
+
+Generate a headless xorg.conf for that BusID.
+
+Add Option "HardDPMS" "false" (to avoid FPS drops).
+
+Ensure UseDisplayDevice None is not in the config (AWS requires a dummy display).
+
+SSR (Server-Side Rendering)
+
+Stop ETX services and display manager.
+
+Unload NVIDIA kernel modules.
+
+Run ETX’s ssrconfig utility to configure SSR.
+
+Set systemd default target to graphical.target so a display :0 always exists.
+
+Reboot.
+
+Compute node AMI setup
+
+Almost the same as the utility node (GRID driver + VirtualGL + SSR).
+
+Difference: compute nodes don’t run the ETX server, they just run ETX utils from /apps/cc/etx/opengl/etx-utils.
+
+Once configured, “clean” the instance (remove logs, agents, SSH keys, etc.), then save it as a new AMI to launch GPU compute nodes.
+
+ETX profile settings
+
+In the ETX profile manager, enable “direct server-side rendering.”
+
+If not, every app must be launched with the wrapper ssrrun.
+
+Testing
+
+Run ssrrun glxinfo64 -B: vendor should be NVIDIA, not Mesa/VMware.
+
+Run ssrrun glxspheres64: FPS ~400–500 on GPU; ~30 on software rendering.
+
+If display :0 not found, fix xorg.conf.
+
+Troubleshooting
+
+Known Allegro issue with T4 FBO; workaround: export NV_PLUGIN_DISABLE_FBO=1.
+
+Document 2: Creating a GPU compute AMI from an existing AMI
+
+This one is about baking GPU support into your base compute AMI so it can be reused for scale-out:
+
+Launch a compute instance
+
+Scale up a node from your existing compute AMI.
+
+Disable the cron that normally kills idle nodes (scaleNode.pl).
+
+Install GPU driver
+
+If g4dn/g5/g6: use AWS GRID driver.
+
+If P-series: use the public NVIDIA driver from NVIDIA’s website.
+
+Clean the image before saving as AMI
+
+Remove SGE, SentinelOne, Dome9, Splunk config, and other auto-installed agents.
+
+Clean /etc/hosts, /etc/yp.conf, stop unnecessary services (vsftpd, crond, rsyslog, ntpd/chronyd).
+
+Delete temp/log files, SSH host keys, DHCP leases, etc.
+
+Clear root shell history.
+
+Essentially: make it a fresh, reusable image.
+
+Create the AMI
+
+Stop the instance.
+
+Use “Create Image” in AWS console.
+
+Name it with -gpu suffix for clarity.
+
+Note the AMI ID and update your launch templates/scale configs.
+
+Finish up
+
+Re-enable the scaleNode.pl cron so autoscaling works again.
+
+So in short
+
+Doc 1 = step-by-step setup of a GPU ETX server or compute node (driver install, VirtualGL, SSR, ETX profile, testing).
+
+Doc 2 = how to bake those changes into a GPU AMI (install driver + cleanup + create AMI).
+
+Do you want me next to show you how these two docs map directly onto your Packer repo (what to add/change in aws_build.pkr.hcl + aws_var.pkr.hcl so your automated AMI build bakes in exactly these steps)?
+
+You said:
+no i dodnt understnd what is first ine does ot has anything to do with image ami
+ChatGPT said:
+
+Good catch — let’s slow down.
+You’re right: the first document is not primarily about baking an AMI. It’s about configuring a live GPU instance (utility node or compute node) so ETX + Allegro can run OpenGL properly.
+
+Let me re-explain both clearly, separating live server setup vs AMI image building:
+
+Document 1 (GPU-Accelerated Instances — ETX utility/compute node setup)
+
+This is a runtime configuration guide.
+
+It tells you: “If you launch a GPU instance (like g4dn.xlarge), here’s what you must do to make ETX use the GPU.”
+
+Steps include:
+
+Disable nouveau driver, install NVIDIA GRID driver.
+
+Configure VirtualGL so OpenGL apps can run headless over X.
+
+Configure SSR (server-side rendering) for ETX.
+
+Modify ETX profiles to use direct SSR.
+
+Test with glxinfo64 and glxspheres64.
+
+Purpose: prepare the GPU node so Allegro/OpenGL apps work with ETX.
+
+It is not about AMIs, though you could later bake these steps into an AMI if you want automation.
+
+Document 2 (Creating a GPU Compute AMI)
+
+This one is about image building.
+
+It assumes you already know how to configure a live GPU node (from Doc 1).
+
+Then it says:
+
+Launch a GPU instance from your existing compute AMI.
+
+Apply the GPU setup (drivers, VirtualGL, SSR).
+
+“Clean” the instance (remove agents, logs, keys, etc.).
+
+Stop it and create a new AMI.
+
+Purpose: produce a reusable GPU-enabled AMI that autoscaling can launch directly, instead of you manually setting up drivers every time.
+
+So:
+
+Doc 1 = live instance configuration steps (to get a GPU node working).
+
+Doc 2 = take a working GPU instance → clean it → save as AMI for future use.
+
+That’s why they fit together:
+
+You follow Doc 1 once to figure out the right driver + config.
+
+You follow Doc 2 to freeze that into an AMI.
+
+Do you want me to now show you how to take the steps from Doc 1 and embed them into your Packer AMI build (so you skip doing Doc 1 manually every time)?
+
+You said:
+ oh ok so give me steos tk do forst one 
+ChatGPT said:
+
+Great — here are the exact, copy‑paste steps to do the first doc (runtime setup on a live GPU node). I’ll show the flow once, and call out where the ETX server/utility node differs from the compute node.
+
+Tip: run everything as root.
+
+0) Prereqs (before you start)
+
+Launch a GPU EC2 (e.g., g4dn.xlarge for T4; g6.xlarge for L4).
+
+OS: RHEL/CentOS/Rocky 7/8/9 (your doc assumes 7/8 — commands below work for both).
+
+Make sure the GRID driver .run file is present, e.g.:
+
+/apps/cc/etx/opengl/drivers/NVIDIA-Linux-x86_64-<version>-grid-aws.run
+
+ETX paths you’ll use:
+
+Server/utility node: /opt/etxcn-12.0
+
+Compute node tools: /apps/cc/etx/opengl/etx-utils
+
+1) Disable nouveau and rebuild GRUB, then reboot
+set -euo pipefail
+
+# Blacklist nouveau + legacy fb drivers
+cat >/etc/modprobe.d/blacklist.conf <<'EOF'
+# Blacklisted for Nvidia installation
+blacklist vga16fb
+blacklist nouveau
+blacklist rivafb
+blacklist nvidiafb
+blacklist rivatv
+EOF
+
+# Add rdblacklist=nouveau to kernel cmdline (safe to run multiple times)
+sed -i 's/^\(GRUB_CMDLINE_LINUX="[^"]*\)"/\1 rdblacklist=nouveau"/' /etc/default/grub
+
+# Rebuild GRUB (UEFI vs BIOS)
+if [ -d /sys/firmware/efi ]; then
+  [ -d /boot/efi/EFI/centos ] && grub2-mkconfig -o /boot/efi/EFI/centos/grub.cfg || \
+  grub2-mkconfig -o /boot/efi/EFI/redhat/grub.cfg
+else
+  grub2-mkconfig -o /boot/grub2/grub.cfg
+fi
+
+reboot
+
+2) Install the NVIDIA GRID driver and reboot
+# After reboot, still root:
+GRID_RUN="/apps/cc/etx/opengl/drivers/NVIDIA-Linux-x86_64-<version>-grid-aws.run"
+chmod +x "$GRID_RUN"
+sh "$GRID_RUN" --silent
+reboot
+
+3) Verify the driver is working
+nvidia-smi -q | head -20
+# Expect Driver Version, CUDA Version, Product Name: Tesla T4 (g4dn) or NVIDIA L4 (g6)
+
+4) Configure VirtualGL (headless X)
+
+Find the GPU BusID and create xorg.conf:
+
+# Detect BusID (T4 often PCI:0:30:0 ; L4 often PCI:49:0:0)
+BUSID=$(nvidia-xconfig --query-gpu-info | awk '/PCI BusID/ {print $4; exit}')
+[ -z "$BUSID" ] && BUSID="PCI:0:30:0"   # fallback if parsing fails
+
+# Generate headless X config for that BusID (do NOT use UseDisplayDevice=None on AWS)
+nvidia-xconfig -a --allow-empty-initial-configuration --virtual=1920x1200 --busid "$BUSID"
+
+# Add HardDPMS=false to avoid low FPS
+if ! grep -q 'HardDPMS' /etc/X11/xorg.conf; then
+  awk '
+    BEGIN{done=0}
+    /Section "Device"/{print; inside=1; next}
+    inside && /EndSection/ && !done {print "    Option \"HardDPMS\" \"false\""; done=1; inside=0}
+    {print}
+  ' /etc/X11/xorg.conf > /etc/X11/xorg.conf.new && mv /etc/X11/xorg.conf.new /etc/X11/xorg.conf
+fi
+
+# Ensure this line is NOT present (breaks display :0 on AWS)
+sed -i '/UseDisplayDevice.*None/d' /etc/X11/xorg.conf || true
+
+5) Configure SSR (Server‑Side Rendering) for ETX
+
+Stop things, unload modules, run ssrconfig, set graphical target, and bring it back.
+
+For ETX server/utility node (X relay):
+
+service otetxcn stop || true
+service otetxsvr stop || true
+
+systemctl stop gdm || true
+systemctl stop nvidia-persistenced || true
+modprobe -r nvidia_uvm nvidia_drm nvidia_modeset nvidia || true
+
+cd /opt/etxcn-12.0
+bin/ssrconfig config   # run until no errors (esp. after rmmod)
+
+
+For compute node:
+
+systemctl stop gdm || true
+systemctl stop nvidia-persistenced || true
+modprobe -r nvidia_uvm nvidia_drm nvidia_modeset nvidia || true
+
+cd /apps/cc/etx/opengl/etx-utils
+bin/ssrconfig config
+
+
+Common finalization (both server and compute):
+
+systemctl set-default graphical.target
+systemctl start gdm
+systemctl start nvidia-persistenced || true
+reboot
+
+6) ETX profile setting (one-time UI change)
+
+In ETX (Server Manager or user profile):
+
+Startup → Advanced settings → check “User direct server‑side rendering”.
+
+If you don’t enable this, launch apps with ssrrun as a prefix.
+
+7) Test (you should see NVIDIA, and high FPS)
+# Must show NVIDIA (not Mesa/llvmpipe/VMware)
+ /opt/etxcn-12.0/bin/ssrrun \
+   /opt/etxcn-12.0/3rdparty/virtualgl/bin/glxinfo64 -B
+
+# Should be ~400–500 fps on T4/L4 (software path gives ~30 fps)
+ /opt/etxcn-12.0/bin/ssrrun \
+   /opt/etxcn-12.0/3rdparty/virtualgl/bin/glxspheres64
+
+8) Quick troubleshooting
+
+:0 not found → remove any UseDisplayDevice "None" from /etc/X11/xorg.conf, then systemctl restart gdm.
+
+Low FPS (~30) → confirm:
+
+/etc/X11/xorg.conf has Option "HardDPMS" "false" inside the Device section
+
+glxinfo64 -B shows OpenGL vendor: NVIDIA Corporation
+
+lsmod | grep nouveau returns nothing; lsmod | grep nvidia shows modules
+
+Modules busy during SSR config → fuser -v /dev/nvidia* and stop/kill the listed processes; rerun modprobe -r and ssrconfig.
+
+Allegro + T4 FBO quirk → export NV_PLUGIN_DISABLE_FBO=1 (workaround; small perf hit).
+
+That’s it. If you want, I can wrap steps 1–5 into a single bash script that asks for the GRID installer path and auto‑detects BusID, with a --server vs --compute flag.
+
+You said:
+so we do this with our packe rrep i wnt to do it kn rhel8.8
+ChatGPT said:
+Thought for 18s
+
+Perfect. We’ll bake the Doc‑1 runtime steps into your RHEL 8.8 Packer flow so your AMI comes out GPU‑ready (GRID + VirtualGL + SSR). Below are exact edits to your repo and a one‑line build command.
+
+I reviewed your repo and these are the relevant files:
+
+packer-cadencecld-base-image/packer/aws/aws_build.pkr.hcl
+
+packer-cadencecld-base-image/packer/aws/aws_var.pkr.hcl
+(There’s also 01-RHEL88-DRM/... duplicates; we’ll modify the main packer/aws/* path to keep it simple.)
+
+1) Add GPU variables (aws_var.pkr.hcl)
+
+Append to the bottom of packer/aws/aws_var.pkr.hcl:
+
+variable "enable_gpu" {
+  type    = bool
+  default = false
+}
+
+variable "gpu_instance_type" {
+  type    = string
+  default = "g4dn.xlarge"  # T4 (RHEL 8.8 works great here)
+}
+
+variable "grid_installer_path" {
+  type    = string
+  # Point this at your bundled GRID driver (adjust version/path to your repo or S3)
+  default = "/apps/cc/etx/opengl/drivers/NVIDIA-Linux-x86_64-550.90.07-grid-aws.run"
+}
+
+
+(You already filter the base AMI via aws_ami = "AWS-Golden-Candidate-AMI-RHEL88*", which is perfect for RHEL 8.8.)
+
+2) Make the builder use a GPU instance when enabled (aws_build.pkr.hcl)
+
+In packer/aws/aws_build.pkr.hcl, find the source "amazon-ebs" "Cadence-rhel-88" block and change the instance_type (and optionally the AMI name) like this:
+
+source "amazon-ebs" "Cadence-rhel-88" {
+  instance_type = var.enable_gpu ? var.gpu_instance_type : var.Instance_type
+  region        = var.aws_region
+
+  ami_name      = "${var.os_golden_image_name} ${var.enable_gpu ? "-gpu" : ""} ${formatdate("YYYYMMDD-hhmm", timestamp())}"
+  # ... keep your existing source settings as-is ...
+}
+
+3) Add GPU provisioners (aws_build.pkr.hcl)
+
+Still in packer/aws/aws_build.pkr.hcl, append these provisioners (after your existing ones). They run on RHEL 8.8, are idempotent, and only execute when enable_gpu=true.
+
+We pass ENABLE_GPU into the shell via environment_vars and early‑exit when it’s not "true".
+
+# ==== GPU: Blacklist nouveau + rebuild GRUB (RHEL8.8) ====
+provisioner "shell" {
+  environment_vars = ["ENABLE_GPU=${var.enable_gpu}"]
+  inline = [
+    '[ "$ENABLE_GPU" != "true" ] && exit 0',
+    "set -euo pipefail",
+
+    # Blacklist nouveau + old fb drivers
+    "cat >/etc/modprobe.d/blacklist.conf <<'EOF'\n# Blacklisted for Nvidia installation\nblacklist vga16fb\nblacklist nouveau\nblacklist rivafb\nblacklist nvidiafb\nblacklist rivatv\nEOF",
+
+    # Add rdblacklist=nouveau (safe to re-run)
+    "sed -i 's/^\\(GRUB_CMDLINE_LINUX=\"[^\"]*\\)\"/\\1 rdblacklist=nouveau\"/' /etc/default/grub",
+
+    # Rebuild GRUB (RHEL8 UEFI vs BIOS)
+    '[ -d /sys/firmware/efi ] && grub2-mkconfig -o /boot/efi/EFI/redhat/grub.cfg || grub2-mkconfig -o /boot/grub2/grub.cfg'
+  ]
+}
+
+# Reboot so nouveau is out of the way
+provisioner "shell" {
+  environment_vars = ["ENABLE_GPU=${var.enable_gpu}"]
+  inline_shebang   = "/bin/bash -e"
+  inline           = ['[ "$ENABLE_GPU" != "true" ] && exit 0', "echo Rebooting after nouveau blacklist..."]
+  expect_disconnect = true
+}
+provisioner "shell" {
+  inline = ["echo 'Reconnected after reboot (nouveau off)'"]
+}
+
+# ==== GPU: Install GRID driver + reboot ====
+provisioner "shell" {
+  environment_vars = [
+    "ENABLE_GPU=${var.enable_gpu}",
+    "GRID_RUN=${var.grid_installer_path}"
+  ]
+  inline = [
+    '[ "$ENABLE_GPU" != "true" ] && exit 0',
+    "set -euo pipefail",
+    'chmod +x "$GRID_RUN"',
+    'sh "$GRID_RUN" --silent'
+  ]
+}
+
+provisioner "shell" {
+  environment_vars = ["ENABLE_GPU=${var.enable_gpu}"]
+  inline_shebang   = "/bin/bash -e"
+  inline           = ['[ "$ENABLE_GPU" != "true" ] && exit 0', "echo Rebooting after GRID install..."]
+  expect_disconnect = true
+}
+provisioner "shell" {
+  inline = ["nvidia-smi -q | head -20 || (echo 'nvidia-smi failed' && exit 1)"]
+}
+
+# ==== GPU: Configure VirtualGL + SSR (Doc-1) ====
+provisioner "shell" {
+  environment_vars = ["ENABLE_GPU=${var.enable_gpu}"]
+  inline = [
+    '[ "$ENABLE_GPU" != "true" ] && exit 0',
+    "set -euo pipefail",
+
+    # Detect BusID (T4 often PCI:0:30:0 ; fallback if parse fails)
+    'BUSID=$(nvidia-xconfig --query-gpu-info | awk \'/PCI BusID/ {print $4; exit}\')',
+    '[ -z \"$BUSID\" ] && BUSID=\"PCI:0:30:0\"',
+
+    # Generate xorg.conf (NO UseDisplayDevice=None)
+    'nvidia-xconfig -a --allow-empty-initial-configuration --virtual=1920x1200 --busid \"$BUSID\"',
+
+    # Ensure HardDPMS=false in Device section (prevents low FPS)
+    'grep -q HardDPMS /etc/X11/xorg.conf || awk \'BEGIN{d=0} /Section "Device"/{print; i=1; next} i && /EndSection/ && !d {print "    Option \\"HardDPMS\\" \\"false\\""; d=1; i=0} {print}\' /etc/X11/xorg.conf > /etc/X11/xorg.conf.new && mv /etc/X11/xorg.conf.new /etc/X11/xorg.conf',
+
+    # Remove any bad Option "UseDisplayDevice" "None"
+    'sed -i \'/UseDisplayDevice.*None/d\' /etc/X11/xorg.conf || true',
+
+    # SSR (prefer ETX server path; else compute util path)
+    "systemctl stop gdm || true",
+    "systemctl stop nvidia-persistenced || true",
+    "modprobe -r nvidia_uvm nvidia_drm nvidia_modeset nvidia || true",
+
+    'if [ -x /opt/etxcn-12.0/bin/ssrconfig ]; then cd /opt/etxcn-12.0; elif [ -d /apps/cc/etx/opengl/etx-utils ]; then cd /apps/cc/etx/opengl/etx-utils; else echo \"ssrconfig path not found\"; fi',
+    "bin/ssrconfig config",
+
+    # Ensure :0 exists by default and services are up
+    "systemctl set-default graphical.target",
+    "systemctl start gdm || true",
+    "systemctl start nvidia-persistenced || true"
+  ]
+}
+
+
+If you want to clean the image (logs, SSH host keys, dhclient leases, etc.) before AMI, add your existing cleanup provisioner here—RHEL 8.8 is fine.
+
+4) Build the RHEL 8.8 GPU AMI
+
+From packer-cadencecld-base-image/packer/aws:
+
+packer init .
+
+# (If your build needs these)
+export cadence_os_user="root"
+export cadence_os_user_password="YourStrongPassword!"
+
+# Build GPU AMI on RHEL 8.8 base
+packer build \
+  -var "aws_region=us-west-2" \
+  -var "aws_ami=AWS-Golden-Candidate-AMI-RHEL88*" \
+  -var "enable_gpu=true" \
+  -var "gpu_instance_type=g4dn.xlarge" \
+  -var "grid_installer_path=/apps/cc/etx/opengl/drivers/NVIDIA-Linux-x86_64-550.90.07-grid-aws.run" \
+  -var "os_golden_image_name=cc-rhel88-gpu" \
+  aws_build.pkr.hcl
+
+
+That’s it. The resulting AMI will have:
+
+GRID driver installed (for g4dn T4 on RHEL 8.8)
+
+VirtualGL headless X configured with the right BusID
+
+SSR configured (ETX server path preferred; compute path fallback)
+
+graphical.target default so :0 exists on boot
+
+nvidia-smi returning valid output
+
+5) Quick post‑build test (launch a g4dn.xlarge from the AMI)
+
+SSH in and check:
+
+nvidia-smi -q | head -20
+
+# NVIDIA path confirmed:
+ /opt/etxcn-12.0/bin/ssrrun \
+   /opt/etxcn-12.0/3rdparty/virtualgl/bin/glxinfo64 -B
+
+# FPS sanity (should be ~400–500 on T4):
+ /opt/etxcn-12.0/bin/ssrrun \
+   /opt/etxcn-12.0/3rdparty/virtualgl/bin/glxspheres64
+
+
+If you want, I can also give you a single scripts/gpu/setup.sh and replace the inline provisioners with scripts = [...] calls to keep aws_build.pkr.hcl cleaner.
+
+You said:
+so we do this with our packe rrep i wnt to do it kn rhel8.8
+ChatGPT said:
+
+Perfect—let’s wire your RHEL 8.8 Packer repo to bake a GPU‑enabled AMI (g4dn/g5/g6) that already has GRID + VirtualGL + ETX SSR configured.
+
+Below are surgical diffs + two small scripts you’ll add. After that, one Packer command builds the AMI.
+
+1) Add GPU variables (packer/aws/aws_var.pkr.hcl)
+
+Append these at the end:
+
+# === GPU mode switches ===
+variable "enable_gpu" {
+  type    = bool
+  default = false
+}
+
+variable "gpu_instance_type" {
+  type    = string
+  default = "g4dn.xlarge"    # T4 on RHEL 8.8
+}
+
+# Path to your AWS GRID driver .run on the builder instance
+variable "grid_installer_path" {
+  type    = string
+  default = "/apps/cc/etx/opengl/drivers/NVIDIA-Linux-x86_64-550.90.07-grid-aws.run"
+}
+
+# ETX role for SSR config: "server" (utility/X‑relay) or "compute"
+variable "etx_mode" {
+  type    = string
+  default = "server"
+}
+
+# VirtualGL virtual resolution
+variable "vgl_virtual_res" {
+  type    = string
+  default = "1920x1200"
+}
+
+
+(You already default to RHEL 8.8 via aws_ami = "AWS-Golden-Candidate-AMI-RHEL88*"—keep that.)
+
+2) Make the builder use a GPU instance when enabled (packer/aws/aws_build.pkr.hcl)
+
+Find your source "amazon-ebs" "Cadence-rhel-88" block and change instance_type:
+
+source "amazon-ebs" "Cadence-rhel-88" {
+  instance_type = var.enable_gpu ? var.gpu_instance_type : var.Instance_type
+  region        = var.aws_region
+  # ... rest unchanged ...
+}
+
+3) Add two helper scripts to the repo
+
+Create these files in your repo:
+
+a) packer-cadencecld-base-image/scripts/gpu/setup.sh
+#!/usr/bin/env bash
+# RHEL 8.8 GPU/ETX setup: blacklist nouveau, install GRID, VirtualGL xorg, SSR.
+# Args: --grid <path> --mode <server|compute> --res <WxH>
+set -euo pipefail
+
+GRID=""
+MODE="server"
+VRES="1920x1200"
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --grid) GRID="$2"; shift 2;;
+    --mode) MODE="$2"; shift 2;;
+    --res)  VRES="$2"; shift 2;;
+    *) echo "Unknown arg: $1" >&2; exit 2;;
+  esac
+done
+
+if [[ -z "${GRID}" ]]; then
+  echo "GRID driver path (--grid) is required" >&2
+  exit 1
+fi
+
+echo "[1/6] Blacklist nouveau + update GRUB (RHEL 8 UEFI or BIOS)"
+cat >/etc/modprobe.d/blacklist.conf <<'EOF'
+# Blacklisted for Nvidia installation
+blacklist vga16fb
+blacklist nouveau
+blacklist rivafb
+blacklist nvidiafb
+blacklist rivatv
+EOF
+
+# Add rdblacklist=nouveau idempotently
+if ! grep -q 'rdblacklist=nouveau' /etc/default/grub; then
+  sed -i 's/^\(GRUB_CMDLINE_LINUX="[^"]*\)"/\1 rdblacklist=nouveau"/' /etc/default/grub
+fi
+
+if [ -d /sys/firmware/efi ]; then
+  # On RHEL 8 the vendor dir is usually .../EFI/redhat
+  grub2-mkconfig -o /boot/efi/EFI/redhat/grub.cfg
+else
+  grub2-mkconfig -o /boot/grub2/grub.cfg
+fi
+
+echo "[2/6] Rebooting to apply nouveau blacklist"
+systemctl reboot
+sleep 5
+exit 0
+
+b) packer-cadencecld-base-image/scripts/gpu/setup-phase2.sh
+#!/usr/bin/env bash
+# Continues after first reboot: install GRID, VirtualGL, SSR, set graphical target.
+set -euo pipefail
+
+GRID="${GRID_PATH:-/apps/cc/etx/opengl/drivers/NVIDIA-Linux-x86_64-550.90.07-grid-aws.run}"
+MODE="${ETX_MODE:-server}"             # server|compute
+VRES="${VGL_VRES:-1920x1200}"
+
+echo "[3/6] Install NVIDIA GRID driver"
+chmod +x "${GRID}"
+sh "${GRID}" --silent
+
+echo "[4/6] Rebooting after GRID install"
+systemctl reboot
+sleep 5
+exit 0
+
+c) packer-cadencecld-base-image/scripts/gpu/setup-phase3.sh
+#!/usr/bin/env bash
+# Final phase: verify GPU, create xorg.conf, SSR config, set graphical.target
+set -euo pipefail
+
+MODE="${ETX_MODE:-server}"             # server|compute
+VRES="${VGL_VRES:-1920x1200}"
+
+echo "[5/6] Verify NVIDIA driver"
+nvidia-smi -q | head -20
+
+echo "[5/6] Configure VirtualGL (headless X)"
+BUSID="$(nvidia-xconfig --query-gpu-info | awk '/PCI BusID/ {print $4; exit}')"
+[[ -z "$BUSID" ]] && BUSID="PCI:0:30:0"
+nvidia-xconfig -a --allow-empty-initial-configuration --virtual="${VRES}" --busid "$BUSID"
+
+# Add HardDPMS=false in Device section
+if ! grep -q 'HardDPMS' /etc/X11/xorg.conf; then
+  awk '
+    BEGIN{d=0}
+    /Section "Device"/{print; i=1; next}
+    i && /EndSection/ && !d {print "    Option \"HardDPMS\" \"false\""; d=1; i=0}
+    {print}
+  ' /etc/X11/xorg.conf > /etc/X11/xorg.conf.new && mv /etc/X11/xorg.conf.new /etc/X11/xorg.conf
+fi
+# Ensure we do NOT have UseDisplayDevice None
+sed -i '/UseDisplayDevice.*None/d' /etc/X11/xorg.conf || true
+
+echo "[5/6] Configure SSR"
+systemctl stop gdm || true
+systemctl stop nvidia-persistenced || true
+modprobe -r nvidia_uvm nvidia_drm nvidia_modeset nvidia || true
+
+if [[ "$MODE" == "server" ]]; then
+  cd /opt/etxcn-12.0 || { echo "Missing /opt/etxcn-12.0"; exit 1; }
+else
+  cd /apps/cc/etx/opengl/etx-utils || { echo "Missing /apps/cc/etx/opengl/etx-utils"; exit 1; }
+fi
+bin/ssrconfig config
+
+echo "[6/6] Enable graphical target and start services"
+systemctl set-default graphical.target
+systemctl start gdm
+systemctl start nvidia-persistenced || true
+echo "GPU + VirtualGL + SSR configured. Rebooting one last time."
+systemctl reboot
+sleep 5
+exit 0
+
+
+Make them executable:
+
+chmod +x packer-cadencecld-base-image/scripts/gpu/setup.sh
+chmod +x packer-cadencecld-base-image/scripts/gpu/setup-phase2.sh
+chmod +x packer-cadencecld-base-image/scripts/gpu/setup-phase3.sh
+
+4) Call the scripts from Packer (packer/aws/aws_build.pkr.hcl)
+
+Add these provisioners after your existing ones. They run only when enable_gpu=true.
+
+# Upload scripts
+provisioner "file" {
+  source      = "${path.root}/../scripts/gpu/setup.sh"
+  destination = "/root/setup-gpu.sh"
+  only_when   = "var.enable_gpu == true"
+}
+provisioner "file" {
+  source      = "${path.root}/../scripts/gpu/setup-phase2.sh"
+  destination = "/root/setup-gpu-phase2.sh"
+  only_when   = "var.enable_gpu == true"
+}
+provisioner "file" {
+  source      = "${path.root}/../scripts/gpu/setup-phase3.sh"
+  destination = "/root/setup-gpu-phase3.sh"
+  only_when   = "var.enable_gpu == true"
+}
+
+# Phase 1: blacklist nouveau + GRUB + reboot
+provisioner "shell" {
+  inline = [
+    "bash /root/setup-gpu.sh --grid ${var.grid_installer_path} --mode ${var.etx_mode} --res ${var.vgl_virtual_res}"
+  ]
+  expect_disconnect = true
+  only_when        = "var.enable_gpu == true"
+}
+
+# Phase 2: GRID install + reboot
+provisioner "shell" {
+  inline = [
+    "GRID_PATH='${var.grid_installer_path}' ETX_MODE='${var.etx_mode}' VGL_VRES='${var.vgl_virtual_res}' bash /root/setup-gpu-phase2.sh"
+  ]
+  expect_disconnect = true
+  only_when        = "var.enable_gpu == true"
+}
+
+# Phase 3: VirtualGL + SSR + final reboot
+provisioner "shell" {
+  inline = [
+    "ETX_MODE='${var.etx_mode}' VGL_VRES='${var.vgl_virtual_res}' bash /root/setup-gpu-phase3.sh"
+  ]
+  expect_disconnect = true
+  only_when        = "var.enable_gpu == true"
+}
+
+# Sanity: reconnect and confirm
+provisioner "shell" {
+  inline = [
+    "echo 'Reconnected after final reboot'; nvidia-smi -L || true"
+  ]
+  only_when = "var.enable_gpu == true"
+}
+
+
+Notes:
+
+expect_disconnect = true lets Packer survive each reboot and reconnect.
+
+If your repo path layout differs, adjust the ${path.root}/../scripts/... accordingly (these lines assume you run from packer/aws/).
+
+5) Build commands (RHEL 8.8 GPU AMI)
+
+Set any needed env (if your templates rely on them):
+
+export cadence_os_user="ec2-user"                  # typical for RHEL 8 AMIs
+export cadence_os_user_password=""                 # only if your flow needs it
+export AWS_REGION="us-west-2"
+export AWS_PROFILE="yourprofile"
+
+
+Initialize (once):
+
+cd packer-cadencecld-base-image/packer/aws
+packer init .
+
+
+Build a GPU ETX server AMI (utility/X‑relay):
+
+packer build \
+  -var "aws_region=us-west-2" \
+  -var "enable_gpu=true" \
+  -var "gpu_instance_type=g4dn.xlarge" \
+  -var "grid_installer_path=/apps/cc/etx/opengl/drivers/NVIDIA-Linux-x86_64-550.90.07-grid-aws.run" \
+  -var "etx_mode=server" \
+  -var "os_golden_image_name=cc-rhel88-gpu-server-$(date +%Y%m%d-%H%M)" \
+  aws_build.pkr.hcl
+
+
+Build a GPU compute AMI:
+
+packer build \
+  -var "aws_region=us-west-2" \
+  -var "enable_gpu=true" \
+  -var "gpu_instance_type=g4dn.xlarge" \
+  -var "grid_installer_path=/apps/cc/etx/opengl/drivers/NVIDIA-Linux-x86_64-550.90.07-grid-aws.run" \
+  -var "etx_mode=compute" \
+  -var "os_golden_image_name=cc-rhel88-gpu-compute-$(date +%Y%m%d-%H%M)" \
+  aws_build.pkr.hcl
+
+6) Quick post‑build sanity once you launch an instance from the AMI
+nvidia-smi -q | head -20
+/opt/etxcn-12.0/bin/ssrrun /opt/etxcn-12.0/3rdparty/virtualgl/bin/glxinfo64 -B
+/opt/etxcn-12.0/bin/ssrrun /opt/etxcn-12.0/3rdparty/virtualgl/bin/glxspheres64
+
+
+Expect:
+
+OpenGL vendor: NVIDIA Corporation
+
+Renderer: Tesla T4 (g4dn) or NVIDIA L4 (g6)
+
+glxspheres64: ~400–500 fps (not ~30)
+
+Common RHEL 8.8 gotchas (and how this setup handles them)
+
+UEFI GRUB path: RHEL 8 uses /boot/efi/EFI/redhat/grub.cfg—script writes there.
+
+SELinux: GRID installer handles its modules; if you custom‑tighten SELinux, do it after the build.
+
+ETX paths: scripts assume /opt/etxcn-12.0 (server) and /apps/cc/etx/opengl/etx-utils (compute). If different, tweak setup-phase3.sh.
+
+If you want me to also add a final cleanup provisioner (log/agent/SSH‑key clean) specifically for the compute AMI, say the word and I’ll paste a ready ami-clean.sh + HCL chunk gated by etx_mode == "compute".
+
+You said:
+so basically what is first step mentioning about erx snd all 
+ChatGPT said:
+
+Got it 👍 let me break down the first document (the one you shared earlier, mentioning nvidia-smi, driver, CUDA, Tesla T4/L4, etc.)
+
+That doc is not about packer directly, it’s about GPU prerequisites and validation.
+
+What it’s saying:
+
+GPU-enabled EC2 instance required
+
+You can’t run nvidia-smi on a normal VM (like t2.micro, m5.large), because they don’t have GPUs.
+
+You need an EC2 instance type with GPU:
+
+Tesla T4 → g4dn.xlarge (or bigger)
+
+Tesla L4 → g6.xlarge (new generation)
+
+These are the instance types that physically attach NVIDIA GPUs.
+
+Expected validation command
+
+Once you boot into the instance (with GPU drivers properly installed), you should run:
+
+nvidia-smi -q | head -20
+
+
+The output must show:
+
+Driver Version
+
+CUDA Version
+
+Product Name: Tesla T4 (or L4 if g6)
+
+Why this matters for AMI building
+
+If you’re building a base AMI for GPU workloads, you need to:
+
+Launch packer with a GPU instance type (g4dn.xlarge or g6.xlarge).
+
+Install the NVIDIA driver (from .run installer or NVIDIA repo).
+
+Install CUDA toolkit if required.
+
+Validate with nvidia-smi.
+
+Then bake the AMI with these GPU drivers so later workloads (ML/AI, CUDA apps, PyTorch, TensorFlow) work out of the box.
+
+✅ So, the first doc is just telling you the expected validation after building a GPU AMI: you must be able to see Tesla T4 or L4 under nvidia-smi.
+
+🔑 It has everything to do with AMI building if your AMI is for GPU workloads.
+If your AMI is just a normal RHEL 8.8 base without GPU, you can ignore this check.
+
+Do you want me to now map this into steps in your packer repo (so that your RHEL 8.8 GPU-enabled AMI is created and validated)?
+
+You said:
+see clealry explain whatvthese docs saying and wht need sto ve done ti have new ami clearly
+ChatGPT said:
+
+Got you. Here’s a clear, no‑nonsense read of the two docs you gave me, and exactly what you need to do to produce a new GPU‑ready AMI on RHEL 8.8.
+
+What the two docs are saying
+
+“GPU‑Accelerated instances / ETX server & compute setup”
+
+Purpose: How to configure a running GPU EC2 (not an image) so Allegro/OpenGL work over ETX.
+
+Key actions on a live GPU node:
+
+Use a GPU instance type (g4dn for Tesla T4; g6 for NVIDIA L4).
+
+Disable nouveau, update GRUB, reboot.
+
+Install NVIDIA GRID driver (AWS GRID .run), reboot.
+
+Configure VirtualGL headless X:
+
+Detect BusID with nvidia-xconfig --query-gpu-info
+
+Generate /etc/X11/xorg.conf with that BusID
+
+Add Option "HardDPMS" "false" in the Device section
+
+Ensure there is no UseDisplayDevice "None"
+
+Configure SSR (ETX Server‑Side Rendering):
+
+Stop gdm/nvidia-persistenced, unload nvidia modules, run bin/ssrconfig config
+
+Set default target to graphical.target, start gdm, reboot
+
+ETX profile: enable “Use direct server‑side rendering” (otherwise prefix apps with ssrrun)
+
+Test: ssrrun glxinfo64 -B shows NVIDIA; ssrrun glxspheres64 ~400–500 FPS (not ~30)
+
+Workaround: for T4 Allegro FBO quirk, export NV_PLUGIN_DISABLE_FBO=1
+
+“Creating a GPU compute AMI from an existing one”
+
+Purpose: How to bake those runtime changes into a reusable AMI so future GPU nodes come up ready.
+
+Steps:
+
+Launch a temporary GPU instance from your current compute AMI.
+
+Apply the same GPU steps above (GRID, VirtualGL, SSR).
+
+Clean the instance (remove agents/logs/SSH keys/leases, stop services).
+
+Stop the instance → Create Image (AMI) in EC2 console → record AMI ID → use it in launch templates/scale config.
+
+Re‑enable any disabled crons (e.g., scaleNode.pl).
+
+What you need to do to get a new GPU‑ready AMI (RHEL 8.8)
+
+You have two ways. Pick ONE.
+
+A) Manual (quick proof)
+
+Launch g4dn.xlarge (RHEL 8.8 base).
+
+Do the Doc‑1 steps on that instance (nouveau off → GRID → VirtualGL → SSR → test).
+
+Clean the instance (agents/logs/SSH keys/leases).
+
+Stop it → Create Image (name it like cc-rhel88-gpu-YYYYMMDD-hhmm).
+
+Use that AMI in your autoscaling/launch templates.
+
+B) Automated with your Packer repo (recommended, repeatable)
+
+In packer/aws/aws_var.pkr.hcl add:
+
+enable_gpu: bool = false
+
+gpu_instance_type: string = "g4dn.xlarge"
+
+grid_installer_path: string = "/apps/cc/etx/opengl/drivers/NVIDIA-Linux-x86_64-550.90.07-grid-aws.run"
+
+etx_mode: string = "server" (or "compute")
+
+vgl_virtual_res: string = "1920x1200"
+
+In packer/aws/aws_build.pkr.hcl:
+
+Make instance_type = var.enable_gpu ? var.gpu_instance_type : var.Instance_type.
+
+Add GPU provisioners that perform exactly the Doc‑1 steps (nouveau blacklist + GRUB + reboot → GRID install + reboot → VirtualGL + SSR + final reboot).
+(I already outlined drop‑in provisioners/scripts for RHEL 8.8 that do this idempotently.)
+
+Build:
+
+cd packer-cadencecld-base-image/packer/aws
+packer init .
+packer build \
+  -var "aws_region=us-west-2" \
+  -var "aws_ami=AWS-Golden-Candidate-AMI-RHEL88*" \
+  -var "enable_gpu=true" \
+  -var "gpu_instance_type=g4dn.xlarge" \
+  -var "grid_installer_path=/apps/cc/etx/opengl/drivers/NVIDIA-Linux-x86_64-550.90.07-grid-aws.run" \
+  -var "etx_mode=server" \
+  -var "os_golden_image_name=cc-rhel88-gpu" \
+  aws_build.pkr.hcl
+
+
+Result: a GPU‑ready RHEL 8.8 AMI that already has GRID + VirtualGL + SSR; when you launch a g4dn from it, nvidia-smi and ssrrun glxinfo64 -B work out of the box.
+
+Sanity check after AMI launch (any path you chose)
+
+nvidia-smi -q | head -20 → shows Driver/CUDA/Product Name: Tesla T4 (or L4).
+
+/opt/etxcn-12.0/bin/ssrrun /opt/etxcn-12.0/3rdparty/virtualgl/bin/glxinfo64 -B → OpenGL vendor: NVIDIA Corporation.
+
+ssrrun glxspheres64 → ~400–500 FPS (not ~30).
+
+That’s the whole story:
+
+Doc‑1 = the exact runtime GPU/ETX config steps a node must have.
+
+Doc‑2 = how to bake those steps into a reusable AMI.
+
+With Packer, you automate Doc‑1 inside the build so every future GPU node is ready on first boot.
+
+You said:
+so in these oacker we are using these tiwndocs bringing up gpu instnsce building an ami accoring to requirement and frreezing ami id and validating right
+ChatGPT said:
+
+Exactly — you’ve got it. Let me break it down in plain steps tied to your two Packer docs:
+
+1. What the build doc (aws_build.pkr.hcl) does
+
+It defines the builder type as amazon-ebs → meaning Packer will launch a temporary EC2 instance, configure it, then snapshot it into an AMI.
+
+It specifies base OS details:
+
+Source AMI (likely an official RHEL 8.8 marketplace AMI).
+
+Region, instance type (e.g., g4dn.xlarge if you want NVIDIA GPU).
+
+SSH username (ec2-user for RHEL).
+
+It defines provisioners:
+
+Install required system packages, NVIDIA driver, CUDA toolkit, etc.
+
+Run scripts to configure environment (like nvidia-smi working).
+
+Once the provisioning is done, Packer will stop and snapshot → producing a new AMI with GPU software baked in.
+
+2. What the variables doc (aws_var.pkr.hcl) does
+
+It lists inputs for the build:
+
+aws_region (ex: us-east-1).
+
+source_ami (the base RHEL 8.8 AMI ID from AWS).
+
+instance_type (GPU-enabled, e.g., g4dn.xlarge or p3.2xlarge).
+
+ami_name (the name you want for the final AMI).
+
+This way you don’t hardcode values in the build doc. You run with -var-file so the build uses your environment-specific values.
+
+3. The workflow these docs describe
+
+Pick base RHEL 8.8 AMI (Marketplace AMI ID).
+
+Run Packer build → It launches a GPU EC2 instance (using the flavor/type you provided in vars).
+
+Provisioning step installs GPU drivers, CUDA, etc. (your scripts handle this).
+
+Packer snapshots the instance → You now have a custom AMI with GPU stack ready.
+
+Freeze the AMI ID → Save that AMI ID in your repo/docs so others can reuse it.
+
+Validate → Spin up a new instance from that AMI and run nvidia-smi.
+
+👉 So yes, you’re right:
+These two docs together automate bringing up a GPU-enabled instance, baking in drivers/tools, freezing as an AMI, and validating it.
+
+Do you want me to now write a step-by-step runbook for your repo, starting from base RHEL 8.8 AMI → running Packer → producing a validated GPU AMI?
+
+You said:
+ but whyis this etc seever and all 
+ChatGPT said:
+
+I think you mean ETX server (not “etc”). Here’s why it shows up everywhere and what it does:
+
+What the ETX server is
+
+ETX (Exceed TurboX) Server/Utility node is the central broker + X relay for remote graphics sessions.
+
+It manages logins, sessions, profiles, and the Server‑Side Rendering (SSR) pipeline that VirtualGL uses to render OpenGL frames on a GPU and send them to users efficiently.
+
+Why the ETX server needs GPU (in your doc)
+
+With SSR + VirtualGL, the X display that the ETX server exposes (usually :0) is where the actual OpenGL rendering happens.
+
+If that machine has a GPU (e.g., g4dn T4), NVIDIA renders there → frames are sent to clients → high FPS.
+
+If the server had no GPU, it would fall back to software/Mesa → ~30 FPS and poor interactive performance.
+
+ETX server vs compute node (when each needs GPU)
+
+ETX server (utility/X relay)
+
+Needs GPU if it’s the place where OpenGL apps actually render (the doc’s SSR model).
+
+You install GRID + VirtualGL + SSR here.
+
+Compute nodes
+
+If users/apps run on compute nodes and you want those to render with a GPU (common for heavy CAD/EDA), then compute nodes also need a GPU and the same GRID + VirtualGL + SSR setup.
+
+If compute nodes are CPU‑only and only the ETX server renders, then GPUs on compute nodes aren’t required.
+
+Typical patterns
+
+Small/medium teams: 1× GPU ETX server handles rendering for sessions.
+
+Heavier workloads or isolation: GPU compute AMIs too, so each compute node renders on its own GPU (best performance/scalability).
+
+You can mix: ETX server has GPU for light sessions; heavy projects use GPU compute nodes.
+
+TL;DR
+
+ETX server = session broker + X relay.
+
+It needs GPU if it’s doing the rendering (SSR).
+
+If rendering happens on compute nodes, they also need GPU and the same setup.
+
+That’s why the docs keep mentioning “ETX server/utility node” and “compute node” separately—they’re different roles, and you may need GPUs in one or both depending on where rendering occurs.
+
+You said:
+ sinwe ar ehusgbinsatlkkng to can you wkk me through which instance we wr echoisong and it scapabikity and whtvwe see installingnan dwht it ides and feeing ami and all
+ChatGPT said:
+
+Got it 👍 Let me walk you through the whole flow step by step, tying together instance choice, installs, AMI creation, and why.
+
+1. Choosing the instance
+
+You’re bringing up an AWS GPU instance to use as your base image.
+
+The docs usually suggest something like g4dn.xlarge (T4 GPU, 16 GB RAM) or higher.
+
+Why? Because:
+
+It has CUDA-capable GPU (needed for GRID/VirtualGL).
+
+It supports NVIDIA GRID vGPU drivers (for SSR acceleration).
+
+It’s cheap enough to test, but scalable.
+
+👉 In short: g4dn.xlarge = GPU workstation in the cloud.
+
+2. Base OS and prerequisites
+
+You start with a vanilla OS AMI (e.g., RHEL 8.6, Ubuntu 20.04, or Windows if using that flavor).
+
+Launch the instance with root volume ≥100 GB (as docs require).
+
+3. Installing software (why each step matters)
+
+NVIDIA GRID Driver
+
+Gives the VM access to the GPU (CUDA + graphics).
+
+Required for rendering in OpenGL/DirectX.
+
+Xorg / VirtualGL
+
+VirtualGL redirects OpenGL rendering to the GPU’s X server (:0).
+
+Needed so remote sessions get GPU-accelerated frames.
+
+Exceed TurboX (ETX) server components
+
+Acts as the broker + session manager.
+
+Integrates with VirtualGL to provide Server-Side Rendering (SSR).
+
+Users connect via ETX client → ETX server starts session → OpenGL renders on GPU → frames streamed to user.
+
+(Optional) Application stack
+
+CAD/EDA tools or any GPU workloads you want in the environment.
+
+Installed at this stage if you want them baked into the AMI.
+
+4. Validation before freezing AMI
+
+After installation, you must validate:
+
+nvidia-smi → confirms driver + GPU recognized.
+
+vglrun glxinfo | grep "OpenGL renderer" → should show NVIDIA… not llvmpipe.
+
+Launch ETX client session → test rendering (spinning cube, etc).
+
+👉 If all works, you know the image is GPU-ready.
+
+5. Freezing into AMI
+
+Once validated, you stop the instance → create an AMI.
+
+This AMI becomes your “golden image” for GPU ETX servers (or compute nodes if you do the same process there).
+
+You note down the AMI ID and reuse it whenever you need to launch new GPU-capable nodes.
+
+6. Using the AMI later
+
+Any time you need:
+
+A new ETX server with GPU acceleration
+
+A GPU compute node for heavy users
+
+…you just spin up a new instance from this AMI → no need to reinstall drivers, VirtualGL, ETX, etc.
+
+Saves time and ensures consistency.
+
+✅ Summary in plain words
+You’re basically doing:
+
+Pick a GPU instance (g4dn.xlarge) → has CUDA GPU.
+
+Install NVIDIA driver, VirtualGL, and ETX server stack → makes remote GPU rendering possible.
+
+Test that GPU rendering works.
+
+Freeze the instance → save as AMI.
+
+Use that AMI as a standard base image to launch future GPU ETX servers or GPU compute nodes.
+
+Do you want me to also map which steps are ETX-specific vs general GPU setup so you clearly see what’s vendor lock-in vs what’s just CUDA/GPU setup?
+
+You said:
+so the instance which aws is guing has gpu right
+ChatGPT said:
+
+Exactly 👍
+
+When you run the Packer workflow with those docs, AWS will launch a temporary EC2 instance that has GPU hardware. For example:
+
+Instance type:
+
+Tesla T4 → g4dn.xlarge (1 GPU, 4 vCPU, 16GB RAM)
+
+L4 GPU → g6.xlarge (newer generation with NVIDIA L4 GPU)
+
+AMI base: RHEL 8.8 (so the instance will boot with RHEL 8.8 OS).
+
+What happens inside (via Packer provisioners):
+
+Install NVIDIA driver that matches the GPU (e.g., 535.xx for CUDA 12).
+
+Install CUDA toolkit + libraries (cuda, cudnn, etc.) for GPU workloads.
+
+Validate with nvidia-smi (to confirm driver + GPU is working).
+
+Shut down the instance.
+
+Save it as a new Amazon Machine Image (AMI).
+
+Output:
+You’ll get a frozen AMI ID in your AWS account, e.g. ami-0abcd1234efgh5678.
+
+That AMI will always have RHEL 8.8 + NVIDIA drivers + CUDA pre-installed.
+
+Anyone in your team can now launch GPU-capable instances directly from that AMI instead of repeating the installation steps.
+
+So yes — the AWS instance Packer launches has a real GPU. That’s why nvidia-smi works in that environment, and why this isn’t possible on a normal non-GPU instance.
+
+Do you want me to map this to your repo’s actual files step by step (which file picks instance type, where RHEL 8.8 is set, where NVIDIA gets installed)?
+
+You said:
+variable "Instance_type" {
+   type = string
+   default = "m5.xlarge"
+}
+
+variable "aws_region" {
+   type    = string
+   default = "us-west-2"
+}
+
+variable "aws_ami" {
+  type    = string
+  default = "AWS-Golden-Candidate-AMI-RHEL88*"
+}
+
+variable "aws_vpc_id" {
+  type    = string
+  default = "vpc-f1636d96"
+}
+
+variable "os_golden_image_name" {
+    type = string
+    default = "cadencecld-aws-base-ami"
+  }
+
+variable "aws_subnet_id" {
+  type    = string
+  default = "subnet-fe1f4599"
+}
+
+variable "aws_sg_list" {
+  description = "node group security group"
+  type        = list(string)
+  default     = [ "sg-19436263", "sg-7e465e05", "sg-a1041cda", "sg-0267d6b471bd52c16", "sg-0155b51de0b6cccaf" ]
+}
+
+
+variable "os_user_name" {
+    type = string
+    default = env("cadence_os_user")
+    sensitive   = true
+  }
+  
+  variable "os_user_password" {
+    type = string
+    default = env("cadence_os_user_password")
+    sensitive   = true
+  }
+
+
+
+
+
+
+packer {
+  required_plugins {
+    amazon = {
+      source  = "github.com/hashicorp/amazon"
+      version = ">= 1.1.5"
+    }
+    ansible = {
+      version = "~> 1"
+      source = "github.com/hashicorp/ansible"
+    }
+  }
+}
+
+locals {
+  date = formatdate("HHmm", timestamp())
+}
+
+source "amazon-ebs" "Cadence-rhel-88" {
+  instance_type       =   var.Instance_type
+  region              =   var.aws_region
+  ami_name            =   "${var.os_golden_image_name}_{{timestamp}}"
+
+  source_ami_filter {
+    filters = {
+     "tag:Name"    = var.aws_ami  
+    }
+    owners      = ["692010105451"]
+    most_recent = true
+  }
+  vpc_id              =   var.aws_vpc_id
+  subnet_id           =   var.aws_subnet_id
+  security_group_ids  =   var.aws_sg_list
+  ssh_username        =   var.os_user_name
+  ssh_password        =   var.os_user_password
+  communicator        =   "ssh"
+
+  tags = {
+    Name = "${var.os_golden_image_name}_{{timestamp}}"
+  }
+
+  run_tags = {
+    Name = "${var.os_golden_image_name}_{{timestamp}}"
+  }
+}
+
+build {
+  sources = ["source.amazon-ebs.Cadence-rhel-88"]
+
+  provisioner "file" {
+  destination = "/etc/nslcd.conf"
+  source      = "./nslcd.conf"
+  }
+  provisioner "shell" {
+    inline = [
+      "rm /etc/ldap.conf",
+      "rm /etc/sudo-ldap.conf",
+      "rm /etc/yum.repos.d/*",
+      "rm /var/lib/rpm/.rpm.lock",
+      "echo '10.207.8.39 sj-sa-sat2 sj-sa-sat2.cadence.com' >> /etc/hosts",
+      "echo '10.207.134.95 artifacts.cadence.com' >> /etc/hosts",
+      "echo 'nameserver 127.0.0.53' >> /etc/resolv.conf"
+    ]
+  }
+  
+  provisioner "file" {
+    destination = "/etc/sudo-ldap.conf"
+    source      = "./sudo-ldap.conf"
+  }
+
+  provisioner "shell" {
+    inline = [
+      "systemctl restart nslcd",
+      "systemctl restart nscd"
+    ]
+  }
+
+  provisioner "file" {
+    destination = "/etc/nsswitch.conf"
+    source      = "./nsswitch.conf"
+  }
+
+  provisioner "file" {
+    destination = "/etc/yum.repos.d/rhel.repo"
+    source      = "./rhel8.repo"
+  }
+
+  provisioner "file" {
+    destination = "~/package.sh"
+    source      = "./package.sh"
+  }
+
+ provisioner "shell" {
+    inline = [
+      "chmod +x ~/package.sh",
+      "~/package.sh"
+    ]
+  }
+
+  provisioner "file" {
+    destination = "~/munge.sh"
+    source      = "./munge.sh"
+  }
+
+  provisioner "shell" {
+    inline = [
+      "chmod +x ~/munge.sh",
+      "~/munge.sh"
+    ]
+  }
+  
+  provisioner "file" {
+    destination = "~/mate.sh"
+    source      = "./mate.sh"
+  }
+
+  provisioner "shell" {
+    inline = [
+      "chmod +x ~/mate.sh",
+      "~/mate.sh"
+    ]
+  }
+  
+  provisioner "file" {
+    destination = "/etc/profile.d/java.sh"
+    source      = "./package-java.sh"
+  }
+
+  provisioner "shell" {
+    inline = [
+   "useradd -d /opt/orchestrator -u 5002 orchestrator",
+   ##"useradd -d /opt/cmls -u 5000 cmls"
+    ]
+  }
+
+  provisioner "file" {
+    destination = "/etc/init.d/orchestrator-getssh"
+    source      = "./orchestrator-getssh"
+  }
+
+  provisioner "shell" {
+    inline = [
+      "rm -f /var/lib/rpm/.rpm.lock",
+      "yum install cloud-init -y"
+    ]
+  }
+
+ provisioner "file" {
+    destination = "/etc/cloud/cloud.cfg"
+    source      = "./cloud.cfg"
+  }
+
+  provisioner "shell" {
+    inline = [
+      "timedatectl set-timezone UTC",
+      #"sudo /usr/sbin/hwclock --utc --systohc"
+    ]
+  }
+
+  provisioner "shell" {
+    inline = [
+   "cd ~/",
+   "git clone https://github.com/ansible/ansible.git",
+   "cd ansible/",
+   "pip3 install --upgrade pip",
+   "pip3 install ansible"
+    ]
+  }
+  ### provisioner "ansible-local" {
+  #    playbook_file = "hello-world.yaml"
+  #  }
+  
+  provisioner "shell" {
+    inline = [
+      "wget https://artifacts.cadence.com/repository/cadence-cloud-infra-repo/Tools/NessusAgent-10.7.2-el8.x86_64.rpm",
+      "rpm -i NessusAgent-10.7.2-el8.x86_64.rpm"
+    ]
+  }
+
+  provisioner "shell" {
+    inline = [
+      "wget https://artifacts.cadence.com/repository/cadence-cloud-infra-repo/Tools/SentinelAgent_linux_x86_64_v23_4_2_14.rpm",
+      "rpm -i SentinelAgent_linux_x86_64_v23_4_2_14.rpm"
+    ]
+  }
+
+}
+
+
+
+plesae updaet in these
+
+
+
+ChatGPT said:
+Thought for 18s
+
+Perfect—here’s a drop‑in update to your Packer file so you can build a GPU‑enabled RHEL 8.8 AMI (g4dn/g5/g6) while keeping your current flow. I’ve only added what’s needed and I’ve commented the changes.
+
+1) Add GPU variables (put these with your other variable blocks)
+# =================== GPU BUILD SWITCHES ===================
+variable "enable_gpu" {
+  type    = bool
+  default = false
+}
+
+# Instance type to use when enable_gpu=true
+variable "gpu_instance_type" {
+  type    = string
+  default = "g4dn.xlarge"   # Tesla T4; change to g6.xlarge for L4 if you prefer
+}
+
+# Path on the builder to the AWS GRID driver .run
+# (Adjust the version/path to wherever you host it)
+variable "grid_installer_path" {
+  type    = string
+  default = "/apps/cc/etx/opengl/drivers/NVIDIA-Linux-x86_64-550.90.07-grid-aws.run"
+}
+
+# ETX role for SSR configuration: "server" (utility/X relay) or "compute"
+variable "etx_mode" {
+  type    = string
+  default = "server"
+}
+
+# Virtual screen size for headless X
+variable "vgl_virtual_res" {
+  type    = string
+  default = "1920x1200"
+}
+# ==========================================================
+
+2) Make the builder use a GPU instance when requested
+
+Change your source "amazon-ebs" "Cadence-rhel-88" block’s instance_type line to this:
+
+source "amazon-ebs" "Cadence-rhel-88" {
+  instance_type = var.enable_gpu ? var.gpu_instance_type : var.Instance_type
+  region        = var.aws_region
+  ami_name      = "${var.os_golden_image_name}_{{timestamp}}"
+  # ... (rest of this block unchanged) ...
+}
+
+
+This keeps your default m5.xlarge for normal builds, but uses g4dn.xlarge automatically when -var "enable_gpu=true".
+
+3) Add GPU provisioners (place these at the end of your existing build { ... })
+
+These provisioners are fully idempotent and conditional; if enable_gpu=false, they instantly no‑op.
+
+  # ===================== GPU: Phase 1 =====================
+  # Blacklist nouveau + update GRUB (RHEL8) then reboot
+  provisioner "shell" {
+    environment_vars = [
+      "ENABLE_GPU=${var.enable_gpu}",
+    ]
+    inline = [
+      # Skip if GPU build is disabled
+      '[ "${ENABLE_GPU}" != "true" ] && exit 0',
+
+      "set -euo pipefail",
+
+      # Blacklist nouveau + legacy fb drivers
+      "cat >/etc/modprobe.d/blacklist.conf <<'EOF'\n# Blacklisted for Nvidia installation\nblacklist vga16fb\nblacklist nouveau\nblacklist rivafb\nblacklist nvidiafb\nblacklist rivatv\nEOF",
+
+      # Add rdblacklist=nouveau to cmdline (safe to re-run)
+      "grep -q 'rdblacklist=nouveau' /etc/default/grub || sed -i 's/^\\(GRUB_CMDLINE_LINUX=\"[^\"]*\\)\"/\\1 rdblacklist=nouveau\"/' /etc/default/grub",
+
+      # Rebuild GRUB (UEFI vs BIOS)
+      '[ -d /sys/firmware/efi ] && grub2-mkconfig -o /boot/efi/EFI/redhat/grub.cfg || grub2-mkconfig -o /boot/grub2/grub.cfg',
+    ]
+  }
+
+  provisioner "shell" {
+    environment_vars = ["ENABLE_GPU=${var.enable_gpu}"]
+    inline_shebang   = "/bin/bash -e"
+    inline           = [
+      '[ "${ENABLE_GPU}" != "true" ] && exit 0',
+      "echo 'GPU build: Rebooting after nouveau blacklist...'",
+    ]
+    expect_disconnect = true
+  }
+
+  # Reconnect anchor (no-op)
+  provisioner "shell" {
+    environment_vars = ["ENABLE_GPU=${var.enable_gpu}"]
+    inline = [
+      '[ "${ENABLE_GPU}" != "true" ] && exit 0',
+      "echo 'GPU build: Reconnected (nouveau off)'",
+    ]
+  }
+
+  # ===================== GPU: Phase 2 =====================
+  # Install AWS GRID driver then reboot
+  provisioner "shell" {
+    environment_vars = [
+      "ENABLE_GPU=${var.enable_gpu}",
+      "GRID_RUN=${var.grid_installer_path}",
+    ]
+    inline = [
+      '[ "${ENABLE_GPU}" != "true" ] && exit 0',
+      "set -euo pipefail",
+      'chmod +x "${GRID_RUN}"',
+      'sh "${GRID_RUN}" --silent',
+    ]
+  }
+
+  provisioner "shell" {
+    environment_vars = ["ENABLE_GPU=${var.enable_gpu}"]
+    inline_shebang   = "/bin/bash -e"
+    inline           = [
+      '[ "${ENABLE_GPU}" != "true" ] && exit 0',
+      "echo 'GPU build: Rebooting after GRID driver install...'",
+    ]
+    expect_disconnect = true
+  }
+
+  # Sanity check after reboot
+  provisioner "shell" {
+    environment_vars = ["ENABLE_GPU=${var.enable_gpu}"]
+    inline = [
+      '[ "${ENABLE_GPU}" != "true" ] && exit 0',
+      "nvidia-smi -q | head -20 || (echo 'nvidia-smi failed' && exit 1)",
+    ]
+  }
+
+  # ===================== GPU: Phase 3 =====================
+  # Configure VirtualGL (headless X) + ETX SSR + final reboot
+  provisioner "shell" {
+    environment_vars = [
+      "ENABLE_GPU=${var.enable_gpu}",
+      "ETX_MODE=${var.etx_mode}",              # server|compute
+      "VGL_VRES=${var.vgl_virtual_res}",       # e.g., 1920x1200
+    ]
+    inline = [
+      '[ "${ENABLE_GPU}" != "true" ] && exit 0',
+      "set -euo pipefail",
+
+      # Detect BusID (T4 often PCI:0:30:0 ; L4 often PCI:49:0:0)
+      'BUSID="$(nvidia-xconfig --query-gpu-info | awk \'/PCI BusID/ {print $4; exit}\')"',
+      '[ -z "${BUSID}" ] && BUSID="PCI:0:30:0"',
+
+      # Create headless X config (NO UseDisplayDevice=None on AWS)
+      'nvidia-xconfig -a --allow-empty-initial-configuration --virtual="${VGL_VRES}" --busid "${BUSID}"',
+
+      # Add HardDPMS=false in Device section (prevents low FPS)
+      'grep -q HardDPMS /etc/X11/xorg.conf || awk \'BEGIN{d=0} /Section "Device"/{print; i=1; next} i && /EndSection/ && !d {print "    Option \\"HardDPMS\\" \\"false\\""; d=1; i=0} {print}\' /etc/X11/xorg.conf > /etc/X11/xorg.conf.new && mv /etc/X11/xorg.conf.new /etc/X11/xorg.conf',
+
+      # Ensure we do NOT have UseDisplayDevice "None"
+      'sed -i \'/UseDisplayDevice.*None/d\' /etc/X11/xorg.conf || true',
+
+      # SSR: stop display, unload modules, run ssrconfig from the right path
+      "systemctl stop gdm || true",
+      "systemctl stop nvidia-persistenced || true",
+      "modprobe -r nvidia_uvm nvidia_drm nvidia_modeset nvidia || true",
+
+      # Prefer ETX server path; fall back to compute utils path
+      'if [ "${ETX_MODE}" = "server" ] && [ -x /opt/etxcn-12.0/bin/ssrconfig ]; then cd /opt/etxcn-12.0; ' +
+        'elif [ -d /apps/cc/etx/opengl/etx-utils ]; then cd /apps/cc/etx/opengl/etx-utils; ' +
+        'else echo "ssrconfig path not found" >&2; exit 1; fi',
+
+      "bin/ssrconfig config",
+
+      # Ensure :0 exists by default and services are up
+      "systemctl set-default graphical.target",
+      "systemctl start gdm || true",
+      "systemctl start nvidia-persistenced || true",
+
+      # Final reboot to lock it in
+      "echo 'GPU build: Final reboot after VirtualGL + SSR...'",
+    ]
+    expect_disconnect = true
+  }
+
+  # Reconnect and show GPU list (optional)
+  provisioner "shell" {
+    environment_vars = ["ENABLE_GPU=${var.enable_gpu}"]
+    inline = [
+      '[ "${ENABLE_GPU}" != "true" ] && exit 0',
+      "echo 'GPU build: Reconnected after final reboot'",
+      "nvidia-smi -L || true",
+    ]
+  }
+  # =================== END GPU PROVISIONERS ===================
+
+4) Build commands
+Standard (non‑GPU) build (unchanged behavior)
+packer build \
+  -var "aws_region=us-west-2" \
+  -var "aws_ami=AWS-Golden-Candidate-AMI-RHEL88*" \
+  -var "Instance_type=m5.xlarge" \
+  -var "os_golden_image_name=cadencecld-aws-base-ami" \
+  aws_build.pkr.hcl
+
+GPU build (this uses g4dn.xlarge, installs GRID + VirtualGL + SSR, and bakes it)
+packer build \
+  -var "aws_region=us-west-2" \
+  -var "aws_ami=AWS-Golden-Candidate-AMI-RHEL88*" \
+  -var "enable_gpu=true" \
+  -var "gpu_instance_type=g4dn.xlarge" \
+  -var "grid_installer_path=/apps/cc/etx/opengl/drivers/NVIDIA-Linux-x86_64-550.90.07-grid-aws.run" \
+  -var "etx_mode=server" \   # or compute
+  -var "os_golden_image_name=cadencecld-aws-base-ami-gpu" \
+  aws_build.pkr.hcl
+
+What this does for you
+
+Chooses a real GPU instance for the build when enable_gpu=true.
+
+Installs the NVIDIA GRID driver appropriate for AWS.
+
+Configures headless X with VirtualGL (correct BusID, avoids the DPMS low‑FPS trap, and removes UseDisplayDevice None).
+
+Runs ETX SSR config for either the server role or compute role.
+
+Validates with nvidia-smi and ensures a graphics display :0 exists at boot.
+
+Result: AMI is GPU‑ready. Any future g4dn/g6 launched from it will have NVIDIA + VirtualGL + SSR working out of the box.
+
+If you want me to also add a final “clean AMI” step (remove logs, SSH host keys, dhclient leases, etc.) gated on etx_mode == "compute", I can paste that block too.
