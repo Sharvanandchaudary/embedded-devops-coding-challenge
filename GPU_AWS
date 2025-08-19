@@ -1,0 +1,381 @@
+GPU-Accelerated instances
+For running OpenGL-intensive applications such as Allegro, we must run GPU-accelerated EC2 instances and take special care in configuring ETX12 to
+support it. The current reference AWS Accelerated Computing instance type for this is the g4dn, which uses the Nvidia Tesla T4 GPU. One GPU will
+suffice. Unfortunately, g4dn instances are more expensive than equivalent m5 instances.
+Configuring the ETX server/utility node
+Install the Nvidia driver
+Updating the driver version (only needed for later upgrades, not in initial setup)
+Configure VirtualGL
+Configure SSR (ETX Server-Side Rendering)
+Configuring the compute node AMI
+ETX profile settings
+Testing
+Troubleshooting
+Configuring the ETX server/utility node
+The chamber ETX utility node must run a g4dn instance to act as an X windows relay for the compute nodes. We must install the Nvidia GRID driver and
+configure ETX to support OpenGL.
+All commands should be run as root.
+Install the Nvidia driver
+(see AWS: Install Nvidia drivers, option 3: GRID drivers, CentOS 7)
+Disable the nouveau open source driver for Nvidia graphics cards and reboot:
+$ vi /etc/modprobe.d/blacklist.conf
+# add these lines:
+# Blacklisted for Nvidia installation
+blacklist vga16fb
+blacklist nouveau
+blacklist rivafb
+blacklist nvidiafb
+blacklist rivatv
+$ vi /etc/default/grub
+GRUB_CMDLINE_LINUX="rdblacklist=nouveau" # add this string to the end of the variable
+$ grub2-mkconfig -o /boot/grub2/grub.cfg
+$ reboot now
+Download and run the GRID driver (we already have versions in /apps/cc/etx/opengl), accepting the default options:
+$ /bin/sh /apps/cc/etx/opengl/drivers/NVIDIA-Linux-x86_64-<version>-grid-aws.run --silent
+(this usually take one or two minutes)
+$ reboot now
+Confirm the driver is functional:
+$ nvidia-smi -q | head
+==============NVSMI LOG==============
+Timestamp : Tue Mar 22 22:38:08 2022
+Driver Version : 510.47.03
+CUDA Version : 11.6
+Attached GPUs : 1
+GPU 00000000:00:1E.0
+Product Name : Tesla T4
+Updating the driver version (only needed for later upgrades, not in initial setup)
+To update to a new driver version, simply re-run step 2, but stop the gdm service beforehand:
+1.
+2.
+3.
+1.
+$ systemctl stop gdm
+$ /bin/sh /apps/cc/etx/opengl/drivers/NVIDIA-Linux-x86_64-<version>-grid-aws.run --silent
+$ reboot now
+Configure VirtualGL
+(see VirtualGL: Headless Nvidia Mini How-To)
+Find the GPU's BusID:
+$ nvidia-xconfig --query-gpu-info # g4dn instances
+Number of GPUs: 1
+GPU #0:
+Name : Tesla T4
+UUID : GPU-6adf4968-46c2-28e8-ae20-343e1eb76efd
+PCI BusID : PCI:0:30:0 # this is the BusID we will need in the next step, but it is
+usually this value
+Number of Display Devices: 0
+$ nvidia-xconfig --query-gpu-info # g6 instances
+Number of GPUs: 1
+GPU #0:
+Name : NVIDIA L4
+UUID : GPU-a084c857-7b83-b975-2a73-df63db2e35d9
+PCI BusID : PCI:49:0:0 # usual BusID for L4 GPUs
+Number of Display Devices: 0
+Create xorg.conf for headless operation:
+$ nvidia-xconfig -a --allow-empty-initial-configuration --virtual=1920x1200 --busid PCI:0:30:0 # use
+the BusID from above
+^^^^^^^^^^
+WARNING: Unable to locate/open X configuration file.
+Option "AllowEmptyInitialConfiguration" "True" added to Screen "Screen0".
+New X configuration file written to '/etc/X11/xorg.conf'
+(Important: Per the VirtualGL instructions, do not include "--use-display-device=None" in the nvidia-xconfig statement for AWS instances; your
+display :0 X server will fail if you do.)
+Edit xorg.conf to disable DMPS on modern Nvidia drivers. This is important, or else you will experience extremely low framerates.
+$ vi /etc/X11/xorg.conf
+# add this line to the "Device" section:
+Option "HardDPMS" "false"
+$ more /etc/X11/xorg.conf
+[...]
+Section "Device"
+Identifier "Device0"
+Driver "nvidia"
+VendorName "NVIDIA Corporation"
+BoardName "Tesla T4"
+BusID "PCI:0:30:0"
+Option "HardDPMS" "false" # make sure this is here
+EndSection
+[...]
+If you need to modify xorg.conf later, you can just run systemctl restart gdm for the server to pick up the new changes. If you're going through
+initial setup up you can skip this; we'll be rebooting after the next section.
+Configure SSR (ETX Server-Side Rendering)
+Stop the ETX server and connection node: (skip this step for the compute node)
+1.
+2.
+3.
+1.
+2.
+3.
+a.
+b.
+c.
+4.
+1.
+2.
+3.
+4.
+$ service otetxcn stop
+$ service otetxsvr stop
+Run ssrconfig (see https://ae09ut03.cadence.com/etx/help/admin/xstart-general.htm under "Server side rendering", or "Exceed TurboX 12.0.4 -
+Server Manager Administration Guide.pdf", page 264)
+$ service gdm stop
+$ service nvidia-persistenced stop
+$ modprobe -r nvidia_uvm nvidia_drm nvidia_modeset nvidia # or remove them individually
+$ cd /opt/etxcn-12.0 # ETX server; for the compute AMI, use /apps/cc/etx
+/opengl/etx-utils
+$ bin/ssrconfig config # run this until there are no errors, especially rmmod
+$ service gdm start
+If the nvidia module is still in use, you can run fuser -v /dev/nvidia* to identify the offending process and stop or kill it.
+Set the default runlevel to graphical login so we have a display :0. When you're done, restart the server one last time to ensure everything is
+working:
+$ systemctl set-default graphical.target
+$ systemctl get-default
+graphical.target
+$ reboot now
+Configuring the compute node AMI
+This is almost the same procedure as the ETX node:
+Follow Install the Nvidia driver, above
+Follow Configure VirtualGL, above
+Follow a slightly modified Configure SSR process:
+Skip step 1
+Use cd /apps/cc/etx/opengl/etx-utils for the path in the first line
+Perform step 3 (set runlevel) as indicated
+After the last reboot, clean the image and prepare the AMI.
+ETX profile settings
+It is important to set the ETX profile to use Direct Server Side Rendering so all applications will run with GPU acceleration.
+Go to ETX profile configuration, either in Server Manager or a personal profile
+Click the Startup tab
+Click Advanced settings
+Check the box for User direct server-side rendering.
+If if you do not do this, OpenGL-accelerated applications must be started with the ssrrun command as a wrapper/prefix:
+$ /opt/etxcn-12.0/bin/ssrrun name_of_application
+Testing
+glxinfo64 should report that it is using Nvidia, not llvmpipe or Mesa or VMware:
+$ /opt/etxcn-12.0/bin/ssrrun /opt/etxcn-12.0/3rdparty/virtualgl/bin/glxinfo64 -B
+name of display: ae20ut08:1
+display: ae20ut08:1 screen: 0
+direct rendering: Yes
+Memory info (GL_NVX_gpu_memory_info):
+Dedicated video memory: 23034 MB
+Total available memory: 23034 MB
+Currently available dedicated video memory: 22361 MB
+OpenGL vendor string: NVIDIA Corporation
+OpenGL renderer string: NVIDIA L4/PCIe/SSE2
+OpenGL core profile version string: 4.6.0 NVIDIA 550.90.07
+OpenGL core profile shading language version string: 4.60 NVIDIA
+OpenGL core profile context flags: (none)
+OpenGL core profile profile mask: core profile
+OpenGL version string: 4.6.0 NVIDIA 550.90.07
+OpenGL shading language version string: 4.60 NVIDIA
+OpenGL context flags: (none)
+OpenGL profile mask: (none)
+OpenGL ES profile version string: OpenGL ES 3.2 NVIDIA 550.90.07
+OpenGL ES profile shading language version string: OpenGL ES GLSL ES 3.20
+Similarly, glxspheres64 should have a frame rate in the 400-500 range, not 30 with software emulation/Mesa/llvm.
+$ /opt/etxcn-12.0/bin/ssrrun /opt/etxcn-12.0/3rdparty/virtualgl/bin/glxspheres64
+(lots of pretty shapes and colors, updating with terrifying speed)
+If it complains about display :0 not found, check your /etc/X11/xorg.conf for references to Option "UseDisplayDevice" "None", remove them, and restart gdm
+/ETX. See Configure VirtualGL, above.
+Troubleshooting
+Per Allegro R&D there is some issue with the frame buffer configuration for the Tesla T4 GPU used in these instances. If we cannot find the issue,
+NV_PLUGIN_DISABLE_FBO=1 works around this with a performance penalty.
+> setenv NV_PLUGIN_DISABLE_FBO 1
+
+
+
+
+
+
+Creating a GPU compute AMI from an existing one
+This is for the case when we need to modify an existing compute AMI, then save it as a new compute launch template. This is most common when we
+must create a GPU compute node in a chamber.
+Scale up a new compute instance.
+Temporarily disable the scaleNode.pl cron job for ccops@<ch>ol01.
+Install the Nvidia driver.
+Clean the image.
+Create a new AMI from the image.
+Steps one and two are fairly straightforward; the last three will take some consideration.
+Install the Nvidia driver
+G5, G4dn, and G3 instances
+For these you can use the AWS-only GRID drivers. Follow the directions on AWS: Install Nvidia drivers on Linux instances, Option 3: GRID drivers,
+CentOS 7. We have a section on the GPU-Accelerated instances page with sample instructions for accelerated graphics applications such as Allegro.
+P-series instances
+For these you must install the public Nvidia driver. The instructions are also on Install Nvidia drivers on Linux instances, but Option 2.
+Visit the Nvidia Driver Downloads page and search for the appropriate driver for the instance type using the table on the AWS page as a
+reference.
+Or download it directly from the Unix Driver Archive page.
+Follow the instructions on the Nvidia Driver Installation Quickstart Guide
+More instructions to follow. FIXME
+References
+Install Nvidia drivers on Linux instances
+Nvidia Driver Downloads
+Nvidia Driver Installation Quickstart Guide
+Unix Driver Archive
+Cleaning the image
+After you install the driver on the new instance, you should "clean" the image before saving it as a new launch template AMI. This uninstalls/unconfigures
+our auto-installed applications like SentinelOne, Splunk, and SGE, and cleans up log and temp files.
+These should all be run as root on the new instance.
+Remove SGE
+service sgeexecd.<ch> stop # for example, "service sgeexecd.aw05 stop"
+chkconfig sgeexecd.<ch> off # same here
+rm /etc/rc.d/init.d/sgeexecd.<ch>
+Remove SentinelOne
+service sentinelone stop
+rpm -qa "*Sentinel*" # to determine the exact rpm name
+rpm -e SentinelAgent-21.10.4.9-1.x86_64 # to use here
+Remove Dome9
+service dome9d stop
+yum remove Dome9Agent -y
+Remove Splunk configuration, but not installation
+/opt/splunkforwarder/bin/splunk stop
+/opt/splunkforwarder/bin/splunk clone-prep-clear-config
+/bin/rm -f /opt/splunkforwarder/var/log/introspection/*
+/bin/rm -f /opt/splunkforwarder/var/log/splunk/*
+/bin/rm -f /opt/splunkforwarder/var/run/splunk/*.pid
+Clean up /etc/hosts and yp.conf
+sed -i '/ip-/d' /etc/hosts
+cat /etc/hosts
+/bin/cp -f /etc/yp.conf.preFix /etc/yp.conf
+cat /etc/yp.conf
+Stop and disable services
+/sbin/chkconfig vsftpd off
+/sbin/chkconfig rhnsd off
+/sbin/chkconfig ypbind off
+/sbin/service crond stop
+Follow relevant steps for installed time sync software
+# for NTP
+/sbin/service ntpd stop
+/bin/cp -f /etc/ntp.conf.preFix /etc/ntp.conf
+/bin/cp -f /etc/ntp/step-tickers.preFix /etc/ntp/step-tickers
+# for Chrony
+/sbin/service chronyd stop
+rm -f /var/lib/chrony/drift
+Clean up everything else
+/sbin/service rsyslog stop
+/usr/sbin/logrotate -f /etc/logrotate.conf
+/bin/rm -f /var/log/*-???????? /var/log/*.gz
+/bin/rm -f /var/log/dmesg.old
+/bin/rm -f /var/log/dome9*
+/bin/rm -f /var/spool/mail/*
+/bin/rm -f /etc/cron.d/rear
+/bin/cat /dev/null > /var/log/wtmp
+/bin/cat /dev/null > /var/log/lastlog
+/bin/rm -rf /tmp/*
+/bin/rm -rf /var/tmp/*
+/bin/rm -f /etc/ssh/*key*
+/bin/rm -f /root/.bash_history
+/bin/rm -f /var/lib/dhclient/dhclient-*.lease
+/bin/rm -f /var/lib/nfs/statd/sm*/*
+history -c
+Reference
+This is the tasks file for img.aws.prep.clean, for reference.
+Tasks file for img.aws.prep.clean
+---
+# tasks file for img.aws.prep.clean
+- name: "Splunk UF Deployment"
+block:
+# this command can be issued as as often as I like with no side affects
+- name: "Stop Splunk service"
+command: "/opt/splunkforwarder/bin/splunk stop"
+# Prepare Splunk for cloning
+- name: "Prepare Splunk for cloning"
+command: "/opt/splunkforwarder/bin/splunk clone-prep-clear-config"
+- name: "Prepare Splunk for cloning - remove files"
+shell: "/bin/rm -f {{ item }}"
+with_items:
+- "/opt/splunkforwarder/var/log/introspection/*"
+- "/opt/splunkforwarder/var/log/splunk/*"
+- "/opt/splunkforwarder/var/run/splunk/*.pid"
+delegate_to: "{{ hostname }}"
+- name: Stop services
+service:
+name: "{{ item }}"
+state: stopped
+delegate_to: "{{ hostname }}"
+with_items:
+- crond
+- rsyslog
+- chronyd
+- dome9d
+ignore_errors: yes
+- name: remove dome9 agent
+yum:
+name: Dome9Agent
+state: absent
+delegate_to: "{{ hostname }}"
+- name: remove hostname from /etc/hosts
+lineinfile:
+path: /etc/hosts
+state: absent
+regexp: 'ip-'
+delegate_to: "{{ hostname }}"
+- name: Copy in default yp.conf
+copy:
+src: "yp.conf"
+dest: "/etc/yp.conf"
+owner: root
+group: root
+mode: 0644
+delegate_to: "{{ hostname }}"
+- name: "Rotate all log files"
+command: "/usr/sbin/logrotate -f /etc/logrotate.conf"
+delegate_to: "{{ hostname }}"
+ignore_errors: yes
+- name: "Truncate files"
+shell: "/bin/cat /dev/null > {{ item }}"
+with_items:
+- /var/log/wtmp
+- /var/log/lastlog
+delegate_to: "{{ hostname }}"
+- name: delete files
+shell: "/bin/rm -f {{ item }}"
+with_items:
+- "/var/log/*-????????"
+- "/var/log/*.gz"
+1.
+2.
+3.
+a.
+b.
+4.
+5.
+6.
+7.
+- "/var/log/dmesg.old"
+- "/var/log/dome9*"
+- "/var/spool/mail/*"
+- "/var/spool/mqueue/*"
+- "/var/spool/clientmqueue/*"
+- "/etc/ssh/*key*"
+- "/etc/cron.d/rear"
+- "/var/lib/dhclient/dhclient-*.lease*"
+- "/var/lib/nfs/statd/sm*/*"
+- "/var/lib/chrony/drift"
+- "-r /var/tmp/*"
+- "-r /tmp/*"
+- "/root/VBoxGuestAdditions.iso"
+- "/root/.bash_history"
+delegate_to: "{{ hostname }}"
+Creating the new AMI
+At this point, in the AWS console, trigger the AMI creation process process.
+Stop the instance in the AWS console; make sure to wait until the status is Stopped.
+Right-click the EC2 instance name and choose Image and templatesCreate image.
+You can name the image whatever you like, but you should put "gpu" in the title somewhere for clarity. For example:
+Source AMI name: slave-rhel-7Workstation-x86_64-7.4-c0502_r7-20210210
+New GPU AMI name: slave-rhel-7Workstation-x86_64-7.4-c0502_r7-20210210-gpu
+Leave everything else with their default values and choose Create Image.
+Note the AMI ID in the green box up top; you will need this to use with scaleNode.
+In the left-nav under ImagesAMIs, find the new AMI and monitor the Status column.
+Once AMI generation is complete, you can edit scaleNode.cfg and add the new AMI ID to the cluster or queue launch configuration.
+Finishing up
+Remember to re-enable scaleNode.pl in cron!
+
+
+
+
+
+
+
+
+
+
+
+
