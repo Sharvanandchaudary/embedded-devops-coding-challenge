@@ -1,0 +1,72 @@
+Baremetal RHEL 8.6 – Cadence Standard Production Image
+Goal
+
+Validate and deliver a Cadence-standard RHEL 8.6 image that can reliably boot on baremetal systems, ensuring readiness for production deployment.
+
+Activities
+
+Tested Cadence BMR and PXE images on RHEL 8.6.
+
+Debugged baremetal boot failures (nodes remained in power-off state).
+
+Compared vanilla RHEL 8.6 ISO vs Cadence images.
+
+Modified ISO builds and validated SSH/cloud-init access.
+
+Partnered with Imaging team to convert ISO into a Cadence-standard image.
+
+Work Done
+
+Cadence BMR & PXE Failures
+
+RHEL 8.6 Cadence BMR and PXE images consistently failed to boot baremetal.
+
+Some failed even in Dev environment, leaving nodes powered-off.
+
+UEFI vs Legacy BIOS
+
+Identified that Cadence PXE image lacked an EFI partition (baremetal requires UEFI).
+
+Adding EFI partition did not resolve the boot issue.
+
+ISO Approach
+
+Used RHEL 8.6 vanilla ISO, which successfully booted baremetal.
+
+Default cloud-user login required modifications in sshd_config and cloud.cfg.
+
+Created new image from modified ISO volume and promoted step-by-step (Dev → Test → Baremetal).
+
+Cadence Standardization
+
+Shared working 8.6 ISO image with Imaging team.
+
+Their automation converted it into Cadence-standard format.
+
+Issues identified:
+
+Kernel update broke boot functionality.
+
+GRUB contained a hardcoded UUID, causing mismatch.
+
+Resolved by ensuring no kernel update during imaging.
+
+Final Outcome
+
+Delivered a RHEL 8.6 Cadence-standard baremetal image that boots successfully.
+
+Validated SSH access and confirmed promotion workflow.
+
+Image is production-ready.
+
+Due Diligence
+
+Verified across Dev, Test, and Baremetal environments.
+
+Root causes identified and documented: missing EFI partition, kernel updates during imaging, GRUB UUID misconfiguration.
+
+Established repeatable methodology for future baremetal image builds.
+
+Acknowledgements
+
+Thanks to Bala and Abhishek for their diligence and support during debugging and validation.
