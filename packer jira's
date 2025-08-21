@@ -1,0 +1,116 @@
+Image pipeline should use non-root user 
+
+All provisoner and shell commands should be executed via sudo and files are copied to tmp folder instead of directly folder that root user owns
+
+Please look at implementation at branch https://github.cadence.com/IT/packer-cadencecld-base-image/tree/feature/rhel9 
+
+ 
+
+cc'ed Arulappan Govinda Swamy 
+
+Attachments
+
+Options
+Drop files to attach, or browse.
+Tempo
+THERE ARE NO ACTIVITIES FOR YOU TO SEE FOR THIS ISSUE.
+You have not recorded any activity on this issue.
+
+
+Log Time
+
+Plan Time
+
+Add Expense
+Activity
+All
+Comments
+Work Log
+History
+Activity
+Subversion ALM
+
+Newest first
+You can now pin up to five comments to highlight important information. Pinned comments will appear above all other comments, so they're easy to find.
+
+
+Got it
+Learn more about pinned comments
+ Collapse comment: Veera Venkata Saravanakumar [C] added a comment - 15/Aug/25 4:07 PM
+
+Veera Venkata Saravanakumar [C] added a comment - 15/Aug/25 4:07 PM
+Image creation with Non root user is nedded for default image creation where there was no root and password we can enable this by uncommenting cloud-user
+
+This enables the ssh as clou-user without password and able to run packer 
+
+All the commands in openstack_build.pkr.hcl has to be sudo so that it get root authority to install libraries and packages
+
+Edit
+Delete
+
+Pin
+
+ Collapse comment: Arun Patnaik added a comment - 15/Aug/25 12:58 PM
+
+Arun Patnaik added a comment - 15/Aug/25 12:58 PM
+Veera Venkata Saravanakumar [C] Arulappan Govinda Swamy can we drive this to closure ASAP?
+
+
+Pin
+
+ Collapse comment: P Srinivasulu added a comment - 15/Jul/25 1:18 AM
+
+P Srinivasulu added a comment - 15/Jul/25 1:18 AM
+Hi Can Sevilmis,
+
+As discussed with you, we have only a non-root user in RHEL9 images. Can you please confirm if we need this configuration only for RHEL9 images?
+
+Regards,
+Srini
+
+
+Pin
+
+ Collapse comment: P Srinivasulu added a comment - 27/Apr/25 8:40 PM
+
+P Srinivasulu added a comment - 27/Apr/25 8:40 PM
+Hi Can Sevilmis,
+
+After converting the image from VMDK to AWS or QCOW2, only the root user is available. Were any additional users with sudo privileges created to perform this activity?
+
+Regards,
+Srini
+
+
+
+#sudo update-alternatives --set python3 /usr/bin/python3.11 
+this logic isn;t coherent with the cloud-init installation. Cloud-init installation is executed with python 3.9 and we are setting python 3.11
+
+This breaks cloud-init execution, please disable this logic as implemented in this branch 
+
+https://github.cadence.com/IT/packer-cadencecld-base-image/tree/feature/rhel9
+
+ 
+
+Add below command to cloud.cfg file 
+
+// code placeholder
+runcmd:- [sh, -xc, 'update-alternatives --set python3 /usr/bin/python3.11']
+
+Description
+At Packer build pipeline, we have an approval job. In thisjob we are utilizing 
+
+${{ steps.manual_approval.outputs.approved}} however this doesn;t work expected
+
+we should enhance via below code block
+
+// code placeholder
+        if: ${{ steps.manual_approval.outputs.approved == 'true' }}        run: |          echo "approved=approved" >> $GITHUB_OUTPUT          echo "::set-output name=approved::approved" 
+At this branch https://github.cadence.com/IT/packer-cadencecld-base-image/tree/feature/rhel9
+
+ 
+
+You can see exact implementation
+ 
+Pin
+
