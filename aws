@@ -1,3 +1,21 @@
+
+
+# Disable services if they exist
+systemctl disable --now vsftpd 2>/dev/null || echo "vsftpd not installed"
+systemctl disable --now rhnsd 2>/dev/null || echo "rhnsd not installed"
+systemctl disable --now ypbind 2>/dev/null || echo "ypbind not installed"
+systemctl disable --now crond 2>/dev/null || echo "crond not installed"
+systemctl disable --now ntpd 2>/dev/null || echo "ntpd not installed"
+
+# Optional: if chronyd is used instead of ntpd (RHEL8+)
+systemctl disable --now chronyd 2>/dev/null || echo "chronyd not installed"
+
+
+
+
+
+
+
 Pls copy and notedown like this
  
  
