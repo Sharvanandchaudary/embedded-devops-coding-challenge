@@ -1,0 +1,9 @@
+sudo dnf install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm -y
+
+sudo dnf install dkms -y
+sudo dnf module disable nvidia-driver -y
+sudo dnf clean all
+sudo dnf makecache
+sudo dnf install nvidia-driver-cuda -y
+sudo reboot
+nvidia-smi
