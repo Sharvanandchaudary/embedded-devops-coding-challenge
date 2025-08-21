@@ -1,0 +1,103 @@
+Report: Cadence Base Image Build Pipeline (Packer)
+Overview
+
+The repository packer-cadencecld-base-image is responsible for creating standardized RHEL 8/9 base images for Cadence cloud environments (AWS, OpenStack, etc.).
+It leverages Packer to automate image builds, enforcing security, consistency, and portability across environments.
+
+The pipeline integrates with GitHub Actions for CI/CD, and uses Docker-based runners to guarantee reproducibility.
+Artifacts produced include:
+
+Golden AMIs for AWS
+
+QCOW2 images for OpenStack
+
+Hardened baseline OS images for internal cloud deployments
+
+Current Behavior
+
+Image creation is triggered via Packer templates under packer/ and images/.
+
+Provisioners (shell/file) currently assume root-level execution in many places.
+
+In some builds, update-alternatives --set python3 /usr/bin/python3.11 was used, which conflicts with cloud-init (which depends on Python 3.9).
+
+GitHub Actions workflow includes a manual approval gate, but its implementation using ${{ steps.manual_approval.outputs.approved }} is not functioning as expected.
+
+Required Changes (Per Jira Request)
+1. Non-root User Image Pipeline
+
+Images must be built using a non-root default user (e.g., cloud-user).
+
+Root SSH login should be disabled; cloud-user should be passwordless sudo-enabled only during build phase.
+
+All provisioners and shell commands must run via sudo.
+
+All file uploads must go first to /tmp, then moved into privileged directories using sudo install or sudo mv.
+
+2. Python Alternatives vs Cloud-init
+
+The logic switching Python to 3.11 must be disabled during image build.
+
+Cloud-init must remain stable with python3.9.
+
+If python alternatives are required, it should be deferred to a post-boot cloud-init runcmd step, but only after validation.
+
+Example for cloud.cfg (if approved):
+
+runcmd:
+  - [ sh, -xc, 'update-alternatives --set python3 /usr/bin/python3.11' ]
+
+3. Approval Job Fix (GitHub Actions)
+
+Replace fragile approval output logic with a reliable conditional block:
+
+if: ${{ steps.manual_approval.outputs.approved == 'true' }}
+run: |
+  echo "approved=approved" >> $GITHUB_OUTPUT
+  echo "::set-output name=approved::approved"
+
+
+Ensure downstream jobs use this explicit approved flag.
+
+Implementation Reference
+
+The required changes are already prototyped in the branch:
+feature/rhel9
+
+This branch includes:
+
+Non-root user setup (cloud-user)
+
+sudo-only provisioning
+
+tmp-staging for file uploads
+
+Corrected approval pipeline logic
+
+Removal of breaking python alternatives logic
+
+Cadence Standard
+
+Going forward, the following must be enforced across all Cadence base images:
+
+Non-root image pipeline (cloud-user with sudo).
+
+Provisioning via sudo only, file staging in /tmp.
+
+No breaking Python alternatives changes during build.
+
+Stable cloud-init execution guaranteed.
+
+Robust approval step logic in CI/CD workflows.
+
+References
+
+Jira Ticket: Image pipeline should use non-root user & fix approval step
+
+Discussions: Arulappan Govinda Swamy, Veera Venkata Saravanakumar [C], Arun Patnaik, P Srinivasulu, Can Sevilmis
+
+Implementation example: feature/rhel9 branch
+
+Would you like me to make this into a formal Markdown/Word report file (Image-Pipeline-Report.md / .docx) so you can attach it directly in Jira?
+
+Is this conversation helpful so far?
