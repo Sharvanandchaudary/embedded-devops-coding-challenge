@@ -1,0 +1,29 @@
+Daily Status Report
+
+Goal:
+
+Validate GPU host aggregate created.
+
+Create new flavor and copy image to prod.
+
+Perform aggregate testing in prod by creating and deleting multiple VMs.
+
+Analyze provisioning to ensure VMs are deployed on the correct node.
+
+Work Done:
+
+Completed host aggregation testing successfully.
+
+Created multiple VMs, provisioned them, and verified they launched on the intended node.
+
+Created a new flavor and validated it by launching an instance on test.
+
+Created a volume snapshot, used it to build a new image, and validated provisioning.
+
+Prepared and tested new image for OA98 chamber deployment.
+
+Issues Faced:
+
+Encountered errors while copying the volume to create a new image.
+
+The image size is ~350 GB, while the flavor created has 420 GB disk — mismatch led to creation error during volume-to-image conversion.
