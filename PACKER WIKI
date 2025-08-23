@@ -1,0 +1,201 @@
+Packer CadenceCLD Base Image — Team Wiki and Getting Started Guide
+
+This document is written as a clear, human-readable guide for new engineers who are starting with the Packer CadenceCLD Base Image repository. It explains how the repository works, what the workflows look like, the standards we follow, and the specific Jira issues that guide our practices. The goal is that anyone, even if they are new to this project, can understand the process step by step.
+
+---
+
+Purpose of This Repository
+
+This repository is the source of truth for building and maintaining golden base images used in Cadence Cloud environments. These images are critical because they:
+
+* Provide a standard baseline (security, compliance, and configuration).
+* Ensure that all deployments are consistent across environments (test, stage, prod).
+* Save time by baking in common software and libraries.
+* Reduce risk by removing ad-hoc manual setup steps.
+
+Every engineer working on this repo contributes to the stability of the entire platform. That is why we follow strict rules for building images and track every change through Jira.
+
+---
+
+Repository Layout
+
+* .github/workflows/ → Contains automation pipelines for building and promoting images.
+* packer/01-RHEL88-DRM/openstack/ → Templates and variables for OpenStack builds.
+* packer/01-RHEL88-DRM/aws/ → Templates for AWS builds.
+* terraform/ → Terraform drivers for both OpenStack and AWS.
+* docker-runner-build/ → Scripts to build a GitHub Actions runner container.
+
+By understanding this structure, you can quickly find where to make changes.
+
+---
+
+Getting Started: Workflow for Engineers
+
+Clone the repo and create your own branch:
+
+git checkout -b feature/<topic>
+
+Edit Packer files (\*.pkr.hcl or provisioner scripts). Follow coding standards:
+
+* Always stage files in /tmp.
+* Always use sudo when moving or installing files.
+* Never assume root access.
+
+Test locally:
+
+packer init .
+packer validate .
+packer build -only=openstack.\* .
+
+Push and open a PR:
+
+* Write a clear PR title.
+* In the description, explain what changed, why, and how to test.
+* Add rollback notes if relevant.
+* Reference Jira tickets.
+
+Get approval and merge after review.
+
+Promote using workflows to move the image into stage and prod.
+
+---
+
+Variables and Secrets
+
+* Variables are stored in openstack\_var.pkr.hcl. Most take values from environment variables like OS\_AUTH\_URL, OS\_USERNAME, or AWS\_REGION.
+* Secrets must be added in GitHub Actions → Settings → Secrets. Examples:
+
+  * AWS\_ACCESS\_KEY\_ID
+  * AWS\_SECRET\_ACCESS\_KEY
+  * OS\_PASSWORD
+  * REPO\_TOKEN
+
+Rule of thumb: Never hardcode secrets in code. Always use environment variables or GitHub secrets.
+
+---
+
+Building Images
+
+OpenStack Example:
+
+cd packer/01-RHEL88-DRM/openstack
+packer init .
+packer build -only=openstack.\* .
+
+AWS Example:
+
+cd packer/01-RHEL88-DRM/aws
+packer init .
+packer build -only=amazon-ebs.\* .
+
+After building, always boot the image once in a test environment and check that:
+
+* Cloud-init runs without errors.
+* Non-root user login works.
+* All provisioned packages are installed.
+
+---
+
+Standards Everyone Must Follow
+
+* Non-root builds — The root account must be disabled for SSH. Instead, use cloud-user with passwordless sudo.
+* Sudo everywhere — All commands in provisioners must be run with sudo.
+* /tmp staging — All files should be copied to /tmp and only then moved with sudo.
+* Cloud-init safety — Do not break cloud-init by forcing Python version changes during boot.
+* Repeatable builds — Builds must work even if re-run, so always use idempotent commands (dnf install -y).
+
+---
+
+Automation Pipelines
+
+We use GitHub Actions to automate builds and promotions:
+
+* Build workflows: Golden-AMI-Pipeline-Packer-Build.yml, Golden-AMI-RHEL88-DRM-Pipeline-Packer-Build.yml
+* Promotion workflows: promote-to-test.yml, promote-to-stage.yml, promote-to-prod.yml
+* Runner workflow: github-runner-docker-build.yml
+
+Manual approvals are built into promotions. The fix for approval handling was added in branch feature/approved-fix.
+
+---
+
+Promotion Process
+
+* Build the image.
+* Validate that it boots successfully.
+* Test SSH access and confirm cloud-init success.
+* Run smoke tests (package versions, logs, GPU drivers if relevant).
+* Use the promote-to-{env}.yml workflows.
+* Tag the repository (for example v2025.08.23-rhel88).
+* Update Jira tickets and notify the team.
+
+---
+
+Known Issues and Fixes
+
+* Cloud-init fails → Do not change Python alternatives during cloud-init.
+* Image too large for flavor → Always check that flavor disk > image size.
+* Provisioners fail → Missing sudo. Always prefix commands with sudo.
+* Mirror/repo issues → Validate internal repos are reachable.
+
+---
+
+Jira References
+
+These Jira tickets capture important practices. Always reference them in PRs:
+
+* Non-root user enforcement
+  Jira: Image creation with non-root user in RHEL9
+  Branch: feature/rhel9
+  Use Case: Ensure cloud-user with sudo access is configured, root login disabled.
+
+* Cloud-init Python conflict
+  Jira: Disable python3.11 alternatives update in cloud-init
+  Branch: feature/rhel9
+  Use Case: Prevent cloud-init failures when it depends on Python 3.9.
+
+* Manual approval fix
+  Jira: Approval output not propagating in GitHub Actions
+  Branch: feature/approved-fix
+  Use Case: Ensure approvals work correctly in promotion pipelines.
+
+---
+
+Onboarding Checklist
+
+* Clone the repository.
+* Create a feature branch.
+* Configure environment variables for OpenStack/AWS.
+* Add required secrets to GitHub.
+* Run packer validate and packer build in test.
+* Boot the image and check logs.
+* Create a PR, referencing Jira tickets.
+* After approval, promote the image.
+
+---
+
+Definition of Done
+
+An image is complete only when:
+
+* It boots successfully in the target environment.
+* Cloud-init finishes with no errors.
+* SSH access works with non-root user + sudo.
+* Security and compliance checks are passed.
+* Jira tickets are updated and promotion is logged.
+
+---
+
+Why This Matters
+
+Golden images are the foundation of every workload. If they fail, the entire environment suffers. By following these practices:
+
+* We ensure consistency across environments.
+* We improve security by removing root logins.
+* We reduce manual effort through automation.
+* We create a reliable audit trail through Jira references.
+
+Every engineer contributes to this chain of reliability. Always follow this guide when working on the repository.
+
+---
+
+This guide should be considered the primary onboarding and usage reference for the Packer CadenceCLD Base Image repo. It will grow as more Jira issues are resolved and new practices are added.
