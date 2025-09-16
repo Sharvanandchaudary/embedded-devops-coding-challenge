@@ -1,0 +1,116 @@
+K8 Installing on a ubuntu 20.04 on Cadence VM
+Monday, September 11, 2023
+3:42 PM
+
+First, verify whether Swap is enabled or not using the following command on all the nodes:
+swapon --show
+If Swap is enabled, you will get the following output:
+NAME TYPE SIZE USED PRIO
+/swapfile file 472.5M 0B -2
+Next, run the following command to disable Swap:
+swapoff -a
+To disable Swap permanently, edit the /etc/fstab file and comment the line containing swapfile:
+nano /etc/fstab
+Comment or remove the following line:
+#/swapfile none swap sw 0 0
+Next, edit the /etc/sysctl.conf file to enable the IP forwarding:
+nano /etc/sysctl.conf
+Un-comment the following line:
+net.ipv4.ip_forward = 1
+Save and close the file, then run the following command to apply the configuration changes:
+sysctl -p
+ 
+Copy /etc/apt/sources.list from blr-eks-node01 and remove last lines of docker end kubernets repo reference. To upgarde Cadence ubuntu 20.04.1 to 20.04.6
+apt-get update
+apt-get upgrade
+First, install the required dependencies to access Docker repositories over HTTPS:
+apt-get install apt-transport-https ca-certificates curl software-properties-common -y
+Next, run the curl command to download and add Docker’s GPG key:
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
+Next, add Docker’s official repository to the APT:
+add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+Once the repository is added, run the following command to install Docker CE:
+apt-get install docker-ce -y
+After the installation, verify the Docker installation using the following command:
+docker --version
+ 
+ 
+First, add the Kubernetes GPG key:
+curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add
+Next, add the Kubernetes repository to APT:
+apt-add-repository "deb http://apt.kubernetes.io/ kubernetes-xenial main"
+Once the repository is added, update the APT cache using the command below:
+apt-get update -y
+ 
+ 
+These instructions are for Kubernetes 1.27.
+1.	Update the apt package index and install packages needed to use the Kubernetes apt repository:
+sudo apt-get update
+# apt-transport-https may be a dummy package; if so, you can skip that packagesudo 
+            apt-get install -y apt-transport-https ca-certificates curl
+ 
+2.	Download the public signing key for the Kubernetes package repositories. The same signing key is used for all repositories so you can disregard the version in the URL:
+curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.27/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+3.	Add the appropriate Kubernetes apt repository. Please note that this repository have packages only for Kubernetes 1.27; for other Kubernetes minor versions, you need to change the Kubernetes minor version in the URL to match your desired minor version (you should also check that you are reading the documentation for the version of Kubernetes that you plan to install).
+# This overwrites any existing configuration in /etc/apt/sources.list.d/kubernetes.list
+1.	           echo'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.27/deb/ /'| sudo tee /etc/apt/sources.list.d/kubernetes.list
+4.	Update the apt package index, install kubelet, kubeadm and kubectl, and pin their version:
+sudo apt-get update
+sudo apt-get install -y kubelet kubeadm kubectl
+sudo apt-mark hold kubelet kubeadm kubectl
+ 
+ 
+=======================================OR========================
+ 
+These instructions are for Kubernetes v1.29.
+1.	Update the apt package index and install packages needed to use the Kubernetes apt repository:
+sudo apt-get update
+# apt-transport-https may be a dummy package; if so, you can skip that package
+           sudo apt-get install -y apt-transport-https ca-certificates curl gpg
+ 
+2.	Download the public signing key for the Kubernetes package repositories. The same signing key is used for all repositories so you can disregard the version in the URL:
+# If the directory `/etc/apt/keyrings` does not exist, it should be created before the curl command, read the note below.# sudo mkdir -p -m 755 /etc/apt/keyringscurl -fsSL https://pkgs.k8s.io/core:/stable:/v1.29/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+           Note: In releases older than Debian 12 and Ubuntu 22.04, directory /etc/apt/keyrings does not exist by default, and it should be created before the curl command.
+3.	Add the appropriate Kubernetes apt repository. Please note that this repository have packages only for Kubernetes 1.29; for other Kubernetes minor versions, you need to change the Kubernetes minor version in the URL to match your desired minor version (you should also check that you are reading the documentation for the version of Kubernetes that you plan to install).
+# This overwrites any existing configuration in /etc/apt/sources.list.d/kubernetes.list
+          echo'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.29/deb/ /'| sudo tee /etc/apt/sources.list.d/kubernetes.list
+ 
+4.	Update the apt package index, install kubelet, kubeadm and kubectl, and pin their version:
+sudo apt-get update
+sudo apt-get install -y kubelet kubeadm kubectl
+sudo apt-mark hold kubelet kubeadm kubectl
+ 
+ 
+=======================================
+ 
+ 
+Next, you will need to update the cgroupdriver on all nodes. You can do it by creating the following file:
+vi /etc/docker/daemon.json
+Add the following lines:
+{ "exec-opts": ["native.cgroupdriver=systemd"],
+"log-driver": "json-file",
+"log-opts":
+{ "max-size": "100m" },
+"storage-driver": "overlay2"
+}
+Save and close the file, then reload the systemd daemon and restart the Docker service with the following command:
+systemctl daemon-reload
+systemctl restart docker
+systemctl enable docker
+ 
+Fix the Error on master and savle when using kubeadm command
+To fix the error you can delete the config.tomal file and restart containerd then try the init command like below:
+```
+$ rm /etc/containerd/config.toml
+$ systemctl restart containerd
+```
+On master node
+kubeadm init --pod-network-cidr=10.244.0.0/16
+After the cluster is initialized note the output of kubernetes cluster details
+export KUBECONFIG=/etc/kubernetes/admin.conf
+ 
+Run the following command on the Master node to deploy a Flannel pod network (if you don't setup the network salve node will hang during the kubeadm join command).
+kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+Next, wait for some time for the pods to be in running state. Then, run the following command to see the status of all pods:
+kubectl get pods --all-namespaces
+
