@@ -1,0 +1,202 @@
+vsaravan@sjcvl-ghrunner1:~$ cat create_bm_port_reuse.sh
+#!/usr/bin/env bash
+set -euo pipefail
+[[ "${DEBUG:-0}" == "1" ]] && set -x
+
+# ========= REQUIRED INPUTS (per node) =========
+# OpenStack image + flavor
+IMAGE_ID="4a31915b-213a-4173-97ad-a582c72ff9f2"   # cc-rhel86-baremetal-uefi
+FLAVOR_NAME="baremetal"
+
+# Node identity
+SERVER_NAME="to01-wrk01-vm"                       # name to show in Nova
+NODE_UUID="16dec879-ba80-4cac-8486-59318d688037"  # Ironic node UUID
+
+# Provisioning network (Ironic)
+PROV_NET_ID="5c79a1a8-b294-4435-a2e6-ef1b992735d3"    # 'provisioning' flat net
+PROV_SUBNET_ID="c83e54b1-822e-4931-ac73-b731d1f6c966" # 10.107.177.0/24
+PXE_MAC="c4:cb:e1:dd:19:6e"                            # Ironic PXE MAC for this node
+
+# Chamber/data network (tenant)
+TENANT_NET_ID="8d28eca5-da32-485f-98c5-d26abaf86d54"
+TENANT_SUBNET_ID="f09dc8d8-5b9e-4ed2-9ea6-10cbfb3130ec"
+DATA_MAC="6c:92:cf:27:ce:50"
+TENANT_IP="10.154.180.52"          # leave empty to auto-assign: TENANT_IP=""
+
+# Keypair for SSH
+OS_KEYPAIR="${OS_KEYPAIR:-c30-to-test-to-01-wrk01-keypair}"
+PUB_KEY_FILE="${PUB_KEY_FILE:-$HOME/.ssh/id_rsa.pub}"
+
+# Optional metadata
+ENVIRONMENT="test-2"
+HYPERSCALER_TAG="rhops"
+
+# Behavior toggles
+ATTACH_VIF_VIA_IRONIC="${ATTACH_VIF_VIA_IRONIC:-0}"   # 1 = also do baremetal node vif attach for PXE
+DISABLE_PROV_AFTER_BOOT="${DISABLE_PROV_AFTER_BOOT:-1}"# 1 = admin_state_up=false on prov port after ACTIVE
+WAIT_SEC_SERVER="${WAIT_SEC_SERVER:-1800}"
+POLL_INTERVAL="${POLL_INTERVAL:-5}"
+
+# ========= LOGGING =========
+RUN_ID="$(date +%Y%m%d-%H%M%S)"
+LOG_FILE="${LOG_FILE:-./bm_${SERVER_NAME}_${RUN_ID}.log}"
+exec > >(tee -a "$LOG_FILE") 2>&1
+
+# ========= HELPERS =========
+die(){ echo "ERROR: $*" >&2; exit 1; }
+info(){ echo "[INFO] $*"; }
+ok(){ echo "[OK] $*"; }
+warn(){ echo "[WARN] $*"; }
+
+require_cmd(){ command -v "$1" >/dev/null 2>&1 || die "Missing command: $1"; }
+
+wait_for_status(){
+  local cmd="$1" want="$2" timeout="$3" start status
+  start="$(date +%s)"
+  while true; do
+    status="$($cmd || true)"
+    [[ "$status" == "$want" ]] && return 0
+    (( $(date +%s) - start > timeout )) && { echo "Timeout: wanted '$want' (last '$status')"; return 1; }
+    sleep "$POLL_INTERVAL"
+  done
+}
+
+ensure_local_pubkey(){
+  if [[ ! -f "$PUB_KEY_FILE" ]]; then
+    warn "No $PUB_KEY_FILE — generating SSH keypair..."
+    mkdir -p "$HOME/.ssh"
+    ssh-keygen -t rsa -b 4096 -f "${PUB_KEY_FILE%.pub}" -N ""
+  fi
+}
+
+ensure_os_keypair(){
+  if ! openstack keypair list -f value -c Name | grep -qx "$OS_KEYPAIR"; then
+    info "Creating OpenStack keypair '$OS_KEYPAIR' from $PUB_KEY_FILE"
+    openstack keypair create --public-key "$PUB_KEY_FILE" "$OS_KEYPAIR" >/dev/null
+  else
+    ok "Keypair '$OS_KEYPAIR' exists."
+  fi
+}
+
+# Reuse existing Neutron port by MAC on the given network (or create it).
+# Refuses to use service ports (router/dhcp). Returns PORT_ID.
+ensure_port(){
+  local NAME="$1" NET="$2" SUBNET="$3" MAC="$4" FIXIP="${5:-}"
+
+  # Try to find an existing port for this MAC on this network
+  local PID
+  PID="$(openstack port list --network "$NET" --mac-address "$MAC" -f value -c ID | head -1 || true)"
+  if [[ -n "$PID" ]]; then
+    local OWN
+    OWN="$(openstack port show "$PID" -f value -c device_owner)"
+    case "$OWN" in
+      network:router_*|network:dhcp) die "Existing port $PID for $MAC is a service port ($OWN)";;
+    esac
+    ok "Reusing port $PID ($NAME) for MAC $MAC on net $NET"
+    echo "$PID"; return 0
+  fi
+
+  # If a fixed IP requested, ensure it isn't owned by someone else
+  if [[ -n "$FIXIP" ]]; then
+    local TAKEN
+    TAKEN="$(openstack port list --fixed-ip ip-address="$FIXIP" -f value -c ID | head -1 || true)"
+    if [[ -n "$TAKEN" ]]; then
+      local OWN MAC_IN_USE NET_IN_USE
+      OWN="$(openstack port show "$TAKEN" -f value -c device_owner)"
+      MAC_IN_USE="$(openstack port show "$TAKEN" -f value -c mac_address)"
+      NET_IN_USE="$(openstack port show "$TAKEN" -f value -c network_id)"
+      case "$OWN" in
+        network:router_*|network:dhcp) die "Requested IP $FIXIP is reserved by $OWN (port $TAKEN)";;
+        *) die "Requested IP $FIXIP is already in use by port $TAKEN (mac=$MAC_IN_USE net=$NET_IN_USE)";;
+      esac
+    fi
+  fi
+
+  # Create the port
+  local args=( --network "$NET" --mac-address "$MAC" --vnic-type baremetal --disable-port-security )
+  if [[ -n "$FIXIP" ]]; then
+    args+=( --fixed-ip "subnet=${SUBNET},ip-address=${FIXIP}" )
+  else
+    args+=( --fixed-ip "subnet=${SUBNET}" )
+  fi
+  local NEW_ID
+  NEW_ID="$(openstack port create "$NAME" "${args[@]}" -f value -c id)"
+  ok "Created port $NEW_ID ($NAME)"
+  echo "$NEW_ID"
+}
+
+ensure_vif_attached(){
+  local NODE="$1" IR_PORT_UUID="$2" NEUTRON_PORT_ID="$3"
+  # already attached?
+  if openstack baremetal node vif list "$NODE" -f value -c ID | grep -qx "$NEUTRON_PORT_ID"; then
+    ok "Neutron port $NEUTRON_PORT_ID already attached to node $NODE"
+    return 0
+  fi
+  info "Attaching Neutron port $NEUTRON_PORT_ID -> Ironic port $IR_PORT_UUID on node $NODE"
+  openstack baremetal node vif attach --port-uuid "$IR_PORT_UUID" "$NODE" "$NEUTRON_PORT_ID"
+}
+
+# ========= PRE‑FLIGHT =========
+require_cmd openstack
+require_cmd ssh-keygen
+
+openstack flavor show "$FLAVOR_NAME" >/dev/null || die "Flavor '$FLAVOR_NAME' not found"
+openstack image  show "$IMAGE_ID"     >/dev/null || die "Image  '$IMAGE_ID' not found"
+openstack network show "$PROV_NET_ID" >/dev/null || die "Provisioning net missing"
+openstack subnet  show "$PROV_SUBNET_ID" >/dev/null || die "Provisioning subnet missing"
+openstack network show "$TENANT_NET_ID" >/dev/null || die "Tenant net missing"
+openstack subnet  show "$TENANT_SUBNET_ID" >/dev/null || die "Tenant subnet missing"
+
+ensure_local_pubkey
+ensure_os_keypair
+
+# ========= CREATE / REUSE PORTS =========
+PROV_PORT_NAME="${SERVER_NAME}-prov"
+DATA_PORT_NAME="${SERVER_NAME}-data"
+
+info "Ensuring provisioning port on PXE MAC $PXE_MAC ..."
+PROV_PORT_ID="$(ensure_port "$PROV_PORT_NAME" "$PROV_NET_ID" "$PROV_SUBNET_ID" "$PXE_MAC")"
+openstack port show "$PROV_PORT_ID" -f yaml | egrep -i 'id:|name:|network_id:|mac_address:|fixed_ips:|status:' || true
+
+info "Ensuring chamber/data port on MAC $DATA_MAC (IP=${TENANT_IP:-auto}) ..."
+DATA_PORT_ID="$(ensure_port "$DATA_PORT_NAME" "$TENANT_NET_ID" "$TENANT_SUBNET_ID" "$DATA_MAC" "${TENANT_IP:-}")"
+openstack port show "$DATA_PORT_ID" -f yaml | egrep -i 'id:|name:|network_id:|mac_address:|fixed_ips:|status:' || true
+
+# ========= OPTIONAL: attach provisioning VIF via Ironic =========
+if [[ "$ATTACH_VIF_VIA_IRONIC" == "1" ]]; then
+  IR_PXE_PORT_UUID="$(
+    openstack baremetal port list --node "$NODE_UUID" -f value -c UUID -c Address | \
+      awk -v m="$PXE_MAC" '$2==m{print $1;exit}'
+  )"
+  [[ -z "$IR_PXE_PORT_UUID" ]] && die "Could not find Ironic port UUID for PXE MAC $PXE_MAC"
+  ensure_vif_attached "$NODE_UUID" "$IR_PXE_PORT_UUID" "$PROV_PORT_ID"
+fi
+
+# ========= BOOT FROM IMAGE WITH BOTH NICS =========
+info "Booting $SERVER_NAME from image with provisioning + chamber NICs ..."
+SERVER_ID="$(
+  openstack server create "$SERVER_NAME" \
+    --flavor "$FLAVOR_NAME" \
+    --image "$IMAGE_ID" \
+    --nic "port-id=$PROV_PORT_ID" \
+    --nic "port-id=$DATA_PORT_ID" \
+    --key-name "$OS_KEYPAIR" \
+    --property env="$ENVIRONMENT" \
+    --property hyperscaler="$HYPERSCALER_TAG" \
+    -f value -c id
+)"
+ok "SERVER_ID=$SERVER_ID"
+
+info "Waiting for server ACTIVE ..."
+wait_for_status "openstack server show $SERVER_ID -f value -c status" "ACTIVE" "$WAIT_SEC_SERVER"
+ok "Server is ACTIVE"
+openstack server show "$SERVER_ID" -f yaml | egrep -i 'id:|name:|status:|addresses:|OS-EXT-SRV-ATTR:hypervisor_hostname' || true
+
+# ========= POST: disable provisioning port (optional) =========
+if [[ "$DISABLE_PROV_AFTER_BOOT" == "1" ]]; then
+  info "Disabling provisioning port $PROV_PORT_ID (admin_state_up=false) ..."
+  openstack port set "$PROV_PORT_ID" --disable
+fi
+
+ok "Done. Data port: $DATA_PORT_ID (expect IP=$(openstack port show "$DATA_PORT_ID" -f value -c fixed_ips))"
+echo "Log: $LOG_FILE"
